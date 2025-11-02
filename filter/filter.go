@@ -44,6 +44,7 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			validFilters = append(validFilters, filterGetter{filter: filter, getter: getter})
 		}
 	}
+	filteredData := []*T{}
 	for _, item := range data {
 		fmt.Println("---")
 		for _, fg := range validFilters {
@@ -52,5 +53,6 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 				fg.filter.Field, value, fg.filter.Mode, fg.filter.Value)
 		}
 	}
+	result.Data = filteredData
 	return &result, nil
 }

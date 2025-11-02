@@ -50,6 +50,31 @@ func generateGettersToWriter(w io.Writer, pkgs map[string]*ast.Package, pkgName 
 	fmt.Fprintf(w, "package %s\n\n", pkgName)
 	fmt.Fprintf(w, "var %s = map[string]any{\n", config.VarName)
 
+	// First pass: collect all struct types
+	structTypes := make(map[string]*ast.StructType)
+	for _, pkg := range pkgs {
+		for _, f := range pkg.Files {
+			for _, decl := range f.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok {
+					continue
+				}
+				for _, spec := range gen.Specs {
+					ts, ok := spec.(*ast.TypeSpec)
+					if !ok {
+						continue
+					}
+					st, ok := ts.Type.(*ast.StructType)
+					if !ok {
+						continue
+					}
+					structTypes[ts.Name.Name] = st
+				}
+			}
+		}
+	}
+
+	// Second pass: generate getters with nested field support
 	for _, pkg := range pkgs {
 		for _, f := range pkg.Files {
 			for _, decl := range f.Decls {
@@ -102,6 +127,37 @@ func generateGettersToWriter(w io.Writer, pkgs map[string]*ast.Package, pkgName 
 
 							fmt.Fprintf(w, "\t\t%q: func(u *%s) any { return u.%s },\n",
 								key, structName, fieldName)
+
+							// Check if field is a struct type and generate nested getters
+							if ident, ok := field.Type.(*ast.Ident); ok {
+								if nestedStruct, exists := structTypes[ident.Name]; exists {
+									for _, nestedField := range nestedStruct.Fields.List {
+										if len(nestedField.Names) > 0 {
+											nestedFieldName := nestedField.Names[0].Name
+											nestedKey := key + "." + strings.ToLower(nestedFieldName)
+
+											// Get nested JSON tag
+											if nestedField.Tag != nil {
+												tag := nestedField.Tag.Value
+												tag = strings.Trim(tag, "`")
+												if strings.Contains(tag, "json:") {
+													parts := strings.Split(tag, "json:")
+													if len(parts) > 1 {
+														jsonTag := strings.Trim(parts[1], `"`)
+														jsonTag = strings.Split(jsonTag, ",")[0]
+														if jsonTag != "" && jsonTag != "-" {
+															nestedKey = key + "." + jsonTag
+														}
+													}
+												}
+											}
+
+											fmt.Fprintf(w, "\t\t%q: func(u *%s) any { return u.%s.%s },\n",
+												nestedKey, structName, fieldName, nestedFieldName)
+										}
+									}
+								}
+							}
 						}
 					}
 					fmt.Fprintln(w, "\t},")
