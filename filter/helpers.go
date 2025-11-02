@@ -213,3 +213,62 @@ func hasTimeComponent(t time.Time) bool {
 	}
 	return true
 }
+
+func compareValues(a, b any) int {
+	// Try to parse both values to standardized types
+	numA, errA := parseNumber(a)
+	numB, errB := parseNumber(b)
+	if errA == nil && errB == nil {
+		if numA < numB {
+			return -1
+		} else if numA > numB {
+			return 1
+		}
+		return 0
+	}
+
+	strA, errA := parseText(a)
+	strB, errB := parseText(b)
+	if errA == nil && errB == nil {
+		return strings.Compare(strA, strB)
+	}
+
+	boolA, errA := parseBool(a)
+	boolB, errB := parseBool(b)
+	if errA == nil && errB == nil {
+		if boolA == boolB {
+			return 0
+		}
+		if !boolA && boolB {
+			return -1
+		}
+		return 1
+	}
+
+	// Try datetime comparison
+	timeA, errA := parseDateTime(a)
+	timeB, errB := parseDateTime(b)
+	if errA == nil && errB == nil {
+		if timeA.Before(timeB) {
+			return -1
+		} else if timeA.After(timeB) {
+			return 1
+		}
+		return 0
+	}
+
+	// Try time-only comparison
+	timeOnlyA, errA := parseTime(a)
+	timeOnlyB, errB := parseTime(b)
+	if errA == nil && errB == nil {
+		if timeOnlyA.Before(timeOnlyB) {
+			return -1
+		} else if timeOnlyA.After(timeOnlyB) {
+			return 1
+		}
+		return 0
+	}
+
+	// Fallback: cannot compare
+	return 0
+}

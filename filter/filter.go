@@ -3,9 +3,8 @@ package filter
 import (
 	"example/models"
 	"fmt"
-	"runtime"
+	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -48,81 +47,68 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			validFilters = append(validFilters, filterGetter{filter: filter, getter: getter})
 		}
 	}
-
-	// Parallelization setup
-	numCPU := runtime.NumCPU() // Or set a fixed number, e.g., 8
-	if numCPU > len(data) {
-		numCPU = len(data)
-	}
-	chunkSize := (len(data) + numCPU - 1) / numCPU
-
-	var wg sync.WaitGroup
-	results := make([][]*T, numCPU) // Pre-allocate slice of slices for each chunk's filtered items
-	errChan := make(chan error, numCPU)
-
-	for i := 0; i < numCPU; i++ {
-		wg.Add(1)
-		start := i * chunkSize
-		end := start + chunkSize
-		if end > len(data) {
-			end = len(data)
-		}
-		go func(chunkIdx int, chunkData []*T) {
-			defer wg.Done()
-			localFiltered := make([]*T, 0, len(chunkData)/2) // Rough capacity estimate
-			for _, item := range chunkData {
-				matches := filterRoot.Logic == FilterLogicAnd
-				for _, fg := range validFilters {
-					value := fg.getter(item)
-					var match bool
-					var err error
-					switch fg.filter.FilterDataType {
-					case FilterDataTypeNumber:
-						match, _, err = f.applyFilterNumber(value, fg.filter)
-					case FilterDataTypeText:
-						match, _, err = f.applyFilterText(value, fg.filter)
-					case FilterDataTypeDate:
-						match, _, err = f.applyFilterDate(value, fg.filter)
-					case FilterDataTypeBool:
-						match, _, err = f.applyFilterBool(value, fg.filter)
-					case FilterDataTypeTime:
-						match, _, err = f.applyFilterTime(value, fg.filter)
-					default:
-						err = fmt.Errorf("unsupported data type: %s", fg.filter.FilterDataType)
-					}
-					if err != nil {
-						errChan <- err
-						return
-					}
-					if match != (filterRoot.Logic == FilterLogicAnd) {
-						matches = match
-						break
-					}
-				}
-				if matches {
-					localFiltered = append(localFiltered, item)
-				}
-			}
-			results[chunkIdx] = localFiltered
-		}(i, data[start:end])
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	// Check for errors
-	if len(errChan) > 0 {
-		return nil, <-errChan // Return the first error
-	}
-
-	// Concatenate in order
 	filteredData := make([]*T, 0, len(data))
-	for _, chunk := range results {
-		filteredData = append(filteredData, chunk...)
+	for _, item := range data {
+		matches := filterRoot.Logic == FilterLogicAnd
+		for _, fg := range validFilters {
+			value := fg.getter(item)
+			var match bool
+			var err error
+			switch fg.filter.FilterDataType {
+			case FilterDataTypeNumber:
+				match, _, err = f.applyFilterNumber(value, fg.filter)
+			case FilterDataTypeText:
+				match, _, err = f.applyFilterText(value, fg.filter)
+			case FilterDataTypeDate:
+				match, _, err = f.applyFilterDate(value, fg.filter)
+			case FilterDataTypeBool:
+				match, _, err = f.applyFilterBool(value, fg.filter)
+			case FilterDataTypeTime:
+				match, _, err = f.applyFilterTime(value, fg.filter)
+			default:
+				err = fmt.Errorf("unsupported data type: %s", fg.filter.FilterDataType)
+			}
+			if err != nil {
+				return nil, err
+			}
+			if match != (filterRoot.Logic == FilterLogicAnd) {
+				matches = match
+				break
+			}
+		}
+		if matches {
+			filteredData = append(filteredData, item)
+		}
 	}
 
+	sort.Slice(filteredData, func(i, j int) bool {
+		return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
+	})
 	result.Data = filteredData
 	return &result, nil
+}
+
+func (f *FilterHandler[T]) compareItems(a, b *T, sortFields []SortField) int {
+	for _, sortField := range sortFields {
+		getter, exists := f.getters[sortField.Field]
+		if !exists {
+			continue
+		}
+
+		valA := getter(a)
+		valB := getter(b)
+
+		cmp := compareValues(valA, valB)
+
+		if sortField.Order == FilterSortOrderDesc {
+			cmp = -cmp
+		}
+
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
 }
 
 // applyFilterNumber applies a number filter and returns whether the value matches the filter
