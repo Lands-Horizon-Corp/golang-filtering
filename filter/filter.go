@@ -34,12 +34,27 @@ func NewFilter[T any](key string) (*FilterHandler[T], error) {
 	}, nil
 }
 
-func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot, progressCallback ProgressCallback) (*PaginationResult[T], error) {
+func (f *FilterHandler[T]) FilterData(
+	data []*T,
+	filterRoot FilterRoot,
+	pageIndex int,
+	pageSize int,
+	progressCallback ProgressCallback,
+) (*PaginationResult[T], error) {
 	result := PaginationResult[T]{
 		Data:      data,
-		PageIndex: 1,
-		PageSize:  30,
+		PageIndex: pageIndex,
+		PageSize:  pageSize,
 	}
+
+	// Set defaults if not provided
+	if result.PageIndex <= 0 {
+		result.PageIndex = 1
+	}
+	if result.PageSize <= 0 {
+		result.PageSize = 30
+	}
+
 	if len(data) == 0 {
 		return &result, nil
 	}
@@ -69,7 +84,9 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot, progress
 	var progressWg sync.WaitGroup
 	stopProgress := make(chan struct{})
 	if progressCallback != nil {
-		progressWg.Go(func() {
+		progressWg.Add(1)
+		go func() {
+			defer progressWg.Done()
 			ticker := time.NewTicker(100 * time.Millisecond)
 			defer ticker.Stop()
 			for {
@@ -84,7 +101,7 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot, progress
 					return
 				}
 			}
-		})
+		}()
 	}
 
 	for i := 0; i < numCPU; i++ {
@@ -156,6 +173,7 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot, progress
 	if filterErr != nil {
 		return nil, filterErr
 	}
+
 	totalSize := 0
 	for _, chunk := range resultChunks {
 		totalSize += len(chunk)
@@ -164,14 +182,35 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot, progress
 	for _, chunk := range resultChunks {
 		filteredData = append(filteredData, chunk...)
 	}
+
+	// Sort after filtering
 	if len(filterRoot.SortFields) > 0 {
 		sort.Slice(filteredData, func(i, j int) bool {
 			return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
 		})
 	}
-	// result.Data = filteredData
-	result.Data = []*T{}
+
+	// Apply pagination
 	result.TotalSize = len(filteredData)
+	result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
+
+	// Calculate start and end indices for the requested page
+	startIdx := (result.PageIndex - 1) * result.PageSize
+	endIdx := startIdx + result.PageSize
+
+	// Handle out of bounds
+	if startIdx >= len(filteredData) {
+		result.Data = []*T{}
+		return &result, nil
+	}
+
+	if endIdx > len(filteredData) {
+		endIdx = len(filteredData)
+	}
+
+	// Return only the requested page
+	result.Data = filteredData[startIdx:endIdx]
+
 	return &result, nil
 }
 
