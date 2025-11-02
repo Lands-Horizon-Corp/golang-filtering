@@ -273,7 +273,7 @@ func (f *FilterHandler[T]) applyFilterBool(value any, filter Filter) (bool, bool
 
 // applyFilterDate applies a date filter and returns whether the value matches the filter
 func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time.Time, error) {
-	data, err := parseDate(value)
+	data, err := parseDateTime(value)
 	if err != nil {
 		return false, time.Time{}, err
 	}
@@ -281,7 +281,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 
 	switch filter.Mode {
 	case FilterModeEqual:
-		filterVal, err := parseDate(filter.Value)
+		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
@@ -293,7 +293,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			return !filterVal.Before(startOfDay) && !filterVal.After(endOfDay), data, nil
 		}
 	case FilterModeNotEqual:
-		filterVal, err := parseDate(filter.Value)
+		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
@@ -319,7 +319,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 	case FilterModeGT:
 		return false, data, fmt.Errorf("greater than filter not supported for date field %s", filter.Field)
 	case FilterModeGTE:
-		filterVal, err := parseDate(filter.Value)
+		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
@@ -330,7 +330,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			return data.Equal(startOfDay) || data.After(startOfDay), data, nil
 		}
 	case FilterModeLT:
-		filterVal, err := parseDate(filter.Value)
+		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
@@ -341,7 +341,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			return data.Before(startOfDay), data, nil
 		}
 	case FilterModeLTE:
-		filterVal, err := parseDate(filter.Value)
+		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
@@ -352,7 +352,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			return data.Equal(endOfDay) || data.Before(endOfDay), data, nil
 		}
 	case FilterModeRange:
-		rangeVal, err := parseRangeDate(filter.Value)
+		rangeVal, err := parseRangeDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
@@ -364,7 +364,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			return !data.Before(startOfDay) && !data.After(endOfDay), data, nil
 		}
 	case FilterModeBefore:
-		filterVal, err := parseDate(filter.Value)
+		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
@@ -375,7 +375,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			return data.Before(startOfDay), data, nil
 		}
 	case FilterModeAfter:
-		filterVal, err := parseDate(filter.Value)
+		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}

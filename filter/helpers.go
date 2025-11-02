@@ -6,6 +6,48 @@ import (
 	"time"
 )
 
+var dateTimeLayouts = []string{
+	time.RFC3339,                     // "2006-01-02T15:04:05Z07:00"
+	time.RFC3339Nano,                 // "2006-01-02T15:04:05.999999999Z07:00"
+	time.RFC1123,                     // "Mon, 02 Jan 2006 15:04:05 MST"
+	time.RFC1123Z,                    // "Mon, 02 Jan 2006 15:04:05 -0700"
+	time.RFC822,                      // "02 Jan 06 15:04 MST"
+	time.RFC822Z,                     // "02 Jan 06 15:04 -0700"
+	time.RFC850,                      // "Monday, 02-Jan-06 15:04:05 MST"
+	time.ANSIC,                       // "Mon Jan _2 15:04:05 2006"
+	time.UnixDate,                    // "Mon Jan _2 15:04:05 MST 2006"
+	time.RubyDate,                    // "Mon Jan 02 15:04:05 -0700 2006"
+	"2006-01-02T15:04:05Z",           // ISO with Z
+	"2006-01-02T15:04:05",            // ISO without zone
+	"2006-01-02 15:04:05",            // Space separator
+	"2006-01-02T15:04:05.999999999",  // With nanoseconds, no zone
+	"01/02/2006 15:04:05",            // US MM/DD/YYYY
+	"02/01/2006 15:04:05",            // EU DD/MM/YYYY
+	"2006-01-02T15:04:05-07:00",      // With offset
+	"Mon Jan 02 2006 15:04:05 -0700", // Variation with space and offset
+	"2006/01/02 15:04:05",            // New: YYYY/MM/DD HH:MM:SS (addresses "2025/11/02 19:26:31")
+	"2006/01/02T15:04:05",            // New: YYYY/MM/DDTHH:MM:SS
+	"2006/01/02 15:04:05Z07:00",      // New: With offset
+	"2006/01/02 15:04:05 MST",        // New: With named zone
+	"2006-01-02",                     // New: Fallback for date-only as midnight
+	"2006/01/02",                     // New: Slashed date-only
+	"01/02/2006",                     // New: US date-only
+	"02/01/2006",                     // New: EU date-only
+}
+
+var timeLayouts = []string{
+	time.Kitchen,         // "3:04PM"
+	"15:04:05",           // HH:MM:SS 24-hour
+	"15:04",              // HH:MM
+	"15:04:05.999999999", // With nanoseconds
+	"3:04:05 PM",         // 12-hour with seconds
+	"3:04 PM",            // 12-hour
+	"15:04:05Z07:00",     // With offset
+	"15:04:05 MST",       // With named zone
+	"3:04:05 PM MST",     // 12-hour with named zone
+	"15:04:05-07:00",     // New: Offset without Z
+}
+
 func parseNumber(value any) (float64, error) {
 	var num float64
 
@@ -34,30 +76,58 @@ func parseText(value any) (string, error) {
 	return strings.ToLower(strings.TrimSpace(str)), nil
 }
 
-func parseDate(value any) (time.Time, error) {
-	t, ok := value.(time.Time)
-	if !ok {
-		return time.Time{}, fmt.Errorf("invalid date type for field %s", value)
-	}
-	dateOnly := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-	return dateOnly, nil
-}
-
 func parseTime(value any) (time.Time, error) {
-	t, ok := value.(time.Time)
-	if !ok {
-		return time.Time{}, fmt.Errorf("invalid time type for field %s", value)
+	var t time.Time
+	var err error
+
+	switch v := value.(type) {
+	case time.Time:
+		t = v
+	case string:
+		var parsed bool
+		for _, layout := range timeLayouts {
+			t, err = time.Parse(layout, v)
+			if err == nil {
+				parsed = true
+				break
+			}
+		}
+		if !parsed {
+			// Fallback to datetime layouts if time-only fails
+			for _, layout := range dateTimeLayouts {
+				t, err = time.Parse(layout, v)
+				if err == nil {
+					break
+				}
+			}
+			if err != nil {
+				return time.Time{}, fmt.Errorf("invalid time format: %v", v)
+			}
+		}
+	default:
+		return time.Time{}, fmt.Errorf("invalid type for time: %T", value)
 	}
-	timeOnly := time.Date(0, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
+
+	// Normalize to time-only in UTC
+	timeOnly := time.Date(0, time.January, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 	return timeOnly, nil
 }
 
 func parseDateTime(value any) (time.Time, error) {
-	t, ok := value.(time.Time)
-	if !ok {
-		return time.Time{}, fmt.Errorf("invalid datetime type for field %s", value)
+	switch v := value.(type) {
+	case time.Time:
+		return v, nil
+	case string:
+		for _, layout := range dateTimeLayouts {
+			t, err := time.Parse(layout, v)
+			if err == nil {
+				return t, nil
+			}
+		}
+		return time.Time{}, fmt.Errorf("invalid datetime format: %v", v)
+	default:
+		return time.Time{}, fmt.Errorf("invalid type for datetime: %T", value)
 	}
-	return t, nil
 }
 
 func parseRangeNumber(value any) (FilterRangeNumber, error) {
@@ -79,16 +149,16 @@ func parseRangeNumber(value any) (FilterRangeNumber, error) {
 	}, nil
 }
 
-func parseRangeDate(value any) (FilterRangeDate, error) {
+func parseRangeDateTime(value any) (FilterRangeDate, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
 		return FilterRangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}
-	from, err := parseDate(rng.From)
+	from, err := parseDateTime(rng.From)
 	if err != nil {
 		return FilterRangeDate{}, err
 	}
-	to, err := parseDate(rng.To)
+	to, err := parseDateTime(rng.To)
 	if err != nil {
 		return FilterRangeDate{}, err
 	}
