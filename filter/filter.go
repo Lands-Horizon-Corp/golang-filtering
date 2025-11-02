@@ -79,7 +79,6 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 				break
 			}
 		}
-
 		if matches {
 			filteredData = append(filteredData, item)
 		}
@@ -88,6 +87,7 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 	return &result, nil
 }
 
+// applyFilterNumber applies a number filter and returns whether the value matches the filter
 func (f *FilterHandler[T]) applyFilterNumber(value any, filter Filter) (bool, float64, error) {
 	num, err := parseNumber(value)
 	if err != nil {
@@ -157,6 +157,7 @@ func (f *FilterHandler[T]) applyFilterNumber(value any, filter Filter) (bool, fl
 	}
 }
 
+// applyFilterText applies a text filter and returns whether the value matches the filter
 func (f *FilterHandler[T]) applyFilterText(value any, filter Filter) (bool, string, error) {
 	data, err := parseText(value)
 	if err != nil {
@@ -223,6 +224,7 @@ func (f *FilterHandler[T]) applyFilterText(value any, filter Filter) (bool, stri
 	}
 }
 
+// applyFilterBool applies a boolean filter and returns whether the value matches the filter
 func (f *FilterHandler[T]) applyFilterBool(value any, filter Filter) (bool, bool, error) {
 	data, err := parseBool(value)
 	if err != nil {
@@ -269,6 +271,7 @@ func (f *FilterHandler[T]) applyFilterBool(value any, filter Filter) (bool, bool
 	}
 }
 
+// applyFilterDate applies a date filter and returns whether the value matches the filter
 func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time.Time, error) {
 	data, err := parseDate(value)
 	if err != nil {
@@ -388,28 +391,67 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 	}
 }
 
+// applyFilterTime applies a time filter and returns whether the value matches the filter
 func (f *FilterHandler[T]) applyFilterTime(value any, filter Filter) (bool, time.Time, error) {
-	t, ok := value.(time.Time)
-	if !ok {
-		return false, time.Time{}, fmt.Errorf("invalid time type for field %s", filter.Field)
+	data, err := parseTime(value)
+	if err != nil {
+		return false, time.Time{}, err
 	}
-
 	switch filter.Mode {
 	case FilterModeEqual:
+		filterVal, err := parseTime(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		return data.Equal(filterVal), data, nil
+
 	case FilterModeNotEqual:
-	case FilterModeContains:
-	case FilterModeNotContains:
-	case FilterModeStartsWith:
-	case FilterModeEndsWith:
-	case FilterModeIsEmpty:
-	case FilterModeIsNotEmpty:
-	case FilterModeGT:
-	case FilterModeGTE:
-	case FilterModeLT:
+		filterVal, err := parseTime(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		return !data.Equal(filterVal), data, nil
+
+	case FilterModeGTE, FilterModeAfter:
+		filterVal, err := parseTime(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		return !data.Before(filterVal), data, nil
+
 	case FilterModeLTE:
+		filterVal, err := parseTime(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		return !data.After(filterVal), data, nil
+
+	case FilterModeLT, FilterModeBefore:
+		filterVal, err := parseTime(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		return data.Before(filterVal), data, nil
+
+	case FilterModeGT:
+		filterVal, err := parseTime(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		return data.After(filterVal), data, nil
+
 	case FilterModeRange:
-	case FilterModeBefore:
-	case FilterModeAfter:
+		rangeVal, err := parseRangeTime(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		return !data.Before(rangeVal.From) && !data.After(rangeVal.To), data, nil
+
+	case FilterModeContains, FilterModeNotContains, FilterModeStartsWith, FilterModeEndsWith,
+		FilterModeIsEmpty, FilterModeIsNotEmpty:
+		return false, data, fmt.Errorf("filter mode %s not supported for time field %s", filter.Mode, filter.Field)
+
+	default:
+		return false, data, fmt.Errorf("unsupported filter mode: %s", filter.Mode)
 	}
-	return true, t, nil
 }
