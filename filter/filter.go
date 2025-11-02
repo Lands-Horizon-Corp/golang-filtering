@@ -49,12 +49,8 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			validFilters = append(validFilters, filterGetter{filter: filter, getter: getter})
 		}
 	}
-
-	// Parallel filtering
 	numCPU := runtime.NumCPU()
 	chunkSize := (len(data) + numCPU - 1) / numCPU
-
-	// Create channels and wait group
 	resultChunks := make([][]*T, numCPU)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -114,9 +110,7 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			resultChunks[workerID] = localFiltered
 		}(i)
 	}
-
 	wg.Wait()
-
 	if filterErr != nil {
 		return nil, filterErr
 	}
@@ -133,8 +127,7 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
 		})
 	}
-
-	result.Data = filteredData
+	result.Data = []*T{}
 	result.TotalSize = len(filteredData)
 	return &result, nil
 }
@@ -145,12 +138,9 @@ func (f *FilterHandler[T]) compareItems(a, b *T, sortFields []SortField) int {
 		if !exists {
 			continue
 		}
-
 		valA := getter(a)
 		valB := getter(b)
-
 		cmp := compareValues(valA, valB)
-
 		if sortField.Order == FilterSortOrderDesc {
 			cmp = -cmp
 		}

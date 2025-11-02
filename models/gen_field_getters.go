@@ -1,6 +1,10 @@
 package models
 
 var ModelFieldGetters = map[string]any{
+	"UserFriend": map[string]func(*UserFriend)any{
+		"id": func(u *UserFriend) any { return u.ID },
+		"name": func(u *UserFriend) any { return u.Name },
+	},
 	"User": map[string]func(*User)any{
 		"id": func(u *User) any { return u.ID },
 		"name": func(u *User) any { return u.Name },
@@ -14,9 +18,5 @@ var ModelFieldGetters = map[string]any{
 		"friend.id": func(u *User) any { return u.Friend.ID },
 		"friend.name": func(u *User) any { return u.Friend.Name },
 		"friends": func(u *User) any { return u.Friends },
-	},
-	"UserFriend": map[string]func(*UserFriend)any{
-		"id": func(u *UserFriend) any { return u.ID },
-		"name": func(u *UserFriend) any { return u.Name },
 	},
 }

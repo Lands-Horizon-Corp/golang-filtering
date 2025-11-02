@@ -140,15 +140,8 @@ func main() {
 	}
 
 	fmt.Printf("\nFiltered results: %d users\n", result.TotalSize)
+	fmt.Println(result)
 	fmt.Printf("Filter execution time: %v\n", elapsed)
 	fmt.Printf("Time per record: %v\n", elapsed/time.Duration(userCount))
 
-	// tools.PrintAsJSON(result)
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
