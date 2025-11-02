@@ -3,8 +3,10 @@ package filter
 import (
 	"example/models"
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -47,44 +49,93 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			validFilters = append(validFilters, filterGetter{filter: filter, getter: getter})
 		}
 	}
-	filteredData := make([]*T, 0, len(data))
-	for _, item := range data {
-		matches := filterRoot.Logic == FilterLogicAnd
-		for _, fg := range validFilters {
-			value := fg.getter(item)
-			var match bool
-			var err error
-			switch fg.filter.FilterDataType {
-			case FilterDataTypeNumber:
-				match, _, err = f.applyFilterNumber(value, fg.filter)
-			case FilterDataTypeText:
-				match, _, err = f.applyFilterText(value, fg.filter)
-			case FilterDataTypeDate:
-				match, _, err = f.applyFilterDate(value, fg.filter)
-			case FilterDataTypeBool:
-				match, _, err = f.applyFilterBool(value, fg.filter)
-			case FilterDataTypeTime:
-				match, _, err = f.applyFilterTime(value, fg.filter)
-			default:
-				err = fmt.Errorf("unsupported data type: %s", fg.filter.FilterDataType)
+
+	// Parallel filtering
+	numCPU := runtime.NumCPU()
+	chunkSize := (len(data) + numCPU - 1) / numCPU
+
+	// Create channels and wait group
+	resultChunks := make([][]*T, numCPU)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var filterErr error
+
+	for i := 0; i < numCPU; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+
+			start := workerID * chunkSize
+			end := min(start+chunkSize, len(data))
+			if start >= len(data) {
+				return
 			}
-			if err != nil {
-				return nil, err
+
+			localFiltered := make([]*T, 0, chunkSize)
+
+			for _, item := range data[start:end] {
+				matches := filterRoot.Logic == FilterLogicAnd
+				for _, fg := range validFilters {
+					value := fg.getter(item)
+					var match bool
+					var err error
+					switch fg.filter.FilterDataType {
+					case FilterDataTypeNumber:
+						match, _, err = f.applyFilterNumber(value, fg.filter)
+					case FilterDataTypeText:
+						match, _, err = f.applyFilterText(value, fg.filter)
+					case FilterDataTypeDate:
+						match, _, err = f.applyFilterDate(value, fg.filter)
+					case FilterDataTypeBool:
+						match, _, err = f.applyFilterBool(value, fg.filter)
+					case FilterDataTypeTime:
+						match, _, err = f.applyFilterTime(value, fg.filter)
+					default:
+						err = fmt.Errorf("unsupported data type: %s", fg.filter.FilterDataType)
+					}
+					if err != nil {
+						mu.Lock()
+						if filterErr == nil {
+							filterErr = err
+						}
+						mu.Unlock()
+						return
+					}
+					if match != (filterRoot.Logic == FilterLogicAnd) {
+						matches = match
+						break
+					}
+				}
+				if matches {
+					localFiltered = append(localFiltered, item)
+				}
 			}
-			if match != (filterRoot.Logic == FilterLogicAnd) {
-				matches = match
-				break
-			}
-		}
-		if matches {
-			filteredData = append(filteredData, item)
-		}
+
+			resultChunks[workerID] = localFiltered
+		}(i)
 	}
 
-	sort.Slice(filteredData, func(i, j int) bool {
-		return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
-	})
+	wg.Wait()
+
+	if filterErr != nil {
+		return nil, filterErr
+	}
+	totalSize := 0
+	for _, chunk := range resultChunks {
+		totalSize += len(chunk)
+	}
+	filteredData := make([]*T, 0, totalSize)
+	for _, chunk := range resultChunks {
+		filteredData = append(filteredData, chunk...)
+	}
+	if len(filterRoot.SortFields) > 0 {
+		sort.Slice(filteredData, func(i, j int) bool {
+			return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
+		})
+	}
+
 	result.Data = filteredData
+	result.TotalSize = len(filteredData)
 	return &result, nil
 }
 
