@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,6 +15,9 @@ type FilterHandler[T any] struct {
 	getters map[string]func(*T) any
 	key     string
 }
+
+// ProgressCallback is called during filtering to report progress
+type ProgressCallback func(processed, total int)
 
 func NewFilter[T any](key string) (*FilterHandler[T], error) {
 	gettersInterface, ok := models.ModelFieldGetters[key]
@@ -30,7 +34,7 @@ func NewFilter[T any](key string) (*FilterHandler[T], error) {
 	}, nil
 }
 
-func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*PaginationResult[T], error) {
+func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot, progressCallback ProgressCallback) (*PaginationResult[T], error) {
 	result := PaginationResult[T]{
 		Data:      data,
 		PageIndex: 1,
@@ -49,12 +53,40 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			validFilters = append(validFilters, filterGetter{filter: filter, getter: getter})
 		}
 	}
+
 	numCPU := runtime.NumCPU()
 	chunkSize := (len(data) + numCPU - 1) / numCPU
 	resultChunks := make([][]*T, numCPU)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var filterErr error
+
+	// Atomic counter for progress tracking
+	var processedCount int64
+	totalCount := len(data)
+
+	// Progress reporting goroutine
+	var progressWg sync.WaitGroup
+	stopProgress := make(chan struct{})
+	if progressCallback != nil {
+		progressWg.Go(func() {
+			ticker := time.NewTicker(100 * time.Millisecond) // Report every 100ms
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					processed := int(atomic.LoadInt64(&processedCount))
+					progressCallback(processed, totalCount)
+				case <-stopProgress:
+					// Final progress update
+					processed := int(atomic.LoadInt64(&processedCount))
+					progressCallback(processed, totalCount)
+					return
+				}
+			}
+		})
+	}
 
 	for i := 0; i < numCPU; i++ {
 		wg.Add(1)
@@ -105,12 +137,23 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 				if matches {
 					localFiltered = append(localFiltered, item)
 				}
+
+				// Update progress
+				atomic.AddInt64(&processedCount, 1)
 			}
 
 			resultChunks[workerID] = localFiltered
 		}(i)
 	}
+
 	wg.Wait()
+
+	// Stop progress reporting
+	if progressCallback != nil {
+		close(stopProgress)
+		progressWg.Wait()
+	}
+
 	if filterErr != nil {
 		return nil, filterErr
 	}
@@ -127,6 +170,7 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
 		})
 	}
+	// result.Data = filteredData
 	result.Data = []*T{}
 	result.TotalSize = len(filteredData)
 	return &result, nil

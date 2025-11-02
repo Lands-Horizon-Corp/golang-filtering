@@ -132,7 +132,10 @@ func main() {
 
 	// Time the filter operation
 	startTime := time.Now()
-	result, err := filter.FilterData(sampleUsers, sampleFilterRootAnd)
+	result, err := filter.FilterData(sampleUsers, sampleFilterRootAnd, func(processed, total int) {
+		percentage := float64(processed) / float64(total) * 100
+		fmt.Printf("\rProgress: %d/%d (%.2f%%)", processed, total, percentage)
+	})
 	elapsed := time.Since(startTime)
 
 	if err != nil {
