@@ -3,6 +3,7 @@ package filter
 import (
 	"example/models"
 	"fmt"
+	"time"
 )
 
 type FilterHandler[T any] struct {
@@ -44,15 +45,110 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot) (*Pagina
 			validFilters = append(validFilters, filterGetter{filter: filter, getter: getter})
 		}
 	}
+	type sortGetter struct {
+		getter func(*T) any
+		order  FilterSortOrder
+	}
+
 	filteredData := []*T{}
 	for _, item := range data {
-		fmt.Println("---")
+		matches := filterRoot.Logic == FilterLogicAnd
+
 		for _, fg := range validFilters {
 			value := fg.getter(item)
-			fmt.Printf("Field: %s, Value: %v, FilterMode: %s, FilterValue: %v\n",
-				fg.filter.Field, value, fg.filter.Mode, fg.filter.Value)
+			var match bool
+			var err error
+
+			switch fg.filter.FilterDataType {
+			case FilterDataTypeNumber:
+				match, _, err = f.applyFilterNumber(value, fg.filter)
+			case FilterDataTypeText:
+				match, _, err = f.applyFilterText(value, fg.filter)
+			case FilterDataTypeDate:
+				match, _, err = f.applyFilterDate(value, fg.filter)
+			case FilterDataTypeBool:
+				match, _, err = f.applyFilterBool(value, fg.filter)
+			case FilterDataTypeTime:
+				match, _, err = f.applyFilterTime(value, fg.filter)
+			default:
+				err = fmt.Errorf("unsupported data type: %s", fg.filter.FilterDataType)
+			}
+
+			if err != nil {
+				return nil, err
+			}
+
+			if match != (filterRoot.Logic == FilterLogicAnd) {
+				matches = match
+				break
+			}
 		}
+
+		if matches {
+			filteredData = append(filteredData, item)
+		}
+
 	}
 	result.Data = filteredData
 	return &result, nil
+}
+
+func (f *FilterHandler[T]) applyFilterNumber(value any, filter Filter) (bool, float64, error) {
+	var num float64
+
+	switch v := value.(type) {
+	case int:
+		num = float64(v)
+	case int32:
+		num = float64(v)
+	case int64:
+		num = float64(v)
+	case float32:
+		num = float64(v)
+	case float64:
+		num = v
+	default:
+		return false, 0, fmt.Errorf("invalid number type for field %s", filter.Field)
+	}
+	return true, num, nil
+}
+
+func (f *FilterHandler[T]) applyFilterText(value any, filter Filter) (bool, string, error) {
+	str, ok := value.(string)
+	if !ok {
+		return false, "", fmt.Errorf("invalid text type for field %s", filter.Field)
+	}
+
+	// TODO: Apply filter logic based on filter.Mode
+	return true, str, nil
+}
+
+func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time.Time, error) {
+	t, ok := value.(time.Time)
+	if !ok {
+		return false, time.Time{}, fmt.Errorf("invalid date type for field %s", filter.Field)
+	}
+
+	// TODO: Apply filter logic based on filter.Mode
+	return true, t, nil
+}
+
+func (f *FilterHandler[T]) applyFilterBool(value any, filter Filter) (bool, bool, error) {
+	b, ok := value.(bool)
+	if !ok {
+		return false, false, fmt.Errorf("invalid boolean type for field %s", filter.Field)
+	}
+
+	// TODO: Apply filter logic based on filter.Mode
+	return true, b, nil
+}
+
+func (f *FilterHandler[T]) applyFilterTime(value any, filter Filter) (bool, time.Time, error) {
+	t, ok := value.(time.Time)
+	if !ok {
+		return false, time.Time{}, fmt.Errorf("invalid time type for field %s", filter.Field)
+	}
+
+	// TODO: Apply filter logic based on filter.Mode
+	return true, t, nil
 }

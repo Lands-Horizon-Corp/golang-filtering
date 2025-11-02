@@ -1,8 +1,14 @@
 package filter
 
 type FilterLogic string
-type DataType string
+type FilterDataType string
 type FilterMode string
+type FilterSortOrder string
+
+const (
+	FilterSortOrderAsc  FilterSortOrder = "ASC"
+	FilterSortOrderDesc FilterSortOrder = "DESC"
+)
 
 const (
 	FilterLogicAnd FilterLogic = "AND"
@@ -10,11 +16,11 @@ const (
 )
 
 const (
-	DataTypeNumber DataType = "number"
-	DataTypeText   DataType = "text"
-	DataTypeDate   DataType = "date"
-	DataTypeBool   DataType = "boolean"
-	DataTypeTime   DataType = "time"
+	FilterDataTypeNumber FilterDataType = "number"
+	FilterDataTypeText   FilterDataType = "text"
+	FilterDataTypeDate   FilterDataType = "date"
+	FilterDataTypeBool   FilterDataType = "boolean"
+	FilterDataTypeTime   FilterDataType = "time"
 )
 const (
 	FilterModeEqual       FilterMode = "equal"
@@ -39,15 +45,15 @@ type FilterRange struct {
 	To   any `json:"to"`
 }
 type Filter struct {
-	DataType DataType   `json:"dataType"`
-	Field    string     `json:"field"`
-	Mode     FilterMode `json:"mode"`
-	Value    any        `json:"value"`
+	FilterDataType FilterDataType `json:"FilterDataType"`
+	Field          string         `json:"field"`
+	Mode           FilterMode     `json:"mode"`
+	Value          any            `json:"value"`
 }
 
 type SortField struct {
-	Field string `json:"field"`
-	Order string `json:"order"`
+	Order FilterSortOrder `json:"order"`
+	Field string          `json:"field"`
 }
 type FilterRoot struct {
 	Filters    []Filter    `json:"filters"`
