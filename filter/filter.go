@@ -17,7 +17,7 @@ type FilterHandler[T any] struct {
 }
 
 // ProgressCallback is called during filtering to report progress
-type ProgressCallback func(processed, total int)
+type ProgressCallback func(processed, total int, percentage float32)
 
 func NewFilter[T any](key string) (*FilterHandler[T], error) {
 	gettersInterface, ok := models.ModelFieldGetters[key]
@@ -70,18 +70,17 @@ func (f *FilterHandler[T]) FilterData(data []*T, filterRoot FilterRoot, progress
 	stopProgress := make(chan struct{})
 	if progressCallback != nil {
 		progressWg.Go(func() {
-			ticker := time.NewTicker(100 * time.Millisecond) // Report every 100ms
+			ticker := time.NewTicker(100 * time.Millisecond)
 			defer ticker.Stop()
-
 			for {
 				select {
 				case <-ticker.C:
 					processed := int(atomic.LoadInt64(&processedCount))
-					progressCallback(processed, totalCount)
+					percentage := float64(processed) / float64(totalCount) * 100
+					progressCallback(processed, totalCount, float32(percentage))
 				case <-stopProgress:
-					// Final progress update
 					processed := int(atomic.LoadInt64(&processedCount))
-					progressCallback(processed, totalCount)
+					progressCallback(processed, totalCount, 100)
 					return
 				}
 			}
