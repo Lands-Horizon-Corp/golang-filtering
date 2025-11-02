@@ -34,11 +34,15 @@ const (
 	FilterModeAfter       FilterMode = "after"
 )
 
+type FilterRange struct {
+	From any `json:"from"`
+	To   any `json:"to"`
+}
 type Filter struct {
-	DataType DataType `json:"dataType"`
-	Field    string   `json:"field"`
-	Mode     string   `json:"mode"`
-	Value    any      `json:"value"`
+	DataType DataType   `json:"dataType"`
+	Field    string     `json:"field"`
+	Mode     FilterMode `json:"mode"`
+	Value    any        `json:"value"`
 }
 
 type SortField struct {
