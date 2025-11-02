@@ -1,5 +1,7 @@
 package filter
 
+import "time"
+
 type FilterLogic string
 type FilterDataType string
 type FilterMode string
@@ -67,4 +69,19 @@ type PaginationResult[T any] struct {
 	TotalPage int  `json:"totalPage"`
 	PageSize  int  `json:"pageSize"`
 	TotalSize int  `json:"totalSize"`
+}
+
+type FilterRangeNumber struct {
+	From float64 `json:"from"`
+	To   float64 `json:"to"`
+}
+
+type FilterRangeTime struct {
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
+}
+
+type FilterRangeDate struct {
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
 }
