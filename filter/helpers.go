@@ -136,3 +136,10 @@ func parseBool(value any) (bool, error) {
 	}
 	return b, nil
 }
+
+func hasTimeComponent(t time.Time) bool {
+	if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 && t.Nanosecond() == 0 {
+		return false
+	}
+	return true
+}

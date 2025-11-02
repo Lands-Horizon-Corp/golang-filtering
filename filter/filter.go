@@ -270,29 +270,122 @@ func (f *FilterHandler[T]) applyFilterBool(value any, filter Filter) (bool, bool
 }
 
 func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time.Time, error) {
-	t, ok := value.(time.Time)
-	if !ok {
-		return false, time.Time{}, fmt.Errorf("invalid date type for field %s", filter.Field)
+	data, err := parseDate(value)
+	if err != nil {
+		return false, time.Time{}, err
 	}
+	hasTime := hasTimeComponent(data)
 
 	switch filter.Mode {
 	case FilterModeEqual:
+		filterVal, err := parseDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return data.Equal(filterVal), data, nil
+		} else {
+			startOfDay := time.Date(data.Year(), data.Month(), data.Day(), 0, 0, 0, 0, data.Location())
+			endOfDay := time.Date(data.Year(), data.Month(), data.Day(), 23, 59, 59, 999999999, data.Location())
+			return !filterVal.Before(startOfDay) && !filterVal.After(endOfDay), data, nil
+		}
 	case FilterModeNotEqual:
+		filterVal, err := parseDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return !data.Equal(filterVal), data, nil
+		} else {
+			startOfDay := time.Date(data.Year(), data.Month(), data.Day(), 0, 0, 0, 0, data.Location())
+			endOfDay := time.Date(data.Year(), data.Month(), data.Day(), 23, 59, 59, 999999999, data.Location())
+			return filterVal.Before(startOfDay) || filterVal.After(endOfDay), data, nil
+		}
 	case FilterModeContains:
+		return false, data, fmt.Errorf("contains filter not supported for date field %s", filter.Field)
 	case FilterModeNotContains:
+		return false, data, fmt.Errorf("not contains filter not supported for date field %s", filter.Field)
 	case FilterModeStartsWith:
+		return false, data, fmt.Errorf("starts with filter not supported for date field %s", filter.Field)
 	case FilterModeEndsWith:
+		return false, data, fmt.Errorf("ends with filter not supported for date field %s", filter.Field)
 	case FilterModeIsEmpty:
+		return false, data, fmt.Errorf("is empty filter not supported for date field %s", filter.Field)
 	case FilterModeIsNotEmpty:
+		return false, data, fmt.Errorf("is not empty filter not supported for date field %s", filter.Field)
 	case FilterModeGT:
+		return false, data, fmt.Errorf("greater than filter not supported for date field %s", filter.Field)
 	case FilterModeGTE:
+		filterVal, err := parseDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return data.Equal(filterVal) || data.After(filterVal), data, nil
+		} else {
+			startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
+			return data.Equal(startOfDay) || data.After(startOfDay), data, nil
+		}
 	case FilterModeLT:
+		filterVal, err := parseDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return data.Before(filterVal), data, nil
+		} else {
+			startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
+			return data.Before(startOfDay), data, nil
+		}
 	case FilterModeLTE:
+		filterVal, err := parseDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return data.Equal(filterVal) || data.Before(filterVal), data, nil
+		} else {
+			endOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 23, 59, 59, 999999999, filterVal.Location())
+			return data.Equal(endOfDay) || data.Before(endOfDay), data, nil
+		}
 	case FilterModeRange:
+		rangeVal, err := parseRangeDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return !data.Before(rangeVal.From) && !data.After(rangeVal.To), data, nil
+		} else {
+			startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
+			endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
+			return !data.Before(startOfDay) && !data.After(endOfDay), data, nil
+		}
 	case FilterModeBefore:
+		filterVal, err := parseDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return data.Before(filterVal), data, nil
+		} else {
+			startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
+			return data.Before(startOfDay), data, nil
+		}
 	case FilterModeAfter:
+		filterVal, err := parseDate(filter.Value)
+		if err != nil {
+			return false, data, err
+		}
+		if hasTime {
+			return data.After(filterVal), data, nil
+		} else {
+			// After the end of the day
+			endOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 23, 59, 59, 999999999, filterVal.Location())
+			return data.After(endOfDay), data, nil
+		}
+	default:
+		return false, data, fmt.Errorf("unsupported filter mode: %s", filter.Mode)
 	}
-	return true, t, nil
 }
 
 func (f *FilterHandler[T]) applyFilterTime(value any, filter Filter) (bool, time.Time, error) {
