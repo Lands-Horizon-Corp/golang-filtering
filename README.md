@@ -186,6 +186,80 @@ func main() {
 
 ---
 
+### 3. Hybrid Filtering (FilterHybrid) - Auto-Switching
+
+**NEW!** Automatically chooses between in-memory and database filtering based on table size.
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "github.com/Lands-Horizon-Corp/golang-filtering/filter"
+    "gorm.io/driver/postgres"
+    "gorm.io/gorm"
+)
+
+func main() {
+    // Initialize database
+    db, err := gorm.Open(postgres.Open("your-connection-string"), &gorm.Config{})
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Create filter handler
+    filterHandler := filter.NewFilter[User]()
+
+    // Define filters
+    filterRoot := filter.FilterRoot{
+        Logic: filter.FilterLogicAnd,
+        Filters: []filter.Filter{
+            {
+                Field:          "is_active",
+                Value:          true,
+                Mode:           filter.FilterModeEqual,
+                FilterDataType: filter.FilterDataTypeBool,
+            },
+        },
+    }
+
+    // Hybrid filtering with 10,000 row threshold
+    // - If table has ≤10k rows → uses in-memory filtering (faster)
+    // - If table has >10k rows → uses database filtering (memory efficient)
+    result, err := filterHandler.FilterHybrid(db, 10000, filterRoot, 1, 30)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Total: %d, Pages: %d\n", result.TotalSize, result.TotalPage)
+}
+```
+
+**Key Benefits:**
+
+- 🎯 **Automatic optimization** - no manual decision needed
+- ⚡ **Fast estimation** - uses database metadata (pg_class, INFORMATION_SCHEMA)
+- 🧠 **Smart switching** - best strategy for each dataset size
+- 🔄 **Scalable** - works from development to production without code changes
+
+**Supported Databases:**
+
+- PostgreSQL (pg_class estimation)
+- MySQL/MariaDB (INFORMATION_SCHEMA)
+- SQLite (sqlite_stat1)
+- SQL Server (sys.partitions)
+
+**Recommended Thresholds:**
+
+- Small tables (users, settings): 50,000
+- Medium tables (orders, products): 10,000
+- Large tables (logs, events): 1,000
+
+**For more details, see:** [HYBRID-FILTER.md](./HYBRID-FILTER.md)
+
+---
+
 ## Filter Modes
 
 ### Text Filters
@@ -313,7 +387,7 @@ result.PageSize   // int - Records per page
 
 ## When to Use Each Method
 
-### Use `FilterData` (In-Memory) When:
+### Use `FilterDataQuery` (In-Memory) When:
 
 - ✅ Data is already loaded in memory
 - ✅ You need parallel processing for speed
@@ -327,6 +401,14 @@ result.PageSize   // int - Records per page
 - ✅ You want to leverage database indexes
 - ✅ Memory is limited
 - ✅ You need efficient pagination over large result sets
+
+### Use `FilterHybrid` (Auto-Switching) When:
+
+- ✅ **Unknown dataset size** - let it decide automatically
+- ✅ **Multi-tenant applications** - different tenants have different data volumes
+- ✅ **Development to production** - small data in dev, large in prod
+- ✅ **Want simplicity** - one method that always works optimally
+- ✅ **Tables that grow over time** - automatic adaptation
 
 ---
 
