@@ -10,11 +10,11 @@ import (
 	"time"
 )
 
-// FilterDataQuery performs in-memory filtering with parallel processing.
+// DataQuery performs in-memory filtering with parallel processing.
 // It filters the provided data slice based on the filter configuration and returns paginated results.
-func (f *FilterHandler[T]) FilterDataQuery(
+func (f *Handler[T]) DataQuery(
 	data []*T,
-	filterRoot FilterRoot,
+	filterRoot Root,
 	pageIndex int,
 	pageSize int,
 ) (*PaginationResult[T], error) {
@@ -37,13 +37,13 @@ func (f *FilterHandler[T]) FilterDataQuery(
 	}
 
 	type filterGetter struct {
-		filter Filter
+		filter FieldFilter
 		getter func(*T) any
 	}
-	validFilters := make([]filterGetter, 0, len(filterRoot.Filters))
-	for _, filter := range filterRoot.Filters {
+	valids := make([]filterGetter, 0, len(filterRoot.FieldFilters))
+	for _, filter := range filterRoot.FieldFilters {
 		if getter, exists := f.getters[filter.Field]; exists {
-			validFilters = append(validFilters, filterGetter{filter: filter, getter: getter})
+			valids = append(valids, filterGetter{filter: filter, getter: getter})
 		}
 	}
 
@@ -74,27 +74,27 @@ func (f *FilterHandler[T]) FilterDataQuery(
 				return
 			}
 
-			localFiltered := resultChunks[workerID] // Reuse pre-allocated slice
+			localed := resultChunks[workerID] // Reuse pre-allocated slice
 
 			for _, item := range data[start:end] {
-				matches := filterRoot.Logic == FilterLogicAnd
-				for _, fg := range validFilters {
+				matches := filterRoot.Logic == LogicAnd
+				for _, fg := range valids {
 					value := fg.getter(item)
 					var match bool
 					var err error
-					switch fg.filter.FilterDataType {
-					case FilterDataTypeNumber:
-						match, _, err = f.applyFilterNumber(value, fg.filter)
-					case FilterDataTypeText:
-						match, _, err = f.applyFilterText(value, fg.filter)
-					case FilterDataTypeDate:
-						match, _, err = f.applyFilterDate(value, fg.filter)
-					case FilterDataTypeBool:
-						match, _, err = f.applyFilterBool(value, fg.filter)
-					case FilterDataTypeTime:
-						match, _, err = f.applyFilterTime(value, fg.filter)
+					switch fg.filter.DataType {
+					case DataTypeNumber:
+						match, _, err = f.applyNumber(value, fg.filter)
+					case DataTypeText:
+						match, _, err = f.applyText(value, fg.filter)
+					case DataTypeDate:
+						match, _, err = f.applyDate(value, fg.filter)
+					case DataTypeBool:
+						match, _, err = f.applyBool(value, fg.filter)
+					case DataTypeTime:
+						match, _, err = f.applyTime(value, fg.filter)
 					default:
-						err = fmt.Errorf("unsupported data type: %s", fg.filter.FilterDataType)
+						err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)
 					}
 					if err != nil {
 						mu.Lock()
@@ -104,17 +104,17 @@ func (f *FilterHandler[T]) FilterDataQuery(
 						mu.Unlock()
 						return
 					}
-					if match != (filterRoot.Logic == FilterLogicAnd) {
+					if match != (filterRoot.Logic == LogicAnd) {
 						matches = match
 						break
 					}
 				}
 				if matches {
-					localFiltered = append(localFiltered, item) // Only append pointers, no data cloning
+					localed = append(localed, item) // Only append pointers, no data cloning
 				}
 				atomic.AddInt64(&processedCount, 1)
 			}
-			resultChunks[workerID] = localFiltered
+			resultChunks[workerID] = localed
 		}(i)
 	}
 
@@ -167,7 +167,7 @@ func (f *FilterHandler[T]) FilterDataQuery(
 	return &result, nil
 }
 
-func (f *FilterHandler[T]) compareItems(a, b *T, sortFields []SortField) int {
+func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int {
 	for _, sortField := range sortFields {
 		getter, exists := f.getters[sortField.Field]
 		if !exists {
@@ -176,7 +176,7 @@ func (f *FilterHandler[T]) compareItems(a, b *T, sortFields []SortField) int {
 		valA := getter(a)
 		valB := getter(b)
 		cmp := compareValues(valA, valB)
-		if sortField.Order == FilterSortOrderDesc {
+		if sortField.Order == SortOrderDesc {
 			cmp = -cmp
 		}
 
@@ -187,145 +187,145 @@ func (f *FilterHandler[T]) compareItems(a, b *T, sortFields []SortField) int {
 	return 0
 }
 
-// applyFilterNumber applies a number filter and returns whether the value matches the filter
-func (f *FilterHandler[T]) applyFilterNumber(value any, filter Filter) (bool, float64, error) {
+// applyNumber applies a number filter and returns whether the value matches the filter
+func (f *Handler[T]) applyNumber(value any, filter FieldFilter) (bool, float64, error) {
 	num, err := parseNumber(value)
 	if err != nil {
 		return false, 0, err
 	}
 	switch filter.Mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		value, err := parseNumber(filter.Value)
 		if err != nil {
 			return false, num, err
 		}
 		return num == value, num, nil
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		value, err := parseNumber(filter.Value)
 		if err != nil {
 			return false, num, err
 		}
 		return num != value, num, nil
-	case FilterModeContains:
+	case ModeContains:
 		return false, num, fmt.Errorf("contains filter not supported for number field %s", filter.Field)
-	case FilterModeNotContains:
+	case ModeNotContains:
 		return false, num, fmt.Errorf("not contains filter not supported for number field %s", filter.Field)
-	case FilterModeStartsWith:
+	case ModeStartsWith:
 		return false, num, fmt.Errorf("starts with filter not supported for number field %s", filter.Field)
-	case FilterModeEndsWith:
+	case ModeEndsWith:
 		return false, num, fmt.Errorf("ends with filter not supported for number field %s", filter.Field)
-	case FilterModeIsEmpty:
+	case ModeIsEmpty:
 		return false, num, fmt.Errorf("is empty filter not supported for number field %s", filter.Field)
-	case FilterModeIsNotEmpty:
+	case ModeIsNotEmpty:
 		return false, num, fmt.Errorf("is not empty filter not supported for number field %s", filter.Field)
-	case FilterModeGT:
+	case ModeGT:
 		value, err := parseNumber(filter.Value)
 		if err != nil {
 			return false, num, err
 		}
 		return num > value, num, nil
-	case FilterModeGTE:
+	case ModeGTE:
 		value, err := parseNumber(filter.Value)
 		if err != nil {
 			return false, num, err
 		}
 		return num >= value, num, nil
-	case FilterModeLT:
+	case ModeLT:
 		value, err := parseNumber(filter.Value)
 		if err != nil {
 			return false, num, err
 		}
 		return num < value, num, nil
-	case FilterModeLTE:
+	case ModeLTE:
 		value, err := parseNumber(filter.Value)
 		if err != nil {
 			return false, num, err
 		}
 		return num <= value, num, nil
-	case FilterModeRange:
+	case ModeRange:
 		value, err := parseRangeNumber(filter.Value)
 		if err != nil {
 			return false, num, err
 		}
 		return num >= value.From && num <= value.To, num, nil
-	case FilterModeBefore:
+	case ModeBefore:
 		return false, num, fmt.Errorf("before filter not supported for number field %s", filter.Field)
-	case FilterModeAfter:
+	case ModeAfter:
 		return false, num, fmt.Errorf("after filter not supported for number field %s", filter.Field)
 	default:
 		return false, num, fmt.Errorf("unsupported filter mode: %s", filter.Mode)
 	}
 }
 
-// applyFilterText applies a text filter and returns whether the value matches the filter
-func (f *FilterHandler[T]) applyFilterText(value any, filter Filter) (bool, string, error) {
+// applyText applies a text filter and returns whether the value matches the filter
+func (f *Handler[T]) applyText(value any, filter FieldFilter) (bool, string, error) {
 	data, err := parseText(value)
 	if err != nil {
 		return false, "", err
 	}
 
 	switch filter.Mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return data == substr, data, nil
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return data != substr, data, nil
-	case FilterModeContains:
+	case ModeContains:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return strings.Contains(data, substr), data, nil
-	case FilterModeNotContains:
+	case ModeNotContains:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return !strings.Contains(data, substr), data, nil
-	case FilterModeStartsWith:
+	case ModeStartsWith:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return strings.HasPrefix(data, substr), data, nil
-	case FilterModeEndsWith:
+	case ModeEndsWith:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return strings.HasSuffix(data, substr), data, nil
-	case FilterModeIsEmpty:
+	case ModeIsEmpty:
 		return data == "", data, nil
-	case FilterModeIsNotEmpty:
+	case ModeIsNotEmpty:
 		return data != "", data, nil
-	case FilterModeGT:
+	case ModeGT:
 		return false, data, fmt.Errorf("greater than filter not supported for text field %s", filter.Field)
-	case FilterModeGTE:
+	case ModeGTE:
 		return false, data, fmt.Errorf("greater than or equal filter not supported for text field %s", filter.Field)
-	case FilterModeLT:
+	case ModeLT:
 		return false, data, fmt.Errorf("less than filter not supported for text field %s", filter.Field)
-	case FilterModeLTE:
+	case ModeLTE:
 		return false, data, fmt.Errorf("less than or equal filter not supported for text field %s", filter.Field)
-	case FilterModeRange:
+	case ModeRange:
 		return false, data, fmt.Errorf("range filter not supported for text field %s", filter.Field)
-	case FilterModeBefore:
+	case ModeBefore:
 		return false, data, fmt.Errorf("before filter not supported for text field %s", filter.Field)
-	case FilterModeAfter:
+	case ModeAfter:
 		return false, data, fmt.Errorf("after filter not supported for text field %s", filter.Field)
 	default:
 		return false, data, fmt.Errorf("unsupported filter mode: %s", filter.Mode)
 	}
 }
 
-// applyFilterBool applies a boolean filter and returns whether the value matches the filter
-func (f *FilterHandler[T]) applyFilterBool(value any, filter Filter) (bool, bool, error) {
+// applyBool applies a boolean filter and returns whether the value matches the filter
+func (f *Handler[T]) applyBool(value any, filter FieldFilter) (bool, bool, error) {
 	data, err := parseBool(value)
 	if err != nil {
 		return false, data, err
@@ -336,43 +336,43 @@ func (f *FilterHandler[T]) applyFilterBool(value any, filter Filter) (bool, bool
 	}
 
 	switch filter.Mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		return data == val, data, nil
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		return data != val, data, nil
-	case FilterModeContains:
+	case ModeContains:
 		return false, data, fmt.Errorf("contains filter not supported for boolean field %s", filter.Field)
-	case FilterModeNotContains:
+	case ModeNotContains:
 		return false, data, fmt.Errorf("not contains filter not supported for boolean field %s", filter.Field)
-	case FilterModeStartsWith:
+	case ModeStartsWith:
 		return false, data, fmt.Errorf("starts with filter not supported for boolean field %s", filter.Field)
-	case FilterModeEndsWith:
+	case ModeEndsWith:
 		return false, data, fmt.Errorf("ends with filter not supported for boolean field %s", filter.Field)
-	case FilterModeIsEmpty:
+	case ModeIsEmpty:
 		return false, data, fmt.Errorf("is empty filter not supported for boolean field %s", filter.Field)
-	case FilterModeIsNotEmpty:
+	case ModeIsNotEmpty:
 		return false, data, fmt.Errorf("is not empty filter not supported for boolean field %s", filter.Field)
-	case FilterModeGT:
+	case ModeGT:
 		return false, data, fmt.Errorf("greater than filter not supported for boolean field %s", filter.Field)
-	case FilterModeGTE:
+	case ModeGTE:
 		return false, data, fmt.Errorf("greater than or equal filter not supported for boolean field %s", filter.Field)
-	case FilterModeLT:
+	case ModeLT:
 		return false, data, fmt.Errorf("less than filter not supported for boolean field %s", filter.Field)
-	case FilterModeLTE:
+	case ModeLTE:
 		return false, data, fmt.Errorf("less than or equal filter not supported for boolean field %s", filter.Field)
-	case FilterModeRange:
+	case ModeRange:
 		return false, data, fmt.Errorf("range filter not supported for boolean field %s", filter.Field)
-	case FilterModeBefore:
+	case ModeBefore:
 		return false, data, fmt.Errorf("before filter not supported for boolean field %s", filter.Field)
-	case FilterModeAfter:
+	case ModeAfter:
 		return false, data, fmt.Errorf("after filter not supported for boolean field %s", filter.Field)
 	default:
 		return false, data, fmt.Errorf("unsupported filter mode: %s", filter.Mode)
 	}
 }
 
-// applyFilterDate applies a date filter and returns whether the value matches the filter
-func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time.Time, error) {
+// applyDate applies a date filter and returns whether the value matches the filter
+func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, error) {
 	data, err := parseDateTime(value)
 	if err != nil {
 		return false, time.Time{}, err
@@ -380,7 +380,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 	hasTime := hasTimeComponent(data)
 
 	switch filter.Mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -392,7 +392,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			endOfDay := time.Date(data.Year(), data.Month(), data.Day(), 23, 59, 59, 999999999, data.Location())
 			return !filterVal.Before(startOfDay) && !filterVal.After(endOfDay), data, nil
 		}
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -404,21 +404,21 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			endOfDay := time.Date(data.Year(), data.Month(), data.Day(), 23, 59, 59, 999999999, data.Location())
 			return filterVal.Before(startOfDay) || filterVal.After(endOfDay), data, nil
 		}
-	case FilterModeContains:
+	case ModeContains:
 		return false, data, fmt.Errorf("contains filter not supported for date field %s", filter.Field)
-	case FilterModeNotContains:
+	case ModeNotContains:
 		return false, data, fmt.Errorf("not contains filter not supported for date field %s", filter.Field)
-	case FilterModeStartsWith:
+	case ModeStartsWith:
 		return false, data, fmt.Errorf("starts with filter not supported for date field %s", filter.Field)
-	case FilterModeEndsWith:
+	case ModeEndsWith:
 		return false, data, fmt.Errorf("ends with filter not supported for date field %s", filter.Field)
-	case FilterModeIsEmpty:
+	case ModeIsEmpty:
 		return false, data, fmt.Errorf("is empty filter not supported for date field %s", filter.Field)
-	case FilterModeIsNotEmpty:
+	case ModeIsNotEmpty:
 		return false, data, fmt.Errorf("is not empty filter not supported for date field %s", filter.Field)
-	case FilterModeGT:
+	case ModeGT:
 		return false, data, fmt.Errorf("greater than filter not supported for date field %s", filter.Field)
-	case FilterModeGTE:
+	case ModeGTE:
 		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -429,7 +429,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
 			return data.Equal(startOfDay) || data.After(startOfDay), data, nil
 		}
-	case FilterModeLT:
+	case ModeLT:
 		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -440,7 +440,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
 			return data.Before(startOfDay), data, nil
 		}
-	case FilterModeLTE:
+	case ModeLTE:
 		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -451,7 +451,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			endOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 23, 59, 59, 999999999, filterVal.Location())
 			return data.Equal(endOfDay) || data.Before(endOfDay), data, nil
 		}
-	case FilterModeRange:
+	case ModeRange:
 		rangeVal, err := parseRangeDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -463,7 +463,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
 			return !data.Before(startOfDay) && !data.After(endOfDay), data, nil
 		}
-	case FilterModeBefore:
+	case ModeBefore:
 		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -474,7 +474,7 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 			startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
 			return data.Before(startOfDay), data, nil
 		}
-	case FilterModeAfter:
+	case ModeAfter:
 		filterVal, err := parseDateTime(filter.Value)
 		if err != nil {
 			return false, data, err
@@ -491,64 +491,64 @@ func (f *FilterHandler[T]) applyFilterDate(value any, filter Filter) (bool, time
 	}
 }
 
-// applyFilterTime applies a time filter and returns whether the value matches the filter
-func (f *FilterHandler[T]) applyFilterTime(value any, filter Filter) (bool, time.Time, error) {
+// applyTime applies a time filter and returns whether the value matches the filter
+func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, error) {
 	data, err := parseTime(value)
 	if err != nil {
 		return false, time.Time{}, err
 	}
 	switch filter.Mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		filterVal, err := parseTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return data.Equal(filterVal), data, nil
 
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		filterVal, err := parseTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return !data.Equal(filterVal), data, nil
 
-	case FilterModeGTE, FilterModeAfter:
+	case ModeGTE, ModeAfter:
 		filterVal, err := parseTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return !data.Before(filterVal), data, nil
 
-	case FilterModeLTE:
+	case ModeLTE:
 		filterVal, err := parseTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return !data.After(filterVal), data, nil
 
-	case FilterModeLT, FilterModeBefore:
+	case ModeLT, ModeBefore:
 		filterVal, err := parseTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return data.Before(filterVal), data, nil
 
-	case FilterModeGT:
+	case ModeGT:
 		filterVal, err := parseTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return data.After(filterVal), data, nil
 
-	case FilterModeRange:
+	case ModeRange:
 		rangeVal, err := parseRangeTime(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
 		return !data.Before(rangeVal.From) && !data.After(rangeVal.To), data, nil
 
-	case FilterModeContains, FilterModeNotContains, FilterModeStartsWith, FilterModeEndsWith,
-		FilterModeIsEmpty, FilterModeIsNotEmpty:
+	case ModeContains, ModeNotContains, ModeStartsWith, ModeEndsWith,
+		ModeIsEmpty, ModeIsNotEmpty:
 		return false, data, fmt.Errorf("filter mode %s not supported for time field %s", filter.Mode, filter.Field)
 
 	default:

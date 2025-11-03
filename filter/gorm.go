@@ -8,11 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// FilterDataGorm performs database-level filtering using GORM queries.
+// DataGorm performs database-level filtering using GORM queries.
 // It generates SQL WHERE clauses based on the filter configuration and returns paginated results.
-func (f *FilterHandler[T]) FilterDataGorm(
+func (f *Handler[T]) DataGorm(
 	db *gorm.DB,
-	filterRoot FilterRoot,
+	filterRoot Root,
 	pageIndex int,
 	pageSize int,
 ) (*PaginationResult[T], error) {
@@ -33,8 +33,8 @@ func (f *FilterHandler[T]) FilterDataGorm(
 	query := db.Model(new(T))
 
 	// Apply filters
-	if len(filterRoot.Filters) > 0 {
-		query = f.applyFiltersGorm(query, filterRoot)
+	if len(filterRoot.FieldFilters) > 0 {
+		query = f.applysGorm(query, filterRoot)
 	}
 
 	// Get total count before pagination
@@ -49,7 +49,7 @@ func (f *FilterHandler[T]) FilterDataGorm(
 	if len(filterRoot.SortFields) > 0 {
 		for _, sortField := range filterRoot.SortFields {
 			order := "ASC"
-			if sortField.Order == FilterSortOrderDesc {
+			if sortField.Order == SortOrderDesc {
 				order = "DESC"
 			}
 			query = query.Order(fmt.Sprintf("%s %s", sortField.Field, order))
@@ -70,21 +70,21 @@ func (f *FilterHandler[T]) FilterDataGorm(
 	return &result, nil
 }
 
-func (f *FilterHandler[T]) applyFiltersGorm(db *gorm.DB, filterRoot FilterRoot) *gorm.DB {
-	if len(filterRoot.Filters) == 0 {
+func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
+	if len(filterRoot.FieldFilters) == 0 {
 		return db
 	}
 
-	if filterRoot.Logic == FilterLogicAnd {
-		for _, filter := range filterRoot.Filters {
-			db = f.applyFilterGorm(db, filter)
+	if filterRoot.Logic == LogicAnd {
+		for _, filter := range filterRoot.FieldFilters {
+			db = f.applyGorm(db, filter)
 		}
 	} else {
 		var orConditions []string
 		var orValues []any
 
-		for _, filter := range filterRoot.Filters {
-			condition, values := f.buildFilterCondition(filter)
+		for _, filter := range filterRoot.FieldFilters {
+			condition, values := f.buildCondition(filter)
 			if condition != "" {
 				orConditions = append(orConditions, condition)
 				orValues = append(orValues, values...)
@@ -97,30 +97,30 @@ func (f *FilterHandler[T]) applyFiltersGorm(db *gorm.DB, filterRoot FilterRoot) 
 	return db
 }
 
-// applyFilterGorm applies a single filter to the GORM query
-func (f *FilterHandler[T]) applyFilterGorm(db *gorm.DB, filter Filter) *gorm.DB {
-	condition, values := f.buildFilterCondition(filter)
+// applyGorm applies a single filter to the GORM query
+func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB {
+	condition, values := f.buildCondition(filter)
 	if condition != "" {
 		db = db.Where(condition, values...)
 	}
 	return db
 }
 
-// buildFilterCondition builds SQL condition and values for a filter
-func (f *FilterHandler[T]) buildFilterCondition(filter Filter) (string, []any) {
+// buildCondition builds SQL condition and values for a filter
+func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) {
 	field := filter.Field
 	value := filter.Value
 
-	switch filter.FilterDataType {
-	case FilterDataTypeNumber:
+	switch filter.DataType {
+	case DataTypeNumber:
 		return f.buildNumberCondition(field, filter.Mode, value)
-	case FilterDataTypeText:
+	case DataTypeText:
 		return f.buildTextCondition(field, filter.Mode, value)
-	case FilterDataTypeBool:
+	case DataTypeBool:
 		return f.buildBoolCondition(field, filter.Mode, value)
-	case FilterDataTypeDate:
+	case DataTypeDate:
 		return f.buildDateCondition(field, filter.Mode, value)
-	case FilterDataTypeTime:
+	case DataTypeTime:
 		return f.buildTimeCondition(field, filter.Mode, value)
 	default:
 		return "", nil
@@ -128,45 +128,45 @@ func (f *FilterHandler[T]) buildFilterCondition(filter Filter) (string, []any) {
 }
 
 // buildNumberCondition builds SQL condition for number filters
-func (f *FilterHandler[T]) buildNumberCondition(field string, mode FilterMode, value any) (string, []any) {
+func (f *Handler[T]) buildNumberCondition(field string, mode Mode, value any) (string, []any) {
 	switch mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		num, err := parseNumber(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s = ?", field), []any{num}
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		num, err := parseNumber(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s != ?", field), []any{num}
-	case FilterModeGT:
+	case ModeGT:
 		num, err := parseNumber(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s > ?", field), []any{num}
-	case FilterModeGTE:
+	case ModeGTE:
 		num, err := parseNumber(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s >= ?", field), []any{num}
-	case FilterModeLT:
+	case ModeLT:
 		num, err := parseNumber(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s < ?", field), []any{num}
-	case FilterModeLTE:
+	case ModeLTE:
 		num, err := parseNumber(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s <= ?", field), []any{num}
-	case FilterModeRange:
+	case ModeRange:
 		rangeVal, err := parseRangeNumber(value)
 		if err != nil {
 			return "", nil
@@ -177,52 +177,52 @@ func (f *FilterHandler[T]) buildNumberCondition(field string, mode FilterMode, v
 }
 
 // buildTextCondition builds SQL condition for text filters
-func (f *FilterHandler[T]) buildTextCondition(field string, mode FilterMode, value any) (string, []any) {
+func (f *Handler[T]) buildTextCondition(field string, mode Mode, value any) (string, []any) {
 	str, err := parseText(value)
 	if err != nil {
 		return "", nil
 	}
 
 	switch mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		return fmt.Sprintf("LOWER(%s) = LOWER(?)", field), []any{str}
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		return fmt.Sprintf("LOWER(%s) != LOWER(?)", field), []any{str}
-	case FilterModeContains:
+	case ModeContains:
 		return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []any{"%" + str + "%"}
-	case FilterModeNotContains:
+	case ModeNotContains:
 		return fmt.Sprintf("LOWER(%s) NOT LIKE LOWER(?)", field), []any{"%" + str + "%"}
-	case FilterModeStartsWith:
+	case ModeStartsWith:
 		return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []any{str + "%"}
-	case FilterModeEndsWith:
+	case ModeEndsWith:
 		return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []any{"%" + str}
-	case FilterModeIsEmpty:
+	case ModeIsEmpty:
 		return fmt.Sprintf("(%s IS NULL OR %s = '')", field, field), []any{}
-	case FilterModeIsNotEmpty:
+	case ModeIsNotEmpty:
 		return fmt.Sprintf("(%s IS NOT NULL AND %s != '')", field, field), []any{}
 	}
 	return "", nil
 }
 
 // buildBoolCondition builds SQL condition for boolean filters
-func (f *FilterHandler[T]) buildBoolCondition(field string, mode FilterMode, value any) (string, []any) {
+func (f *Handler[T]) buildBoolCondition(field string, mode Mode, value any) (string, []any) {
 	boolVal, err := parseBool(value)
 	if err != nil {
 		return "", nil
 	}
 	switch mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		return fmt.Sprintf("%s = ?", field), []any{boolVal}
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		return fmt.Sprintf("%s != ?", field), []any{boolVal}
 	}
 	return "", nil
 }
 
 // buildDateCondition builds SQL condition for date/datetime filters
-func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, value any) (string, []any) {
+func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (string, []any) {
 	switch mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		t, err := parseDateTime(value)
 		if err != nil {
 			return "", nil
@@ -234,7 +234,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 		endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 		return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		t, err := parseDateTime(value)
 		if err != nil {
 			return "", nil
@@ -246,7 +246,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 		endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 		return fmt.Sprintf("(%s < ? OR %s > ?)", field, field), []any{startOfDay, endOfDay}
-	case FilterModeGTE:
+	case ModeGTE:
 		t, err := parseDateTime(value)
 		if err != nil {
 			return "", nil
@@ -258,7 +258,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 			return fmt.Sprintf("%s >= ?", field), []any{startOfDay}
 		}
-	case FilterModeLT:
+	case ModeLT:
 		t, err := parseDateTime(value)
 		if err != nil {
 			return "", nil
@@ -270,7 +270,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 			return fmt.Sprintf("%s < ?", field), []any{startOfDay}
 		}
-	case FilterModeLTE:
+	case ModeLTE:
 		t, err := parseDateTime(value)
 		if err != nil {
 			return "", nil
@@ -282,7 +282,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 			return fmt.Sprintf("%s <= ?", field), []any{endOfDay}
 		}
-	case FilterModeBefore:
+	case ModeBefore:
 		t, err := parseDateTime(value)
 		if err != nil {
 			return "", nil
@@ -294,7 +294,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 			return fmt.Sprintf("%s < ?", field), []any{startOfDay}
 		}
-	case FilterModeAfter:
+	case ModeAfter:
 		t, err := parseDateTime(value)
 		if err != nil {
 			return "", nil
@@ -306,7 +306,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 			return fmt.Sprintf("%s > ?", field), []any{endOfDay}
 		}
-	case FilterModeRange:
+	case ModeRange:
 		rangeVal, err := parseRangeDateTime(value)
 		if err != nil {
 			return "", nil
@@ -326,45 +326,45 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 }
 
 // buildTimeCondition builds SQL condition for time filters
-func (f *FilterHandler[T]) buildTimeCondition(field string, mode FilterMode, value any) (string, []any) {
+func (f *Handler[T]) buildTimeCondition(field string, mode Mode, value any) (string, []any) {
 	switch mode {
-	case FilterModeEqual:
+	case ModeEqual:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s = ?", field), []any{t}
-	case FilterModeNotEqual:
+	case ModeNotEqual:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s != ?", field), []any{t}
-	case FilterModeGT:
+	case ModeGT:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s > ?", field), []any{t}
-	case FilterModeGTE, FilterModeAfter:
+	case ModeGTE, ModeAfter:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s >= ?", field), []any{t}
-	case FilterModeLT, FilterModeBefore:
+	case ModeLT, ModeBefore:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s < ?", field), []any{t}
-	case FilterModeLTE:
+	case ModeLTE:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s <= ?", field), []any{t}
-	case FilterModeRange:
+	case ModeRange:
 		rangeVal, err := parseRangeTime(value)
 		if err != nil {
 			return "", nil

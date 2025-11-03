@@ -21,9 +21,9 @@ type Product struct {
 	Description string    `json:"description"`
 }
 
-// GormFilterSample demonstrates database filtering using FilterDataGorm
-func GormFilterSample(db *gorm.DB) {
-	fmt.Println("=== GORM Database Filter Example ===")
+// GormSample demonstrates database filtering using DataGorm
+func GormSample(db *gorm.DB) {
+	fmt.Println("=== GORM Database  Example ===")
 
 	// Create filter handler
 	filterHandler := filter.NewFilter[Product]()
@@ -49,20 +49,20 @@ func GormFilterSample(db *gorm.DB) {
 	gormExample5(filterHandler, db)
 }
 
-func gormExample1(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func gormExample1(filterHandler *filter.Handler[Product], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "name",
-				Value:          "Pro",
-				Mode:           filter.FilterModeContains,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "name",
+				Value:    "Pro",
+				Mode:     filter.ModeContains,
+				DataType: filter.DataTypeText,
 			},
 		},
 	}
 
-	result, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+	result, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -71,23 +71,23 @@ func gormExample1(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
 	printGormResults(result)
 }
 
-func gormExample2(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func gormExample2(filterHandler *filter.Handler[Product], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "price",
-				Value:          filter.Range{From: 500, To: 1500},
-				Mode:           filter.FilterModeRange,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "price",
+				Value:    filter.Range{From: 500, To: 1500},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "price", Order: filter.FilterSortOrderAsc},
+			{Field: "price", Order: filter.SortOrderAsc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+	result, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -96,29 +96,29 @@ func gormExample2(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
 	printGormResults(result)
 }
 
-func gormExample3(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func gormExample3(filterHandler *filter.Handler[Product], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "in_stock",
-				Value:          true,
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeBool,
+				Field:    "in_stock",
+				Value:    true,
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeBool,
 			},
 			{
-				Field:          "rating",
-				Value:          4.0,
-				Mode:           filter.FilterModeGTE,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "rating",
+				Value:    4.0,
+				Mode:     filter.ModeGTE,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "rating", Order: filter.FilterSortOrderDesc},
+			{Field: "rating", Order: filter.SortOrderDesc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+	result, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -127,30 +127,30 @@ func gormExample3(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
 	printGormResults(result)
 }
 
-func gormExample4(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicOr,
-		Filters: []filter.Filter{
+func gormExample4(filterHandler *filter.Handler[Product], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicOr,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "category",
-				Value:          "Electronics",
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "category",
+				Value:    "Electronics",
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeText,
 			},
 			{
-				Field:          "category",
-				Value:          "Computers",
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "category",
+				Value:    "Computers",
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeText,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "category", Order: filter.FilterSortOrderAsc},
-			{Field: "name", Order: filter.FilterSortOrderAsc},
+			{Field: "category", Order: filter.SortOrderAsc},
+			{Field: "name", Order: filter.SortOrderAsc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+	result, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -159,25 +159,25 @@ func gormExample4(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
 	printGormResults(result)
 }
 
-func gormExample5(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
+func gormExample5(filterHandler *filter.Handler[Product], db *gorm.DB) {
 	sixMonthsAgo := time.Now().AddDate(0, -6, 0)
 
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "launched_at",
-				Value:          sixMonthsAgo,
-				Mode:           filter.FilterModeAfter,
-				FilterDataType: filter.FilterDataTypeDate,
+				Field:    "launched_at",
+				Value:    sixMonthsAgo,
+				Mode:     filter.ModeAfter,
+				DataType: filter.DataTypeDate,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "launched_at", Order: filter.FilterSortOrderDesc},
+			{Field: "launched_at", Order: filter.SortOrderDesc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+	result, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return

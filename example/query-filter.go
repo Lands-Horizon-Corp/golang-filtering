@@ -18,9 +18,9 @@ type User1 struct {
 	Role      string    `json:"role"`
 }
 
-// QueryFilterSample demonstrates in-memory filtering using FilterDataQuery
-func QueryFilterSample() {
-	fmt.Println("=== In-Memory Query Filter Example ===")
+// QuerySample demonstrates in-memory filtering using DataQuery
+func QuerySample() {
+	fmt.Println("=== In-Memory Query  Example ===")
 
 	// Sample data
 	users := []*User1{
@@ -68,20 +68,20 @@ func QueryFilterSample() {
 	queryExample7(filterHandler, users)
 }
 
-func queryExample1(filterHandler *filter.FilterHandler[User1], users []*User1) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func queryExample1(filterHandler *filter.Handler[User1], users []*User1) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "name",
-				Value:          "John",
-				Mode:           filter.FilterModeContains,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "name",
+				Value:    "John",
+				Mode:     filter.ModeContains,
+				DataType: filter.DataTypeText,
 			},
 		},
 	}
 
-	result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
+	result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -90,23 +90,23 @@ func queryExample1(filterHandler *filter.FilterHandler[User1], users []*User1) {
 	printQueryResults(result)
 }
 
-func queryExample2(filterHandler *filter.FilterHandler[User1], users []*User1) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func queryExample2(filterHandler *filter.Handler[User1], users []*User1) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "age",
-				Value:          filter.Range{From: 25, To: 35},
-				Mode:           filter.FilterModeRange,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "age",
+				Value:    filter.Range{From: 25, To: 35},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "age", Order: filter.FilterSortOrderAsc},
+			{Field: "age", Order: filter.SortOrderAsc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
+	result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -115,35 +115,35 @@ func queryExample2(filterHandler *filter.FilterHandler[User1], users []*User1) {
 	printQueryResults(result)
 }
 
-func queryExample3(filterHandler *filter.FilterHandler[User1], users []*User1) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func queryExample3(filterHandler *filter.Handler[User1], users []*User1) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "name",
-				Value:          "John",
-				Mode:           filter.FilterModeContains,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "name",
+				Value:    "John",
+				Mode:     filter.ModeContains,
+				DataType: filter.DataTypeText,
 			},
 			{
-				Field:          "age",
-				Value:          18,
-				Mode:           filter.FilterModeGTE,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "age",
+				Value:    18,
+				Mode:     filter.ModeGTE,
+				DataType: filter.DataTypeNumber,
 			},
 			{
-				Field:          "is_active",
-				Value:          true,
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeBool,
+				Field:    "is_active",
+				Value:    true,
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeBool,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "age", Order: filter.FilterSortOrderDesc},
+			{Field: "age", Order: filter.SortOrderDesc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
+	result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -152,30 +152,30 @@ func queryExample3(filterHandler *filter.FilterHandler[User1], users []*User1) {
 	printQueryResults(result)
 }
 
-func queryExample4(filterHandler *filter.FilterHandler[User1], users []*User1) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicOr, // OR logic
-		Filters: []filter.Filter{
+func queryExample4(filterHandler *filter.Handler[User1], users []*User1) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicOr, // OR logic
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "role",
-				Value:          "admin",
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "role",
+				Value:    "admin",
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeText,
 			},
 			{
-				Field:          "role",
-				Value:          "moderator",
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "role",
+				Value:    "moderator",
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeText,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "role", Order: filter.FilterSortOrderAsc},
-			{Field: "name", Order: filter.FilterSortOrderAsc},
+			{Field: "role", Order: filter.SortOrderAsc},
+			{Field: "name", Order: filter.SortOrderAsc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
+	result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -184,25 +184,25 @@ func queryExample4(filterHandler *filter.FilterHandler[User1], users []*User1) {
 	printQueryResults(result)
 }
 
-func queryExample5(filterHandler *filter.FilterHandler[User1], users []*User1) {
+func queryExample5(filterHandler *filter.Handler[User1], users []*User1) {
 	threeMonthsAgo := time.Now().AddDate(0, -3, 0)
 
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "created_at",
-				Value:          threeMonthsAgo,
-				Mode:           filter.FilterModeAfter,
-				FilterDataType: filter.FilterDataTypeDate,
+				Field:    "created_at",
+				Value:    threeMonthsAgo,
+				Mode:     filter.ModeAfter,
+				DataType: filter.DataTypeDate,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "created_at", Order: filter.FilterSortOrderDesc},
+			{Field: "created_at", Order: filter.SortOrderDesc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
+	result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -211,31 +211,31 @@ func queryExample5(filterHandler *filter.FilterHandler[User1], users []*User1) {
 	printQueryResults(result)
 }
 
-func queryExample6(filterHandler *filter.FilterHandler[User1], users []*User1) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func queryExample6(filterHandler *filter.Handler[User1], users []*User1) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "is_active",
-				Value:          true,
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeBool,
+				Field:    "is_active",
+				Value:    true,
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeBool,
 			},
 			{
-				Field:          "age",
-				Value:          25,
-				Mode:           filter.FilterModeGTE,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "age",
+				Value:    25,
+				Mode:     filter.ModeGTE,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "age", Order: filter.FilterSortOrderDesc},
-			{Field: "name", Order: filter.FilterSortOrderAsc},
+			{Field: "age", Order: filter.SortOrderDesc},
+			{Field: "name", Order: filter.SortOrderAsc},
 		},
 	}
 
 	// Request page 1 with page size of 3
-	result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 3)
+	result, err := filterHandler.DataQuery(users, filterRoot, 1, 3)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -244,24 +244,24 @@ func queryExample6(filterHandler *filter.FilterHandler[User1], users []*User1) {
 	printQueryResults(result)
 }
 
-func queryExample7(filterHandler *filter.FilterHandler[User1], users []*User1) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func queryExample7(filterHandler *filter.Handler[User1], users []*User1) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "role",
-				Value:          "",
-				Mode:           filter.FilterModeIsNotEmpty,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "role",
+				Value:    "",
+				Mode:     filter.ModeIsNotEmpty,
+				DataType: filter.DataTypeText,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "role", Order: filter.FilterSortOrderAsc},
-			{Field: "name", Order: filter.FilterSortOrderAsc},
+			{Field: "role", Order: filter.SortOrderAsc},
+			{Field: "name", Order: filter.SortOrderAsc},
 		},
 	}
 
-	result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
+	result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return

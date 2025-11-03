@@ -7,13 +7,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// FilterHybrid intelligently chooses between in-memory (FilterDataQuery) and database (FilterDataGorm)
+// Hybrid intelligently chooses between in-memory (DataQuery) and database (DataGorm)
 // filtering based on estimated table size. If estimated rows <= threshold, it fetches all data and
 // uses in-memory filtering for better performance. Otherwise, it uses database filtering.
-func (f *FilterHandler[T]) FilterHybrid(
+func (f *Handler[T]) Hybrid(
 	db *gorm.DB,
 	threshold int64,
-	filterRoot FilterRoot,
+	filterRoot Root,
 	pageIndex int,
 	pageSize int,
 ) (*PaginationResult[T], error) {
@@ -28,7 +28,7 @@ func (f *FilterHandler[T]) FilterHybrid(
 	estimatedRows, err := f.estimateTableRows(db, tableName)
 	if err != nil {
 		// If estimation fails, fall back to database filtering
-		return f.FilterDataGorm(db, filterRoot, pageIndex, pageSize)
+		return f.DataGorm(db, filterRoot, pageIndex, pageSize)
 	}
 
 	// Decide which strategy to use
@@ -38,16 +38,16 @@ func (f *FilterHandler[T]) FilterHybrid(
 		if err := db.Find(&allData).Error; err != nil {
 			return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
 		}
-		return f.FilterDataQuery(allData, filterRoot, pageIndex, pageSize)
+		return f.DataQuery(allData, filterRoot, pageIndex, pageSize)
 	}
 
 	// Use database filtering for large datasets
-	return f.FilterDataGorm(db, filterRoot, pageIndex, pageSize)
+	return f.DataGorm(db, filterRoot, pageIndex, pageSize)
 }
 
 // estimateTableRows returns an estimated row count for a table.
 // It uses database-specific methods for fast estimation without scanning the entire table.
-func (f *FilterHandler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, error) {
+func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, error) {
 	// Get the database driver name
 	dialectName := db.Name()
 

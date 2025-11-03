@@ -1,4 +1,4 @@
-// Package main demonstrates FilterHybrid functionality with SQLite
+// Package main demonstrates Hybrid functionality with SQLite
 package main
 
 import (
@@ -21,7 +21,7 @@ type User struct {
 }
 
 func main() {
-	fmt.Println("=== FilterHybrid SQLite Test ===")
+	fmt.Println("=== Hybrid SQLite Test ===")
 
 	// Initialize database
 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
@@ -50,45 +50,45 @@ func main() {
 	filterHandler := filter.NewFilter[User]()
 
 	// Define filters
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "name",
-				Value:          "John",
-				Mode:           filter.FilterModeContains,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "name",
+				Value:    "John",
+				Mode:     filter.ModeContains,
+				DataType: filter.DataTypeText,
 			},
 			{
-				Field:          "age",
-				Value:          18,
-				Mode:           filter.FilterModeGTE,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "age",
+				Value:    18,
+				Mode:     filter.ModeGTE,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "age", Order: filter.FilterSortOrderDesc},
-			{Field: "name", Order: filter.FilterSortOrderAsc},
+			{Field: "age", Order: filter.SortOrderDesc},
+			{Field: "name", Order: filter.SortOrderAsc},
 		},
 	}
 
 	fmt.Println("--- Test 1: Low Threshold (50) - Should use DATABASE filtering ---")
-	testHybridFilter(filterHandler, db, filterRoot, 50, "Low threshold forces DB filtering")
+	testHybrid(filterHandler, db, filterRoot, 50, "Low threshold forces DB filtering")
 
 	fmt.Println("\n--- Test 2: Medium Threshold (100) - Should use IN-MEMORY filtering ---")
-	testHybridFilter(filterHandler, db, filterRoot, 100, "Medium threshold uses in-memory")
+	testHybrid(filterHandler, db, filterRoot, 100, "Medium threshold uses in-memory")
 
 	fmt.Println("\n--- Test 3: High Threshold (1000) - Should use IN-MEMORY filtering ---")
-	testHybridFilter(filterHandler, db, filterRoot, 1000, "High threshold uses in-memory")
+	testHybrid(filterHandler, db, filterRoot, 1000, "High threshold uses in-memory")
 
 	fmt.Println("\n--- Test 4: Compare all three methods ---")
-	compareFilteringMethods(filterHandler, db, filterRoot)
+	compareingMethods(filterHandler, db, filterRoot)
 
 	fmt.Println("\n--- Test 5: Active users only (different filter) ---")
-	testActiveUsersFilter(filterHandler, db)
+	testActiveUsers(filterHandler, db)
 }
 
-func testHybridFilter(filterHandler *filter.FilterHandler[User], db *gorm.DB, filterRoot filter.FilterRoot, threshold int64, description string) {
+func testHybrid(filterHandler *filter.Handler[User], db *gorm.DB, filterRoot filter.Root, threshold int64, description string) {
 	fmt.Printf("Description: %s\n", description)
 	fmt.Printf("Threshold: %d rows\n", threshold)
 
@@ -111,7 +111,7 @@ func testHybridFilter(filterHandler *filter.FilterHandler[User], db *gorm.DB, fi
 	fmt.Printf("Estimated rows: %d, Expected strategy: %s\n", estimatedRows, expectedStrategy)
 
 	start := time.Now()
-	result, err := filterHandler.FilterHybrid(db, threshold, filterRoot, 1, 10)
+	result, err := filterHandler.Hybrid(db, threshold, filterRoot, 1, 10)
 	elapsed := time.Since(start)
 
 	if err != nil {
@@ -130,16 +130,16 @@ func testHybridFilter(filterHandler *filter.FilterHandler[User], db *gorm.DB, fi
 	}
 }
 
-func compareFilteringMethods(filterHandler *filter.FilterHandler[User], db *gorm.DB, filterRoot filter.FilterRoot) {
-	fmt.Println("Comparing FilterDataQuery vs FilterDataGorm vs FilterHybrid:")
+func compareingMethods(filterHandler *filter.Handler[User], db *gorm.DB, filterRoot filter.Root) {
+	fmt.Println("Comparing DataQuery vs DataGorm vs Hybrid:")
 	fmt.Println()
 
-	// Test 1: In-Memory (FilterDataQuery)
-	fmt.Println("1. FilterDataQuery (In-Memory):")
+	// Test 1: In-Memory (DataQuery)
+	fmt.Println("1. DataQuery (In-Memory):")
 	var allUsers []*User
 	db.Find(&allUsers)
 	start := time.Now()
-	result1, err := filterHandler.FilterDataQuery(allUsers, filterRoot, 1, 10)
+	result1, err := filterHandler.DataQuery(allUsers, filterRoot, 1, 10)
 	elapsed1 := time.Since(start)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -147,10 +147,10 @@ func compareFilteringMethods(filterHandler *filter.FilterHandler[User], db *gorm
 		fmt.Printf("   Time: %v, Results: %d\n", elapsed1, len(result1.Data))
 	}
 
-	// Test 2: Database (FilterDataGorm)
-	fmt.Println("2. FilterDataGorm (Database):")
+	// Test 2: Database (DataGorm)
+	fmt.Println("2. DataGorm (Database):")
 	start = time.Now()
-	result2, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+	result2, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
 	elapsed2 := time.Since(start)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -159,9 +159,9 @@ func compareFilteringMethods(filterHandler *filter.FilterHandler[User], db *gorm
 	}
 
 	// Test 3: Hybrid with low threshold (forces DB)
-	fmt.Println("3. FilterHybrid (threshold=50, expects DB):")
+	fmt.Println("3. Hybrid (threshold=50, expects DB):")
 	start = time.Now()
-	result3, err := filterHandler.FilterHybrid(db, 50, filterRoot, 1, 10)
+	result3, err := filterHandler.Hybrid(db, 50, filterRoot, 1, 10)
 	elapsed3 := time.Since(start)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -170,9 +170,9 @@ func compareFilteringMethods(filterHandler *filter.FilterHandler[User], db *gorm
 	}
 
 	// Test 4: Hybrid with high threshold (forces in-memory)
-	fmt.Println("4. FilterHybrid (threshold=200, expects In-Memory):")
+	fmt.Println("4. Hybrid (threshold=200, expects In-Memory):")
 	start = time.Now()
-	result4, err := filterHandler.FilterHybrid(db, 200, filterRoot, 1, 10)
+	result4, err := filterHandler.Hybrid(db, 200, filterRoot, 1, 10)
 	elapsed4 := time.Since(start)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -192,29 +192,29 @@ func compareFilteringMethods(filterHandler *filter.FilterHandler[User], db *gorm
 	}
 }
 
-func testActiveUsersFilter(filterHandler *filter.FilterHandler[User], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func testActiveUsers(filterHandler *filter.Handler[User], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "is_active",
-				Value:          true,
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeBool,
+				Field:    "is_active",
+				Value:    true,
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeBool,
 			},
 			{
-				Field:          "age",
-				Value:          25,
-				Mode:           filter.FilterModeGTE,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "age",
+				Value:    25,
+				Mode:     filter.ModeGTE,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "age", Order: filter.FilterSortOrderAsc},
+			{Field: "age", Order: filter.SortOrderAsc},
 		},
 	}
 
-	result, err := filterHandler.FilterHybrid(db, 10, filterRoot, 1, 10)
+	result, err := filterHandler.Hybrid(db, 10, filterRoot, 1, 10)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
 		return

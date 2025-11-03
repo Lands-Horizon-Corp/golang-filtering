@@ -20,9 +20,9 @@ type Order struct {
 	ShipDate    time.Time `json:"ship_date"`
 }
 
-// HybridFilterSample demonstrates automatic strategy selection using FilterHybrid
-func HybridFilterSample(db *gorm.DB) {
-	fmt.Println("=== Hybrid Filter Example ===")
+// HybridSample demonstrates automatic strategy selection using Hybrid
+func HybridSample(db *gorm.DB) {
+	fmt.Println("=== Hybrid  Example ===")
 	fmt.Println("Automatically switches between in-memory and database filtering based on data size")
 	fmt.Println()
 
@@ -50,32 +50,32 @@ func HybridFilterSample(db *gorm.DB) {
 	hybridExample4(filterHandler, db)
 }
 
-func hybridExample1(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func hybridExample1(filterHandler *filter.Handler[Order], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "is_paid",
-				Value:          true,
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeBool,
+				Field:    "is_paid",
+				Value:    true,
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeBool,
 			},
 			{
-				Field:          "total_amount",
-				Value:          100.0,
-				Mode:           filter.FilterModeGTE,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "total_amount",
+				Value:    100.0,
+				Mode:     filter.ModeGTE,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "total_amount", Order: filter.FilterSortOrderDesc},
+			{Field: "total_amount", Order: filter.SortOrderDesc},
 		},
 	}
 
 	// Threshold: 10,000 rows
-	// If orders table has <= 10k rows: uses FilterDataQuery (in-memory, parallel processing)
-	// If orders table has > 10k rows: uses FilterDataGorm (database query)
-	result, err := filterHandler.FilterHybrid(db, 10000, filterRoot, 1, 10)
+	// If orders table has <= 10k rows: uses DataQuery (in-memory, parallel processing)
+	// If orders table has > 10k rows: uses DataGorm (database query)
+	result, err := filterHandler.Hybrid(db, 10000, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -84,25 +84,25 @@ func hybridExample1(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
 	printHybridResults(result, "Paid orders >= $100")
 }
 
-func hybridExample2(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func hybridExample2(filterHandler *filter.Handler[Order], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "status",
-				Value:          "pending",
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeText,
+				Field:    "status",
+				Value:    "pending",
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeText,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "order_date", Order: filter.FilterSortOrderDesc},
+			{Field: "order_date", Order: filter.SortOrderDesc},
 		},
 	}
 
 	// Low threshold: 100 rows
 	// Forces database filtering for most real-world scenarios
-	result, err := filterHandler.FilterHybrid(db, 100, filterRoot, 1, 10)
+	result, err := filterHandler.Hybrid(db, 100, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -111,25 +111,25 @@ func hybridExample2(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
 	printHybridResults(result, "Pending orders")
 }
 
-func hybridExample3(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+func hybridExample3(filterHandler *filter.Handler[Order], db *gorm.DB) {
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "customer_id",
-				Value:          12345,
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "customer_id",
+				Value:    12345,
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "order_date", Order: filter.FilterSortOrderDesc},
+			{Field: "order_date", Order: filter.SortOrderDesc},
 		},
 	}
 
 	// High threshold: 1,000,000 rows
 	// Prefers in-memory filtering unless dataset is massive
-	result, err := filterHandler.FilterHybrid(db, 1000000, filterRoot, 1, 10)
+	result, err := filterHandler.Hybrid(db, 1000000, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -138,40 +138,40 @@ func hybridExample3(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
 	printHybridResults(result, "Customer #12345 orders")
 }
 
-func hybridExample4(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
+func hybridExample4(filterHandler *filter.Handler[Order], db *gorm.DB) {
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 
-	filterRoot := filter.FilterRoot{
-		Logic: filter.FilterLogicAnd,
-		Filters: []filter.Filter{
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
 			{
-				Field:          "order_date",
-				Value:          thirtyDaysAgo,
-				Mode:           filter.FilterModeAfter,
-				FilterDataType: filter.FilterDataTypeDate,
+				Field:    "order_date",
+				Value:    thirtyDaysAgo,
+				Mode:     filter.ModeAfter,
+				DataType: filter.DataTypeDate,
 			},
 			{
-				Field:          "is_paid",
-				Value:          true,
-				Mode:           filter.FilterModeEqual,
-				FilterDataType: filter.FilterDataTypeBool,
+				Field:    "is_paid",
+				Value:    true,
+				Mode:     filter.ModeEqual,
+				DataType: filter.DataTypeBool,
 			},
 			{
-				Field:          "total_amount",
-				Value:          filter.Range{From: 50, To: 500},
-				Mode:           filter.FilterModeRange,
-				FilterDataType: filter.FilterDataTypeNumber,
+				Field:    "total_amount",
+				Value:    filter.Range{From: 50, To: 500},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeNumber,
 			},
 		},
 		SortFields: []filter.SortField{
-			{Field: "order_date", Order: filter.FilterSortOrderDesc},
-			{Field: "total_amount", Order: filter.FilterSortOrderDesc},
+			{Field: "order_date", Order: filter.SortOrderDesc},
+			{Field: "total_amount", Order: filter.SortOrderDesc},
 		},
 	}
 
 	// Balanced threshold: 50,000 rows
 	// Good default for most applications
-	result, err := filterHandler.FilterHybrid(db, 50000, filterRoot, 1, 10)
+	result, err := filterHandler.Hybrid(db, 50000, filterRoot, 1, 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return

@@ -2,80 +2,80 @@ package filter
 
 import "time"
 
-// FilterMode defines the type of comparison operation to perform
-type FilterMode string
+// Mode defines the type of comparison operation to perform
+type Mode string
 
-// Filter mode constants define available comparison operations
+// mode constants define available comparison operations
 const (
-	FilterModeEqual       FilterMode = "equal"       // Exact match
-	FilterModeNotEqual    FilterMode = "notEqual"    // Not equal
-	FilterModeContains    FilterMode = "contains"    // Contains substring
-	FilterModeNotContains FilterMode = "notContains" // Does not contain substring
-	FilterModeStartsWith  FilterMode = "startsWith"  // Starts with prefix
-	FilterModeEndsWith    FilterMode = "endsWith"    // Ends with suffix
-	FilterModeIsEmpty     FilterMode = "isEmpty"     // Is empty or null
-	FilterModeIsNotEmpty  FilterMode = "isNotEmpty"  // Is not empty
-	FilterModeGT          FilterMode = "gt"          // Greater than
-	FilterModeGTE         FilterMode = "gte"         // Greater than or equal
-	FilterModeLT          FilterMode = "lt"          // Less than
-	FilterModeLTE         FilterMode = "lte"         // Less than or equal
-	FilterModeRange       FilterMode = "range"       // Between two values
-	FilterModeBefore      FilterMode = "before"      // Before (date/time)
-	FilterModeAfter       FilterMode = "after"       // After (date/time)
+	ModeEqual       Mode = "equal"       // Exact match
+	ModeNotEqual    Mode = "notEqual"    // Not equal
+	ModeContains    Mode = "contains"    // Contains substring
+	ModeNotContains Mode = "notContains" // Does not contain substring
+	ModeStartsWith  Mode = "startsWith"  // Starts with prefix
+	ModeEndsWith    Mode = "endsWith"    // Ends with suffix
+	ModeIsEmpty     Mode = "isEmpty"     // Is empty or null
+	ModeIsNotEmpty  Mode = "isNotEmpty"  // Is not empty
+	ModeGT          Mode = "gt"          // Greater than
+	ModeGTE         Mode = "gte"         // Greater than or equal
+	ModeLT          Mode = "lt"          // Less than
+	ModeLTE         Mode = "lte"         // Less than or equal
+	ModeRange       Mode = "range"       // Between two values
+	ModeBefore      Mode = "before"      // Before (date/time)
+	ModeAfter       Mode = "after"       // After (date/time)
 )
 
-// FilterDataType defines the data type being filtered
-type FilterDataType string
+// DataType defines the data type being filtered
+type DataType string
 
-// Filter data type constants define the type of data being filtered
+// data type constants define the type of data being filtered
 const (
-	FilterDataTypeNumber FilterDataType = "number" // Numeric values
-	FilterDataTypeText   FilterDataType = "text"   // Text/string values
-	FilterDataTypeBool   FilterDataType = "bool"   // Boolean values
-	FilterDataTypeDate   FilterDataType = "date"   // Date values
-	FilterDataTypeTime   FilterDataType = "time"   // Time values
+	DataTypeNumber DataType = "number" // Numeric values
+	DataTypeText   DataType = "text"   // Text/string values
+	DataTypeBool   DataType = "bool"   // Boolean values
+	DataTypeDate   DataType = "date"   // Date values
+	DataTypeTime   DataType = "time"   // Time values
 )
 
-// FilterLogic defines how multiple filters are combined
-type FilterLogic string
+// Logic defines how multiple filters are combined
+type Logic string
 
-// Filter logic constants define how to combine multiple filters
+// logic constants define how to combine multiple filters
 const (
-	FilterLogicAnd FilterLogic = "and" // All filters must match
-	FilterLogicOr  FilterLogic = "or"  // Any filter can match
+	LogicAnd Logic = "and" // All filters must match
+	LogicOr  Logic = "or"  // Any filter can match
 )
 
-// FilterSortOrder defines the sort direction
-type FilterSortOrder string
+// SortOrder defines the sort direction
+type SortOrder string
 
 // Sort order constants define ascending or descending order
 const (
-	FilterSortOrderAsc  FilterSortOrder = "asc"  // Ascending order
-	FilterSortOrderDesc FilterSortOrder = "desc" // Descending order
+	SortOrderAsc  SortOrder = "asc"  // Ascending order
+	SortOrderDesc SortOrder = "desc" // Descending order
 )
 
-// Filter represents a single filter condition
-type Filter struct {
-	Field          string         `json:"field"`          // Field name to filter on
-	Value          any            `json:"value"`          // Value to compare against
-	Mode           FilterMode     `json:"mode"`           // Comparison mode
-	FilterDataType FilterDataType `json:"filterDataType"` // Data type of the field
+// represents a single filter condition
+type FieldFilter struct {
+	Field    string   `json:"field"`          // Field name to filter on
+	Value    any      `json:"value"`          // Value to compare against
+	Mode     Mode     `json:"mode"`           // Comparison mode
+	DataType DataType `json:"filterDataType"` // Data type of the field
 }
 
 // SortField represents a field to sort by
 type SortField struct {
-	Field string          `json:"field"` // Field name to sort by
-	Order FilterSortOrder `json:"order"` // Sort direction
+	Field string    `json:"field"` // Field name to sort by
+	Order SortOrder `json:"order"` // Sort direction
 }
 
-// FilterRoot represents the root filter configuration
-type FilterRoot struct {
-	Filters    []Filter    `json:"filters"`    // List of filter conditions
-	SortFields []SortField `json:"sortFields"` // List of sort fields
-	Logic      FilterLogic `json:"logic"`      // How to combine filters (AND/OR)
+// Root represents the root filter configuration
+type Root struct {
+	FieldFilters []FieldFilter `json:"filters"`    // List of filter conditions
+	SortFields   []SortField   `json:"sortFields"` // List of sort fields
+	Logic        Logic         `json:"logic"`      // How to combine filters (AND/OR)
 }
 
-// FilterRange represents a range of values for filtering
+// Range represents a range of values for filtering
 type Range struct {
 	From any `json:"from"` // Start of range
 	To   any `json:"to"`   // End of range
