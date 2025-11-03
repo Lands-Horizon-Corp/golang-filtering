@@ -669,3 +669,425 @@ func TestInvalidDateTimeFormats(t *testing.T) {
 		})
 	}
 }
+
+// TestDateRangeComprehensive tests various date range scenarios
+func TestDateRangeComprehensive(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	// Create events spanning across months
+	events := []*Event{
+		{ID: 1, Name: "Jan1", EventDate: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{ID: 2, Name: "Jan15", EventDate: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
+		{ID: 3, Name: "Jan31", EventDate: time.Date(2025, 1, 31, 0, 0, 0, 0, time.UTC)},
+		{ID: 4, Name: "Feb1", EventDate: time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC)},
+		{ID: 5, Name: "Feb14", EventDate: time.Date(2025, 2, 14, 0, 0, 0, 0, time.UTC)},
+		{ID: 6, Name: "Feb28", EventDate: time.Date(2025, 2, 28, 0, 0, 0, 0, time.UTC)},
+		{ID: 7, Name: "Mar1", EventDate: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC)},
+		{ID: 8, Name: "Mar15", EventDate: time.Date(2025, 3, 15, 0, 0, 0, 0, time.UTC)},
+		{ID: 9, Name: "Mar31", EventDate: time.Date(2025, 3, 31, 0, 0, 0, 0, time.UTC)},
+		{ID: 10, Name: "Apr1", EventDate: time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)},
+	}
+
+	testCases := []struct {
+		name     string
+		from     string
+		to       string
+		expected int
+		desc     string
+	}{
+		{"Single month", "2025-02-01", "2025-02-28", 3, "All of February"},
+		{"Two months", "2025-01-15", "2025-02-15", 4, "Mid-Jan to mid-Feb"},
+		{"Quarter", "2025-01-01", "2025-03-31", 9, "Q1 2025"},
+		{"Single day", "2025-02-14", "2025-02-14", 1, "Valentine's Day only"},
+		{"Boundary inclusive", "2025-01-01", "2025-01-31", 3, "All of January"},
+		{"Cross month boundary", "2025-01-31", "2025-02-01", 2, "Month transition"},
+		{"Full range", "2025-01-01", "2025-04-01", 10, "All events"},
+		{"Empty range before", "2024-11-01", "2024-12-31", 0, "Before all events"},
+		{"Empty range after", "2025-05-01", "2025-06-30", 0, "After all events"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filterRoot := filter.Root{
+				Logic: filter.LogicAnd,
+				FieldFilters: []filter.FieldFilter{
+					{
+						Field: "event_date",
+						Value: filter.Range{
+							From: tc.from,
+							To:   tc.to,
+						},
+						Mode:     filter.ModeRange,
+						DataType: filter.DataTypeDate,
+					},
+				},
+			}
+
+			result, err := handler.DataQuery(events, filterRoot, 1, 20)
+			if err != nil {
+				t.Fatalf("Error filtering %s: %v", tc.name, err)
+			}
+
+			if result.TotalSize != tc.expected {
+				t.Errorf("%s (%s): expected %d results, got %d",
+					tc.name, tc.desc, tc.expected, result.TotalSize)
+			}
+		})
+	}
+}
+
+// TestTimeRangeComprehensive tests various time range scenarios
+func TestTimeRangeComprehensive(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	// Create events throughout a day
+	events := []*Event{
+		{ID: 1, Name: "Midnight", EventTime: time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{ID: 2, Name: "1AM", EventTime: time.Date(0, 1, 1, 1, 0, 0, 0, time.UTC)},
+		{ID: 3, Name: "3AM", EventTime: time.Date(0, 1, 1, 3, 0, 0, 0, time.UTC)},
+		{ID: 4, Name: "6AM", EventTime: time.Date(0, 1, 1, 6, 0, 0, 0, time.UTC)},
+		{ID: 5, Name: "9AM", EventTime: time.Date(0, 1, 1, 9, 0, 0, 0, time.UTC)},
+		{ID: 6, Name: "Noon", EventTime: time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC)},
+		{ID: 7, Name: "3PM", EventTime: time.Date(0, 1, 1, 15, 0, 0, 0, time.UTC)},
+		{ID: 8, Name: "6PM", EventTime: time.Date(0, 1, 1, 18, 0, 0, 0, time.UTC)},
+		{ID: 9, Name: "9PM", EventTime: time.Date(0, 1, 1, 21, 0, 0, 0, time.UTC)},
+		{ID: 10, Name: "11PM", EventTime: time.Date(0, 1, 1, 23, 0, 0, 0, time.UTC)},
+	}
+
+	testCases := []struct {
+		name     string
+		from     string
+		to       string
+		expected int
+		desc     string
+	}{
+		{"Work hours", "09:00:00", "17:00:00", 3, "9AM to 5PM inclusive"},
+		{"Morning", "06:00:00", "12:00:00", 3, "6AM to noon inclusive"},
+		{"Afternoon", "12:00:00", "18:00:00", 3, "Noon to 6PM inclusive"},
+		{"Evening", "18:00:00", "23:59:59", 3, "6PM to midnight"},
+		{"Night hours", "00:00:00", "06:00:00", 4, "Midnight to 6AM"},
+		{"Single hour", "12:00:00", "12:59:59", 1, "Noon hour"},
+		{"Full day", "00:00:00", "23:59:59", 10, "All day"},
+		{"Lunch time", "11:00:00", "13:00:00", 1, "11AM to 1PM"},
+		{"Late night", "21:00:00", "23:59:59", 2, "9PM to midnight"},
+		{"Early morning", "00:00:00", "03:00:00", 3, "Midnight to 3AM"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filterRoot := filter.Root{
+				Logic: filter.LogicAnd,
+				FieldFilters: []filter.FieldFilter{
+					{
+						Field: "event_time",
+						Value: filter.Range{
+							From: tc.from,
+							To:   tc.to,
+						},
+						Mode:     filter.ModeRange,
+						DataType: filter.DataTypeTime,
+					},
+				},
+			}
+
+			result, err := handler.DataQuery(events, filterRoot, 1, 20)
+			if err != nil {
+				t.Fatalf("Error filtering %s: %v", tc.name, err)
+			}
+
+			if result.TotalSize != tc.expected {
+				t.Errorf("%s (%s): expected %d results, got %d",
+					tc.name, tc.desc, tc.expected, result.TotalSize)
+			}
+		})
+	}
+}
+
+// TestDateRangeWithTimezone tests date ranges with different timezones
+func TestDateRangeWithTimezone(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	// Create events in different timezones
+	utc := time.UTC
+	est := time.FixedZone("EST", -5*3600)
+	pst := time.FixedZone("PST", -8*3600)
+
+	events := []*Event{
+		{ID: 1, Name: "UTC", EventDate: time.Date(2025, 3, 1, 12, 0, 0, 0, utc)},
+		{ID: 2, Name: "EST", EventDate: time.Date(2025, 3, 1, 12, 0, 0, 0, est)},
+		{ID: 3, Name: "PST", EventDate: time.Date(2025, 3, 1, 12, 0, 0, 0, pst)},
+		{ID: 4, Name: "UTC2", EventDate: time.Date(2025, 3, 15, 12, 0, 0, 0, utc)},
+	}
+
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_date",
+				Value: filter.Range{
+					From: "2025-03-01",
+					To:   "2025-03-31",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeDate,
+			},
+		},
+	}
+
+	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	if err != nil {
+		t.Fatalf("Error filtering: %v", err)
+	}
+
+	// All events should be in March regardless of timezone
+	if result.TotalSize < 4 {
+		t.Errorf("Expected at least 4 results in March, got %d", result.TotalSize)
+	}
+}
+
+// TestTimeRangeWithMinutesSeconds tests precise time ranges
+func TestTimeRangeWithMinutesSeconds(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	events := []*Event{
+		{ID: 1, Name: "14:29:00", EventTime: time.Date(0, 1, 1, 14, 29, 0, 0, time.UTC)},
+		{ID: 2, Name: "14:30:00", EventTime: time.Date(0, 1, 1, 14, 30, 0, 0, time.UTC)},
+		{ID: 3, Name: "14:30:30", EventTime: time.Date(0, 1, 1, 14, 30, 30, 0, time.UTC)},
+		{ID: 4, Name: "14:31:00", EventTime: time.Date(0, 1, 1, 14, 31, 0, 0, time.UTC)},
+		{ID: 5, Name: "14:35:00", EventTime: time.Date(0, 1, 1, 14, 35, 0, 0, time.UTC)},
+	}
+
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_time",
+				Value: filter.Range{
+					From: "14:30:00",
+					To:   "14:31:00",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeTime,
+			},
+		},
+	}
+
+	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	if err != nil {
+		t.Fatalf("Error filtering: %v", err)
+	}
+
+	if result.TotalSize != 3 {
+		t.Errorf("Expected 3 results in 14:30-14:31 range, got %d", result.TotalSize)
+	}
+}
+
+// TestDateRangeYearBoundary tests date ranges crossing year boundary
+func TestDateRangeYearBoundary(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	events := []*Event{
+		{ID: 1, Name: "Dec20", EventDate: time.Date(2024, 12, 20, 0, 0, 0, 0, time.UTC)},
+		{ID: 2, Name: "Dec25", EventDate: time.Date(2024, 12, 25, 0, 0, 0, 0, time.UTC)},
+		{ID: 3, Name: "Dec31", EventDate: time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)},
+		{ID: 4, Name: "Jan1", EventDate: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{ID: 5, Name: "Jan5", EventDate: time.Date(2025, 1, 5, 0, 0, 0, 0, time.UTC)},
+		{ID: 6, Name: "Jan10", EventDate: time.Date(2025, 1, 10, 0, 0, 0, 0, time.UTC)},
+	}
+
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_date",
+				Value: filter.Range{
+					From: "2024-12-25",
+					To:   "2025-01-05",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeDate,
+			},
+		},
+	}
+
+	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	if err != nil {
+		t.Fatalf("Error filtering: %v", err)
+	}
+
+	if result.TotalSize != 4 {
+		t.Errorf("Expected 4 results crossing year boundary, got %d", result.TotalSize)
+	}
+}
+
+// TestTimeRangeMidnightCrossing tests time ranges around midnight
+func TestTimeRangeMidnightCrossing(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	events := []*Event{
+		{ID: 1, Name: "22:00", EventTime: time.Date(0, 1, 1, 22, 0, 0, 0, time.UTC)},
+		{ID: 2, Name: "23:00", EventTime: time.Date(0, 1, 1, 23, 0, 0, 0, time.UTC)},
+		{ID: 3, Name: "23:30", EventTime: time.Date(0, 1, 1, 23, 30, 0, 0, time.UTC)},
+		{ID: 4, Name: "00:00", EventTime: time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{ID: 5, Name: "01:00", EventTime: time.Date(0, 1, 1, 1, 0, 0, 0, time.UTC)},
+		{ID: 6, Name: "02:00", EventTime: time.Date(0, 1, 1, 2, 0, 0, 0, time.UTC)},
+	}
+
+	// Test late evening (cannot cross midnight in a single range)
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_time",
+				Value: filter.Range{
+					From: "22:00:00",
+					To:   "23:59:59",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeTime,
+			},
+		},
+	}
+
+	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	if err != nil {
+		t.Fatalf("Error filtering: %v", err)
+	}
+
+	// Should include events from 22:00 through 23:30
+	if result.TotalSize != 3 {
+		t.Errorf("Expected 3 results in late evening range, got %d", result.TotalSize)
+	}
+
+	// Test early morning
+	filterRoot2 := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_time",
+				Value: filter.Range{
+					From: "00:00:00",
+					To:   "02:00:00",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeTime,
+			},
+		},
+	}
+
+	result2, err := handler.DataQuery(events, filterRoot2, 1, 10)
+	if err != nil {
+		t.Fatalf("Error filtering early morning: %v", err)
+	}
+
+	// Should include midnight, 1AM, and 2AM
+	if result2.TotalSize != 3 {
+		t.Errorf("Expected 3 results in early morning range, got %d", result2.TotalSize)
+	}
+}
+
+// TestDateRangeInvalidRange tests error handling for invalid date ranges
+func TestDateRangeInvalidRange(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	events := []*Event{
+		{ID: 1, Name: "Event", EventDate: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
+	}
+
+	// From date after To date
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_date",
+				Value: filter.Range{
+					From: "2025-12-31",
+					To:   "2025-01-01",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeDate,
+			},
+		},
+	}
+
+	_, err := handler.DataQuery(events, filterRoot, 1, 10)
+	if err == nil {
+		t.Error("Expected error for invalid date range (from > to), got none")
+	}
+}
+
+// TestTimeRangeInvalidRange tests error handling for invalid time ranges
+func TestTimeRangeInvalidRange(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	events := []*Event{
+		{ID: 1, Name: "Event", EventTime: time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC)},
+	}
+
+	// From time after To time
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_time",
+				Value: filter.Range{
+					From: "18:00:00",
+					To:   "09:00:00",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeTime,
+			},
+		},
+	}
+
+	_, err := handler.DataQuery(events, filterRoot, 1, 10)
+	if err == nil {
+		t.Error("Expected error for invalid time range (from > to), got none")
+	}
+}
+
+// TestDateRangeWithSorting tests date range with sorting
+func TestDateRangeWithSorting(t *testing.T) {
+	handler := filter.NewFilter[Event]()
+
+	events := []*Event{
+		{ID: 1, Name: "Event3", EventDate: time.Date(2025, 3, 15, 0, 0, 0, 0, time.UTC)},
+		{ID: 2, Name: "Event1", EventDate: time.Date(2025, 3, 5, 0, 0, 0, 0, time.UTC)},
+		{ID: 3, Name: "Event2", EventDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC)},
+		{ID: 4, Name: "Event4", EventDate: time.Date(2025, 3, 20, 0, 0, 0, 0, time.UTC)},
+	}
+
+	filterRoot := filter.Root{
+		Logic: filter.LogicAnd,
+		FieldFilters: []filter.FieldFilter{
+			{
+				Field: "event_date",
+				Value: filter.Range{
+					From: "2025-03-01",
+					To:   "2025-03-31",
+				},
+				Mode:     filter.ModeRange,
+				DataType: filter.DataTypeDate,
+			},
+		},
+		SortFields: []filter.SortField{
+			{Field: "event_date", Order: filter.SortOrderAsc},
+		},
+	}
+
+	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	if err != nil {
+		t.Fatalf("Error filtering: %v", err)
+	}
+
+	if result.TotalSize != 4 {
+		t.Errorf("Expected 4 results, got %d", result.TotalSize)
+	}
+
+	// Verify ascending order
+	if len(result.Data) >= 2 {
+		if result.Data[0].EventDate.After(result.Data[1].EventDate) {
+			t.Error("Results not sorted in ascending order")
+		}
+	}
+}
