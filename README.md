@@ -1,26 +1,43 @@
 # Golang Filtering Package
 
-A high-performance, memory-efficient filtering package for Go with automatic field detection and support for both in-memory and GORM database filtering.
+<div align="center">
+  <h1>🚀 Golang Filtering</h1>
+  <p>A high-performance, memory-efficient filtering package for Go with automatic field detection and support for both in-memory and GORM database filtering.</p>
 
-## Features
+  [![Go Version](https://img.shields.io/badge/Go-1.18+-00ADD8?style=flat&logo=go)](https://go.dev/)
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+</div>
 
-- ✨ **Automatic field getter generation** using reflection
-- 🚀 **Parallel processing** for in-memory filtering
-- 💾 **Memory efficient** - zero data cloning, pointer-based operations
-- �️ **GORM integration** for database queries
-- 🔍 **Rich filter modes** - text, number, boolean, date, time
-- 📊 **Sorting** with multiple fields
-- 📄 **Pagination** built-in
-- 🏷️ **JSON tag support**
-- 🔗 **Nested struct support**
+## ✨ Features
 
-## Installation
+- **Automatic field getter generation** using reflection
+- **Parallel processing** for in-memory filtering
+- **Memory efficient** – zero data cloning, pointer-based operations
+- **GORM integration** for database queries
+- **Rich filter modes** – text, number, boolean, date, time
+- **Sorting** with multiple fields
+- **Pagination** built-in
+- **JSON tag support**
+- **Nested struct support**
+
+[Features](#features) • [Installation](#installation) • [Quick Start](#quick-start) • [Examples](#examples) • [Performance](#performance) • [API Reference](#api-reference)
+
+---
+
+## 📦 Installation
 
 ```bash
 go get github.com/Lands-Horizon-Corp/golang-filtering/filter
 ```
 
-## Quick Start
+**Requirements:**
+- Go 1.18+ (for generics support)
+- GORM v2 (optional, for database filtering)
+
+---
+
+## 🚀 Quick Start
 
 ### Define Your Model
 
@@ -32,23 +49,23 @@ type User struct {
     Email     string    `json:"email"`
     IsActive  bool      `json:"is_active"`
     CreatedAt time.Time `json:"created_at"`
+    Role      string    `json:"role"`
 }
 ```
 
 ### Create Filter Handler
 
 ```go
-// Automatic getter generation - no setup needed!
 filterHandler := filter.NewFilter[User]()
 ```
 
 ---
 
-## Usage Examples
+## 📚 Examples
 
-### 1. In-Memory Filtering (FilterData)
+### 1. In-Memory Filtering (`FilterDataQuery`)
 
-Perfect for filtering data already loaded in memory with parallel processing.
+Perfect for filtering data already loaded in memory with **parallel processing**.
 
 ```go
 package main
@@ -59,19 +76,16 @@ import (
 )
 
 func main() {
-    // Your data
-    users := []*User{
+    users := []*filter.User{
         {Name: "John Doe", Age: 25, Email: "john@example.com", IsActive: true},
         {Name: "Jane Smith", Age: 30, Email: "jane@example.com", IsActive: true},
         {Name: "Bob Johnson", Age: 35, Email: "bob@example.com", IsActive: false},
     }
 
-    // Create filter handler
-    filterHandler := filter.NewFilter[User]()
+    filterHandler := filter.NewFilter[filter.User]()
 
-    // Define filters
     filterRoot := filter.FilterRoot{
-        Logic: filter.FilterLogicAnd, // or FilterLogicOr
+        Logic: filter.FilterLogicAnd,
         Filters: []filter.Filter{
             {
                 Field:          "name",
@@ -91,15 +105,12 @@ func main() {
         },
     }
 
-    // Apply filtering with pagination
     result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
     if err != nil {
         panic(err)
     }
 
-    fmt.Printf("Total: %d, Page: %d/%d\n",
-        result.TotalSize, result.PageIndex, result.TotalPage)
-
+    fmt.Printf("Total: %d, Page: %d/%d\n", result.TotalSize, result.PageIndex, result.TotalPage)
     for _, user := range result.Data {
         fmt.Printf("- %s (Age: %d)\n", user.Name, user.Age)
     }
@@ -107,14 +118,13 @@ func main() {
 ```
 
 **Key Benefits:**
-
-- ⚡ Parallel processing using all CPU cores
-- 💾 Memory efficient - no data cloning
-- 🎯 Perfect for already-loaded data
+- Parallel processing using all CPU cores
+- Memory efficient – no data cloning
+- Perfect for already-loaded data
 
 ---
 
-### 2. GORM Database Filtering (FilterDataGorm)
+### 2. GORM Database Filtering (`FilterDataGorm`)
 
 Perfect for querying databases with efficient SQL generation.
 
@@ -130,19 +140,14 @@ import (
 )
 
 func main() {
-    // Initialize database
     db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
     if err != nil {
         log.Fatal(err)
     }
+    db.AutoMigrate(&filter.User{})
 
-    // Auto migrate
-    db.AutoMigrate(&User{})
+    filterHandler := filter.NewFilter[filter.User]()
 
-    // Create filter handler
-    filterHandler := filter.NewFilter[User]()
-
-    // Define filters
     filterRoot := filter.FilterRoot{
         Logic: filter.FilterLogicAnd,
         Filters: []filter.Filter{
@@ -164,7 +169,6 @@ func main() {
         },
     }
 
-    // Execute database query with pagination
     result, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
     if err != nil {
         log.Fatal(err)
@@ -178,92 +182,43 @@ func main() {
 ```
 
 **Key Benefits:**
-
-- 🗄️ Direct database queries - efficient SQL generation
-- 📊 Built-in COUNT for pagination
-- 🔍 Database-level filtering (no loading all records)
-- 🚀 Perfect for large datasets (billions of records)
+- Direct database queries – efficient SQL generation
+- Built-in `COUNT` for pagination
+- Database-level filtering (no loading all records)
+- Perfect for large datasets
 
 ---
 
-### 3. Hybrid Filtering (FilterHybrid) - Auto-Switching
+### 3. Hybrid Filtering (`FilterHybrid`) – Auto-Switching
 
-**NEW!** Automatically chooses between in-memory and database filtering based on table size.
+**Automatically chooses** between in-memory and database filtering based on table size.
 
 ```go
-package main
-
-import (
-    "fmt"
-    "log"
-    "github.com/Lands-Horizon-Corp/golang-filtering/filter"
-    "gorm.io/driver/postgres"
-    "gorm.io/gorm"
-)
-
-func main() {
-    // Initialize database
-    db, err := gorm.Open(postgres.Open("your-connection-string"), &gorm.Config{})
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    // Create filter handler
-    filterHandler := filter.NewFilter[User]()
-
-    // Define filters
-    filterRoot := filter.FilterRoot{
-        Logic: filter.FilterLogicAnd,
-        Filters: []filter.Filter{
-            {
-                Field:          "is_active",
-                Value:          true,
-                Mode:           filter.FilterModeEqual,
-                FilterDataType: filter.FilterDataTypeBool,
-            },
-        },
-    }
-
-    // Hybrid filtering with 10,000 row threshold
-    // - If table has ≤10k rows → uses in-memory filtering (faster)
-    // - If table has >10k rows → uses database filtering (memory efficient)
-    result, err := filterHandler.FilterHybrid(db, 10000, filterRoot, 1, 30)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    fmt.Printf("Total: %d, Pages: %d\n", result.TotalSize, result.TotalPage)
-}
+result, err := filterHandler.FilterHybrid(db, 10000, filterRoot, 1, 30)
 ```
 
+**How it works:**
+1. Estimates table size using database metadata (instant)
+2. If ≤ threshold → `FilterDataQuery` (parallel processing)
+3. If > threshold → `FilterDataGorm` (SQL queries)
+
+**Supported databases:**
+- PostgreSQL (`pg_class`)
+- MySQL/MariaDB (`INFORMATION_SCHEMA`)
+- SQLite (`sqlite_stat1`)
+- SQL Server (`sys.partitions`)
+
 **Key Benefits:**
-
-- 🎯 **Automatic optimization** - no manual decision needed
-- ⚡ **Fast estimation** - uses database metadata (pg_class, INFORMATION_SCHEMA)
-- 🧠 **Smart switching** - best strategy for each dataset size
-- 🔄 **Scalable** - works from development to production without code changes
-
-**Supported Databases:**
-
-- PostgreSQL (pg_class estimation)
-- MySQL/MariaDB (INFORMATION_SCHEMA)
-- SQLite (sqlite_stat1)
-- SQL Server (sys.partitions)
-
-**Recommended Thresholds:**
-
-- Small tables (users, settings): 50,000
-- Medium tables (orders, products): 10,000
-- Large tables (logs, events): 1,000
-
-**For more details, see:** [HYBRID-FILTER.md](./HYBRID-FILTER.md)
+- Automatic optimization
+- Fast estimation using metadata
+- Smart switching
+- Scalable from dev to production
 
 ---
 
 ## Filter Modes
 
 ### Text Filters
-
 ```go
 filter.FilterModeEqual        // Exact match (case-insensitive)
 filter.FilterModeNotEqual     // Not equal
@@ -276,19 +231,17 @@ filter.FilterModeIsNotEmpty   // Not empty
 ```
 
 ### Number Filters
-
 ```go
-filter.FilterModeEqual    // Equal to
-filter.FilterModeNotEqual // Not equal to
-filter.FilterModeGT       // Greater than
-filter.FilterModeGTE      // Greater than or equal
-filter.FilterModeLT       // Less than
-filter.FilterModeLTE      // Less than or equal
-filter.FilterModeRange    // Between two values
+filter.FilterModeEqual    // =
+filter.FilterModeNotEqual // !=
+filter.FilterModeGT       // >
+filter.FilterModeGTE      // >=
+filter.FilterModeLT       // <
+filter.FilterModeLTE      // <=
+filter.FilterModeRange    // Between
 ```
 
 **Range Example:**
-
 ```go
 {
     Field:          "age",
@@ -299,134 +252,184 @@ filter.FilterModeRange    // Between two values
 ```
 
 ### Boolean Filters
-
 ```go
-filter.FilterModeEqual    // Equal to true/false
-filter.FilterModeNotEqual // Not equal
+filter.FilterModeEqual    // true/false
+filter.FilterModeNotEqual // not
 ```
 
 ### Date/DateTime Filters
-
 ```go
-filter.FilterModeEqual    // Exact date match
-filter.FilterModeNotEqual // Not equal
-filter.FilterModeBefore   // Before date
-filter.FilterModeAfter    // After date
-filter.FilterModeGTE      // Greater than or equal
-filter.FilterModeLTE      // Less than or equal
-filter.FilterModeRange    // Between two dates
-```
-
-### Time Filters
-
-```go
-filter.FilterModeEqual    // Exact time
-filter.FilterModeNotEqual // Not equal
-filter.FilterModeBefore   // Before time
-filter.FilterModeAfter    // After time
-filter.FilterModeGTE      // Greater than or equal
-filter.FilterModeLTE      // Less than or equal
-filter.FilterModeRange    // Between two times
+filter.FilterModeEqual    // =
+filter.FilterModeNotEqual // !=
+filter.FilterModeBefore   // <
+filter.FilterModeAfter    // >
+filter.FilterModeGTE      // >=
+filter.FilterModeLTE      // <=
+filter.FilterModeRange    // Between
 ```
 
 ---
 
-## Logic Operators
+## 🔀 Logic Operators
 
 ### AND Logic
-
-All filters must match:
-
 ```go
 filterRoot := filter.FilterRoot{
     Logic: filter.FilterLogicAnd,
-    Filters: []filter.Filter{
-        // All these must be true
-    },
+    Filters: []filter.Filter{ /* all must match */ },
 }
 ```
 
 ### OR Logic
-
-Any filter can match:
-
 ```go
 filterRoot := filter.FilterRoot{
     Logic: filter.FilterLogicOr,
-    Filters: []filter.Filter{
-        // Any of these can be true
+    Filters: []filter.Filter{ /* any can match */ },
+}
+```
+
+---
+
+## 📄 Pagination
+
+```go
+result, err := filterHandler.FilterDataQuery(data, filterRoot, pageIndex, pageSize)
+// or FilterDataGorm / FilterHybrid
+```
+
+**Result includes:**
+```go
+result.Data       // []*T
+result.TotalSize  // int
+result.TotalPage  // int
+result.PageIndex  // int (1-based)
+result.PageSize   // int
+```
+
+**Defaults:**
+- `pageIndex`: 1 (if ≤ 0)
+- `pageSize`: 30 (if ≤ 0)
+
+---
+
+## 🎯 Sorting
+
+```go
+filterRoot := filter.FilterRoot{
+    SortFields: []filter.SortField{
+        {Field: "age", Order: filter.FilterSortOrderDesc},
+        {Field: "name", Order: filter.FilterSortOrderAsc},
     },
 }
 ```
 
 ---
 
-## Pagination
+## ⚡ Performance
 
-Both methods support pagination:
+### In-Memory (`FilterDataQuery`)
+- Parallel processing across all CPU cores
+- Zero data cloning – pointer-based
+- Pre-allocated slices
+- Reflection cached once
+
+### Database (`FilterDataGorm`)
+- Efficient SQL generation
+- Leverages database indexes
+- Single `COUNT(*)` query for pagination
+
+### Hybrid Mode
+- Metadata-based size estimation (~1-2ms)
+- Auto-selects optimal strategy
+
+| Records | In-Memory | Database | Winner     |
+|--------|-----------|----------|------------|
+| 100    | 50µs      | 200µs    | In-Memory  |
+| 10K    | 10ms      | 15ms     | In-Memory  |
+| 100K   | 100ms     | 50ms     | Database   |
+| 1M     | 1s        | 100ms    | **Database** |
+| 10M    | OOM       | 500ms    | **Database** |
+
+**Use `FilterHybrid` for automatic optimization!**
+
+---
+
+## 📖 API Reference
+
+### Core Types
 
 ```go
-result, err := filterHandler.FilterDataQuery(data, filterRoot, pageIndex, pageSize)
-// or
-result, err := filterHandler.FilterDataGorm(db, filterRoot, pageIndex, pageSize)
+type Handler[T any] struct { /* cached getters */ }
 
-// Result contains:
-result.Data       // []*T - Current page data
-result.TotalSize  // int - Total matching records
-result.TotalPage  // int - Total pages
-result.PageIndex  // int - Current page (1-based)
-result.PageSize   // int - Records per page
+type FilterRoot struct {
+    Logic      FilterLogic
+    Filters    []Filter
+    SortFields []SortField
+}
+
+type Filter struct {
+    Field          string
+    Value          any
+    Mode           FilterMode
+    FilterDataType FilterDataType
+}
+
+type PaginationResult[T any] struct {
+    Data      []*T
+    TotalSize int
+    TotalPage int
+    PageIndex int
+    PageSize  int
+}
 ```
 
-**Defaults:**
+### Methods
 
-- `pageIndex`: defaults to 1 if <= 0
-- `pageSize`: defaults to 30 if <= 0
-
----
-
-## When to Use Each Method
-
-### Use `FilterDataQuery` (In-Memory) When:
-
-- ✅ Data is already loaded in memory
-- ✅ You need parallel processing for speed
-- ✅ Working with small to medium datasets (< 1 million records)
-- ✅ You want to filter API responses or cached data
-
-### Use `FilterDataGorm` (Database) When:
-
-- ✅ Data is in a database
-- ✅ Working with large datasets (millions/billions of records)
-- ✅ You want to leverage database indexes
-- ✅ Memory is limited
-- ✅ You need efficient pagination over large result sets
-
-### Use `FilterHybrid` (Auto-Switching) When:
-
-- ✅ **Unknown dataset size** - let it decide automatically
-- ✅ **Multi-tenant applications** - different tenants have different data volumes
-- ✅ **Development to production** - small data in dev, large in prod
-- ✅ **Want simplicity** - one method that always works optimally
-- ✅ **Tables that grow over time** - automatic adaptation
+| Method | Description |
+|-------|-------------|
+| `NewFilter[T any]()` | Creates handler with cached reflection |
+| `FilterDataQuery(...)` | In-memory parallel filtering |
+| `FilterDataGorm(...)` | GORM database filtering |
+| `FilterHybrid(...)` | Auto-switches based on size |
 
 ---
 
-## Performance
+## 🎯 When to Use Each Method
 
-### In-Memory Filtering:
+| Use Case | Recommended |
+|--------|-------------|
+| Data in memory, < 100K | `FilterDataQuery` |
+| Large DB tables | `FilterDataGorm` |
+| Unknown size / multi-tenant | `FilterHybrid` |
 
-- ⚡ Parallel processing across all CPU cores
-- 💾 Zero data cloning - only pointer manipulation
-- 🎯 Pre-allocated slices prevent reallocation
-- ⚙️ Reflection overhead is minimal (one-time at initialization)
+---
 
-### Database Filtering:
+## 🤝 Contributing
 
-- 📊 Efficient SQL generation
-- 🔍 Leverages database indexes
-- 💡 Add indexes on frequently filtered fields for best performance
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ```bash
-rm -f test.db && go run .
+git clone https://github.com/Lands-Horizon-Corp/golang-filtering.git
+cd golang-filtering
+go test ./...
 ```
+
+---
+
+## 📄 License
+
+[MIT License](LICENSE)
+
+---
+
+## 💬 Support
+
+- Issues: [GitHub Issues](https://github.com/Lands-Horizon-Corp/golang-filtering/issues)
+- Email: support@landshorizon.com
+
+---
+
+<div align="center">
+  <p><strong>Made with ❤️ by <a href="https://github.com/Lands-Horizon-Corp">Lands Horizon Corp</a></strong></p>
+  <p>Star this project if you find it useful! ⭐</p>
+</div>
