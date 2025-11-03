@@ -1,7 +1,6 @@
 package filter
 
 import (
-	"example/models"
 	"fmt"
 	"runtime"
 	"sort"
@@ -11,38 +10,13 @@ import (
 	"time"
 )
 
-type FilterHandler[T any] struct {
-	getters map[string]func(*T) any
-	key     string
-}
-
-// ProgressCallback is called during filtering to report progress
-type ProgressCallback func(processed, total int, percentage float32)
-
-func NewFilter[T any](key string) (*FilterHandler[T], error) {
-	gettersInterface, ok := models.ModelFieldGetters[key]
-	if !ok {
-		return nil, fmt.Errorf("no field getters found for key: %s", key)
-	}
-	getters, ok := gettersInterface.(map[string]func(*T) any)
-	if !ok {
-		return nil, fmt.Errorf("invalid getter map type for key: %s", key)
-	}
-	return &FilterHandler[T]{
-		getters: getters,
-		key:     key,
-	}, nil
-}
-
-func (f *FilterHandler[T]) FilterData(
+func (f *FilterHandler[T]) FilterDataQuery(
 	data []*T,
 	filterRoot FilterRoot,
 	pageIndex int,
 	pageSize int,
-	progressCallback ProgressCallback,
 ) (*PaginationResult[T], error) {
 	result := PaginationResult[T]{
-		Data:      data,
 		PageIndex: pageIndex,
 		PageSize:  pageSize,
 	}
@@ -56,8 +30,10 @@ func (f *FilterHandler[T]) FilterData(
 	}
 
 	if len(data) == 0 {
+		result.Data = data // Reuse the empty slice
 		return &result, nil
 	}
+
 	type filterGetter struct {
 		filter Filter
 		getter func(*T) any
@@ -71,40 +47,21 @@ func (f *FilterHandler[T]) FilterData(
 
 	numCPU := runtime.NumCPU()
 	chunkSize := (len(data) + numCPU - 1) / numCPU
+
+	// Pre-allocate result slices with exact capacity to avoid reallocations
 	resultChunks := make([][]*T, numCPU)
+	for i := range numCPU {
+		resultChunks[i] = make([]*T, 0, chunkSize)
+	}
+
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var filterErr error
 
 	// Atomic counter for progress tracking
 	var processedCount int64
-	totalCount := len(data)
 
-	// Progress reporting goroutine
-	var progressWg sync.WaitGroup
-	stopProgress := make(chan struct{})
-	if progressCallback != nil {
-		progressWg.Add(1)
-		go func() {
-			defer progressWg.Done()
-			ticker := time.NewTicker(100 * time.Millisecond)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ticker.C:
-					processed := int(atomic.LoadInt64(&processedCount))
-					percentage := float64(processed) / float64(totalCount) * 100
-					progressCallback(processed, totalCount, float32(percentage))
-				case <-stopProgress:
-					processed := int(atomic.LoadInt64(&processedCount))
-					progressCallback(processed, totalCount, 100)
-					return
-				}
-			}
-		}()
-	}
-
-	for i := 0; i < numCPU; i++ {
+	for i := range numCPU {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
@@ -115,7 +72,7 @@ func (f *FilterHandler[T]) FilterData(
 				return
 			}
 
-			localFiltered := make([]*T, 0, chunkSize)
+			localFiltered := resultChunks[workerID] // Reuse pre-allocated slice
 
 			for _, item := range data[start:end] {
 				matches := filterRoot.Logic == FilterLogicAnd
@@ -151,36 +108,30 @@ func (f *FilterHandler[T]) FilterData(
 					}
 				}
 				if matches {
-					localFiltered = append(localFiltered, item)
+					localFiltered = append(localFiltered, item) // Only append pointers, no data cloning
 				}
-
-				// Update progress
 				atomic.AddInt64(&processedCount, 1)
 			}
-
 			resultChunks[workerID] = localFiltered
 		}(i)
 	}
 
 	wg.Wait()
 
-	// Stop progress reporting
-	if progressCallback != nil {
-		close(stopProgress)
-		progressWg.Wait()
-	}
-
 	if filterErr != nil {
 		return nil, filterErr
 	}
 
+	// Calculate total size first
 	totalSize := 0
 	for _, chunk := range resultChunks {
 		totalSize += len(chunk)
 	}
+
+	// Pre-allocate exactly the size needed - no reallocation
 	filteredData := make([]*T, 0, totalSize)
 	for _, chunk := range resultChunks {
-		filteredData = append(filteredData, chunk...)
+		filteredData = append(filteredData, chunk...) // Only copying pointers, not data
 	}
 
 	// Sort after filtering
@@ -200,7 +151,7 @@ func (f *FilterHandler[T]) FilterData(
 
 	// Handle out of bounds
 	if startIdx >= len(filteredData) {
-		result.Data = []*T{}
+		result.Data = make([]*T, 0) // Empty slice with zero allocation
 		return &result, nil
 	}
 
@@ -208,9 +159,9 @@ func (f *FilterHandler[T]) FilterData(
 		endIdx = len(filteredData)
 	}
 
-	// Return only the requested page
+	// Return only the requested page - this is a slice view, not a copy
+	// No data cloning, just sharing pointers to the same underlying data
 	result.Data = filteredData[startIdx:endIdx]
-
 	return &result, nil
 }
 

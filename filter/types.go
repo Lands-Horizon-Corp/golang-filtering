@@ -2,37 +2,17 @@ package filter
 
 import "time"
 
-type FilterLogic string
-type FilterDataType string
 type FilterMode string
-type FilterSortOrder string
 
-const (
-	FilterSortOrderAsc  FilterSortOrder = "ASC"
-	FilterSortOrderDesc FilterSortOrder = "DESC"
-)
-
-const (
-	FilterLogicAnd FilterLogic = "AND"
-	FilterLogicOr  FilterLogic = "OR"
-)
-
-const (
-	FilterDataTypeNumber FilterDataType = "number"
-	FilterDataTypeText   FilterDataType = "text"
-	FilterDataTypeDate   FilterDataType = "date"
-	FilterDataTypeBool   FilterDataType = "boolean"
-	FilterDataTypeTime   FilterDataType = "time"
-)
 const (
 	FilterModeEqual       FilterMode = "equal"
-	FilterModeNotEqual    FilterMode = "nequal"
+	FilterModeNotEqual    FilterMode = "notEqual"
 	FilterModeContains    FilterMode = "contains"
-	FilterModeNotContains FilterMode = "ncontains"
-	FilterModeStartsWith  FilterMode = "startswith"
-	FilterModeEndsWith    FilterMode = "endswith"
-	FilterModeIsEmpty     FilterMode = "isempty"
-	FilterModeIsNotEmpty  FilterMode = "isnotempty"
+	FilterModeNotContains FilterMode = "notContains"
+	FilterModeStartsWith  FilterMode = "startsWith"
+	FilterModeEndsWith    FilterMode = "endsWith"
+	FilterModeIsEmpty     FilterMode = "isEmpty"
+	FilterModeIsNotEmpty  FilterMode = "isNotEmpty"
 	FilterModeGT          FilterMode = "gt"
 	FilterModeGTE         FilterMode = "gte"
 	FilterModeLT          FilterMode = "lt"
@@ -42,46 +22,67 @@ const (
 	FilterModeAfter       FilterMode = "after"
 )
 
-type FilterRange struct {
-	From any `json:"from"`
-	To   any `json:"to"`
-}
+type FilterDataType string
+
+const (
+	FilterDataTypeNumber FilterDataType = "number"
+	FilterDataTypeText   FilterDataType = "text"
+	FilterDataTypeBool   FilterDataType = "bool"
+	FilterDataTypeDate   FilterDataType = "date"
+	FilterDataTypeTime   FilterDataType = "time"
+)
+
+type FilterLogic string
+
+const (
+	FilterLogicAnd FilterLogic = "and"
+	FilterLogicOr  FilterLogic = "or"
+)
+
+type FilterSortOrder string
+
+const (
+	FilterSortOrderAsc  FilterSortOrder = "asc"
+	FilterSortOrderDesc FilterSortOrder = "desc"
+)
+
 type Filter struct {
-	FilterDataType FilterDataType `json:"FilterDataType"`
 	Field          string         `json:"field"`
-	Mode           FilterMode     `json:"mode"`
 	Value          any            `json:"value"`
+	Mode           FilterMode     `json:"mode"`
+	FilterDataType FilterDataType `json:"filterDataType"`
 }
 
 type SortField struct {
-	Order FilterSortOrder `json:"order"`
 	Field string          `json:"field"`
+	Order FilterSortOrder `json:"order"`
 }
+
 type FilterRoot struct {
 	Filters    []Filter    `json:"filters"`
 	SortFields []SortField `json:"sortFields"`
 	Logic      FilterLogic `json:"logic"`
 }
 
+type FilterRange struct {
+	From any `json:"from"`
+	To   any `json:"to"`
+}
+
 type PaginationResult[T any] struct {
 	Data      []*T `json:"data"`
-	PageIndex int  `json:"pageIndex"`
-	TotalPage int  `json:"totalPage"`
-	PageSize  int  `json:"pageSize"`
 	TotalSize int  `json:"totalSize"`
+	TotalPage int  `json:"totalPage"`
+	PageIndex int  `json:"pageIndex"`
+	PageSize  int  `json:"pageSize"`
 }
 
 type FilterRangeNumber struct {
-	From float64 `json:"from"`
-	To   float64 `json:"to"`
-}
-
-type FilterRangeTime struct {
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
+	From float64
+	To   float64
 }
 
 type FilterRangeDate struct {
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
+	From time.Time
+	To   time.Time
 }

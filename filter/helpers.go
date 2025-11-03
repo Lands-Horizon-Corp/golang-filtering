@@ -2,6 +2,7 @@ package filter
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -162,38 +163,35 @@ func parseRangeDateTime(value any) (FilterRangeDate, error) {
 	if err != nil {
 		return FilterRangeDate{}, err
 	}
-
-	// Validate that from <= to
 	if from.After(to) {
 		return FilterRangeDate{}, fmt.Errorf("range from date cannot be after to date")
 	}
-
 	return FilterRangeDate{
 		From: from,
 		To:   to,
 	}, nil
 }
 
-func parseRangeTime(value any) (FilterRangeTime, error) {
+func parseRangeTime(value any) (FilterRangeDate, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
-		return FilterRangeTime{}, fmt.Errorf("invalid range type for field %s", value)
+		return FilterRangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}
 	from, err := parseTime(rng.From)
 	if err != nil {
-		return FilterRangeTime{}, err
+		return FilterRangeDate{}, err
 	}
 	to, err := parseTime(rng.To)
 	if err != nil {
-		return FilterRangeTime{}, err
+		return FilterRangeDate{}, err
 	}
 
 	// Validate that from <= to
 	if from.After(to) {
-		return FilterRangeTime{}, fmt.Errorf("range from time cannot be after to time")
+		return FilterRangeDate{}, fmt.Errorf("range from time cannot be after to time")
 	}
 
-	return FilterRangeTime{
+	return FilterRangeDate{
 		From: from,
 		To:   to,
 	}, nil
@@ -271,4 +269,94 @@ func compareValues(a, b any) int {
 
 	// Fallback: cannot compare
 	return 0
+}
+
+// generateGetters automatically generates field getters using reflection
+func generateGetters[T any]() map[string]func(*T) any {
+	var zero T
+	t := reflect.TypeOf(zero)
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	getters := make(map[string]func(*T) any)
+	if t.Kind() != reflect.Struct {
+		return getters
+	}
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		fieldName := field.Name
+		key := fieldName
+		if jsonTag := field.Tag.Get("json"); jsonTag != "" {
+			tagValue := strings.Split(jsonTag, ",")[0]
+			if tagValue != "" && tagValue != "-" {
+				key = tagValue
+			}
+		}
+		lowerKey := strings.ToLower(fieldName)
+		fieldIndex := i
+		getter := func(v *T) any {
+			val := reflect.ValueOf(v)
+			if val.Kind() == reflect.Pointer {
+				val = val.Elem()
+			}
+			return val.Field(fieldIndex).Interface()
+		}
+
+		getters[key] = getter
+		if key != lowerKey {
+			getters[lowerKey] = getter
+		}
+		if field.Type.Kind() == reflect.Struct {
+			generateNestedGetters(getters, field, fieldIndex, key)
+		}
+	}
+
+	return getters
+}
+
+// generateNestedGetters generates getters for nested struct fields
+func generateNestedGetters[T any](getters map[string]func(*T) any, parentField reflect.StructField, parentIndex int, parentKey string) {
+	nestedType := parentField.Type
+
+	for i := 0; i < nestedType.NumField(); i++ {
+		nestedField := nestedType.Field(i)
+
+		if !nestedField.IsExported() {
+			continue
+		}
+
+		nestedFieldName := nestedField.Name
+		nestedKey := nestedFieldName
+
+		// Check for json tag on nested field
+		if jsonTag := nestedField.Tag.Get("json"); jsonTag != "" {
+			tagValue := strings.Split(jsonTag, ",")[0]
+			if tagValue != "" && tagValue != "-" {
+				nestedKey = tagValue
+			}
+		}
+
+		// Create composite key: parent.nested
+		compositeKey := parentKey + "." + nestedKey
+		compositeLowerKey := parentKey + "." + strings.ToLower(nestedFieldName)
+
+		// Create getter for nested field
+		nestedIndex := i
+		nestedGetter := func(v *T) any {
+			val := reflect.ValueOf(v)
+			if val.Kind() == reflect.Ptr {
+				val = val.Elem()
+			}
+			parentVal := val.Field(parentIndex)
+			return parentVal.Field(nestedIndex).Interface()
+		}
+
+		getters[compositeKey] = nestedGetter
+		if compositeKey != compositeLowerKey {
+			getters[compositeLowerKey] = nestedGetter
+		}
+	}
 }

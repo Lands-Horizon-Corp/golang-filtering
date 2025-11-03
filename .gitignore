@@ -1,0 +1,52 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Output of the go build command
+*.out
+
+# Compiled object files, caches, and intermediate data
+*.o
+*.a
+*.slo
+*.lo
+*.la
+*.obj
+*.gch
+*.pch
+
+# Go build cache
+/go-build/
+/vendor/
+/bin/
+/build/
+
+# IDE/editor specific
+.vscode/
+.idea/
+*.iml
+
+# Dependency management
+go.sum
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+
+# Environment or local config files
+.env
+.env.local
+.env.*
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+*.db
+*.db-journal

@@ -1,149 +1,259 @@
 package main
 
 import (
-	"example/filter"
-	"example/models"
-	"example/tools"
 	"fmt"
 	"log"
-	"math/rand"
 	"time"
+
+	"github.com/Lands-Horizon-Corp/golang-filtering/filter"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-// Sample filter root with AND logic
-var sampleFilterRootAnd = filter.FilterRoot{
-	Filters: []filter.Filter{
-		{
-			FilterDataType: filter.FilterDataTypeText,
-			Field:          "name",
-			Mode:           filter.FilterModeContains,
-			Value:          "John",
-		},
-		{
-			FilterDataType: filter.FilterDataTypeNumber,
-			Field:          "age",
-			Mode:           filter.FilterModeGTE,
-			Value:          18,
-		},
-		{
-			FilterDataType: filter.FilterDataTypeDate,
-			Field:          "created_at",
-			Mode:           filter.FilterModeAfter,
-			Value:          "2024-01-01",
-		},
-		{
-			FilterDataType: filter.FilterDataTypeBool,
-			Field:          "is_active",
-			Mode:           filter.FilterModeEqual,
-			Value:          true,
-		},
-		{
-			FilterDataType: filter.FilterDataTypeText,
-			Field:          "friend.name",
-			Mode:           filter.FilterModeContains,
-			Value:          "Alice",
-		},
-		{
-			FilterDataType: filter.FilterDataTypeNumber,
-			Field:          "height",
-			Mode:           filter.FilterModeRange,
-			Value:          filter.FilterRange{From: 160.0, To: 180.0},
-		},
-	},
-	Logic: filter.FilterLogicAnd,
-	SortFields: []filter.SortField{
-		{Field: "age", Order: "asc"},
-		{Field: "name", Order: "desc"},
-	},
-}
-
-// Generate fake users
-func generateFakeUsers(count int) []*models.User {
-	firstNames := []string{"John", "Jane", "Bob", "Alice", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry",
-		"Ivy", "Jack", "Kate", "Leo", "Mia", "Noah", "Olivia", "Peter", "Quinn", "Rachel",
-		"Sam", "Tina", "Uma", "Victor", "Wendy", "Xavier", "Yara", "Zack"}
-
-	lastNames := []string{"Doe", "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez",
-		"Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson",
-		"Martin", "Lee", "Perez", "Thompson", "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis"}
-
-	users := make([]*models.User, count)
-	rand.Seed(time.Now().UnixNano())
-
-	for i := 0; i < count; i++ {
-		firstName := firstNames[rand.Intn(len(firstNames))]
-		lastName := lastNames[rand.Intn(len(lastNames))]
-		name := fmt.Sprintf("%s %s", firstName, lastName)
-		email := fmt.Sprintf("%s.%s@example.com",
-			firstName[:1]+firstName[1:],
-			lastName)
-
-		age := rand.Intn(50) + 18             // 18-67
-		height := 150.0 + rand.Float64()*40.0 // 150-190 cm
-		isActive := rand.Intn(2) == 1
-
-		// Random date between 2023 and 2024
-		daysAgo := rand.Intn(730)
-		createdAt := time.Now().AddDate(0, 0, -daysAgo)
-
-		// Random birthday between 1960 and 2005
-		birthYear := 1960 + rand.Intn(45)
-		birthMonth := time.Month(rand.Intn(12) + 1)
-		birthDay := rand.Intn(28) + 1
-		birthday := time.Date(birthYear, birthMonth, birthDay, 0, 0, 0, 0, time.UTC)
-
-		// Random friend
-		friendFirstName := firstNames[rand.Intn(len(firstNames))]
-		friendLastName := lastNames[rand.Intn(len(lastNames))]
-		friend := models.UserFriend{
-			ID:   rand.Intn(1000) + 1,
-			Name: fmt.Sprintf("%s %s", friendFirstName, friendLastName),
-		}
-
-		users[i] = &models.User{
-			ID:        i + 1,
-			Name:      name,
-			Email:     email,
-			Age:       age,
-			Height:    height,
-			IsActive:  isActive,
-			CreatedAt: createdAt,
-			Birthday:  birthday,
-			Friend:    friend,
-		}
-	}
-
-	return users
+type User struct {
+	ID        uint `gorm:"primarykey"`
+	Name      string
+	Age       int
+	Email     string
+	IsActive  bool
+	CreatedAt time.Time
 }
 
 func main() {
-	tools.RunCLI("models/")
+	fmt.Println("=== FilterHybrid SQLite Test ===")
 
-	// Generate fake users - CHANGE THIS NUMBER
-	userCount := 10_000_000 // Change this to generate more or fewer users
-	sampleUsers := generateFakeUsers(userCount)
-
-	fmt.Printf("Generated %d fake users\n", userCount)
-
-	filter, err := filter.NewFilter[models.User]("User")
+	// Initialize database
+	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Time the filter operation
-	startTime := time.Now()
-	result, err := filter.FilterData(sampleUsers, sampleFilterRootAnd, 1, 5, func(processed, total int, percentage float32) {
-		fmt.Printf("\rProgress: %d/%d (%.2f%%)", processed, total, percentage)
-	})
-	elapsed := time.Since(startTime)
+	// Auto migrate
+	db.AutoMigrate(&User{})
 
-	if err != nil {
-		log.Fatal(err)
+	// Seed test data
+	seedData(db)
+
+	// Run ANALYZE to populate sqlite_stat1 for better estimation
+	db.Exec("ANALYZE")
+	fmt.Println("Ran ANALYZE to populate SQLite statistics")
+
+	// Get actual row count for comparison
+	var actualCount int64
+	db.Model(&User{}).Count(&actualCount)
+	fmt.Printf("Actual users in database: %d\n\n", actualCount)
+
+	// Create filter handler
+	filterHandler := filter.NewFilter[User]()
+
+	// Define filters
+	filterRoot := filter.FilterRoot{
+		Logic: filter.FilterLogicAnd,
+		Filters: []filter.Filter{
+			{
+				Field:          "name",
+				Value:          "John",
+				Mode:           filter.FilterModeContains,
+				FilterDataType: filter.FilterDataTypeText,
+			},
+			{
+				Field:          "age",
+				Value:          18,
+				Mode:           filter.FilterModeGTE,
+				FilterDataType: filter.FilterDataTypeNumber,
+			},
+		},
+		SortFields: []filter.SortField{
+			{Field: "age", Order: filter.FilterSortOrderDesc},
+			{Field: "name", Order: filter.FilterSortOrderAsc},
+		},
 	}
 
-	fmt.Printf("\nFiltered results: %d users\n", result.TotalSize)
-	fmt.Println(result)
-	fmt.Printf("Filter execution time: %v\n", elapsed)
-	fmt.Printf("Time per record: %v\n", elapsed/time.Duration(userCount))
+	fmt.Println("--- Test 1: Low Threshold (50) - Should use DATABASE filtering ---")
+	testHybridFilter(filterHandler, db, filterRoot, 50, "Low threshold forces DB filtering")
 
+	fmt.Println("\n--- Test 2: Medium Threshold (100) - Should use IN-MEMORY filtering ---")
+	testHybridFilter(filterHandler, db, filterRoot, 100, "Medium threshold uses in-memory")
+
+	fmt.Println("\n--- Test 3: High Threshold (1000) - Should use IN-MEMORY filtering ---")
+	testHybridFilter(filterHandler, db, filterRoot, 1000, "High threshold uses in-memory")
+
+	fmt.Println("\n--- Test 4: Compare all three methods ---")
+	compareFilteringMethods(filterHandler, db, filterRoot)
+
+	fmt.Println("\n--- Test 5: Active users only (different filter) ---")
+	testActiveUsersFilter(filterHandler, db)
+}
+
+func testHybridFilter(filterHandler *filter.FilterHandler[User], db *gorm.DB, filterRoot filter.FilterRoot, threshold int64, description string) {
+	fmt.Printf("Description: %s\n", description)
+	fmt.Printf("Threshold: %d rows\n", threshold)
+
+	// Get estimated rows to see what strategy will be used
+	stmt := &gorm.Statement{DB: db}
+	stmt.Parse(new(User))
+
+	// Try to get estimation (simplified version without exposing internal method)
+	var est struct{ Rows int64 }
+	db.Raw("SELECT COUNT(*) AS rows FROM " + stmt.Table).Scan(&est)
+	estimatedRows := est.Rows
+
+	expectedStrategy := "DATABASE"
+	if estimatedRows <= threshold {
+		expectedStrategy = "IN-MEMORY"
+	}
+	fmt.Printf("Estimated rows: %d, Expected strategy: %s\n", estimatedRows, expectedStrategy)
+
+	start := time.Now()
+	result, err := filterHandler.FilterHybrid(db, threshold, filterRoot, 1, 10)
+	elapsed := time.Since(start)
+
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Execution time: %v\n", elapsed)
+	fmt.Printf("Total: %d, Pages: %d, Current Page: %d/%d\n",
+		result.TotalSize, result.TotalPage, result.PageIndex, result.TotalPage)
+	fmt.Printf("Found %d users on this page\n", len(result.Data))
+
+	for i, user := range result.Data {
+		fmt.Printf("  %d. Name: %-20s Age: %d, Active: %v\n",
+			i+1, user.Name, user.Age, user.IsActive)
+	}
+}
+
+func compareFilteringMethods(filterHandler *filter.FilterHandler[User], db *gorm.DB, filterRoot filter.FilterRoot) {
+	fmt.Println("Comparing FilterDataQuery vs FilterDataGorm vs FilterHybrid:")
+	fmt.Println()
+
+	// Test 1: In-Memory (FilterDataQuery)
+	fmt.Println("1. FilterDataQuery (In-Memory):")
+	var allUsers []*User
+	db.Find(&allUsers)
+	start := time.Now()
+	result1, err := filterHandler.FilterDataQuery(allUsers, filterRoot, 1, 10)
+	elapsed1 := time.Since(start)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("   Time: %v, Results: %d\n", elapsed1, len(result1.Data))
+	}
+
+	// Test 2: Database (FilterDataGorm)
+	fmt.Println("2. FilterDataGorm (Database):")
+	start = time.Now()
+	result2, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+	elapsed2 := time.Since(start)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("   Time: %v, Results: %d\n", elapsed2, len(result2.Data))
+	}
+
+	// Test 3: Hybrid with low threshold (forces DB)
+	fmt.Println("3. FilterHybrid (threshold=50, expects DB):")
+	start = time.Now()
+	result3, err := filterHandler.FilterHybrid(db, 50, filterRoot, 1, 10)
+	elapsed3 := time.Since(start)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("   Time: %v, Results: %d\n", elapsed3, len(result3.Data))
+	}
+
+	// Test 4: Hybrid with high threshold (forces in-memory)
+	fmt.Println("4. FilterHybrid (threshold=200, expects In-Memory):")
+	start = time.Now()
+	result4, err := filterHandler.FilterHybrid(db, 200, filterRoot, 1, 10)
+	elapsed4 := time.Since(start)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("   Time: %v, Results: %d\n", elapsed4, len(result4.Data))
+	}
+
+	// Verify all methods return same results
+	fmt.Println()
+	if result1 != nil && result2 != nil && result3 != nil && result4 != nil {
+		if result1.TotalSize == result2.TotalSize && result2.TotalSize == result3.TotalSize && result3.TotalSize == result4.TotalSize {
+			fmt.Printf("✓ All methods returned consistent results (%d total records)\n", result1.TotalSize)
+		} else {
+			fmt.Printf("✗ Warning: Methods returned different totals: Q=%d, G=%d, H1=%d, H2=%d\n",
+				result1.TotalSize, result2.TotalSize, result3.TotalSize, result4.TotalSize)
+		}
+	}
+}
+
+func testActiveUsersFilter(filterHandler *filter.FilterHandler[User], db *gorm.DB) {
+	filterRoot := filter.FilterRoot{
+		Logic: filter.FilterLogicAnd,
+		Filters: []filter.Filter{
+			{
+				Field:          "is_active",
+				Value:          true,
+				Mode:           filter.FilterModeEqual,
+				FilterDataType: filter.FilterDataTypeBool,
+			},
+			{
+				Field:          "age",
+				Value:          25,
+				Mode:           filter.FilterModeGTE,
+				FilterDataType: filter.FilterDataTypeNumber,
+			},
+		},
+		SortFields: []filter.SortField{
+			{Field: "age", Order: filter.FilterSortOrderAsc},
+		},
+	}
+
+	result, err := filterHandler.FilterHybrid(db, 10, filterRoot, 1, 10)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Active users aged 25+:\n")
+	fmt.Printf("Total: %d users\n", result.TotalSize)
+	for i, user := range result.Data {
+		fmt.Printf("  %d. Name: %-20s Age: %d, Email: %s\n",
+			i+1, user.Name, user.Age, user.Email)
+	}
+}
+
+func seedData(db *gorm.DB) {
+	// Check if data already exists
+	var count int64
+	db.Model(&User{}).Count(&count)
+	if count > 0 {
+		fmt.Printf("Database already has %d users, skipping seed\n", count)
+		return
+	}
+
+	users := []User{
+		{Name: "John Doe", Age: 25, Email: "john@example.com", IsActive: true, CreatedAt: time.Now()},
+		{Name: "Jane Smith", Age: 30, Email: "jane@example.com", IsActive: true, CreatedAt: time.Now()},
+		{Name: "John Smith", Age: 22, Email: "johnsmith@example.com", IsActive: false, CreatedAt: time.Now()},
+		{Name: "Bob Johnson", Age: 35, Email: "bob@example.com", IsActive: true, CreatedAt: time.Now()},
+		{Name: "Alice Wonder", Age: 28, Email: "alice@example.com", IsActive: true, CreatedAt: time.Now()},
+		{Name: "Johnny Walker", Age: 40, Email: "johnny@example.com", IsActive: true, CreatedAt: time.Now()},
+		{Name: "Sarah Connor", Age: 32, Email: "sarah@example.com", IsActive: false, CreatedAt: time.Now()},
+		{Name: "John Connor", Age: 18, Email: "johnconnor@example.com", IsActive: true, CreatedAt: time.Now()},
+	}
+
+	// Add many more test users for better threshold demonstration
+	baseTime := time.Now().AddDate(0, -12, 0)
+	for i := range 100 {
+		users = append(users, User{
+			Name:      fmt.Sprintf("User %d", i),
+			Age:       20 + (i % 50),
+			Email:     fmt.Sprintf("user%d@example.com", i),
+			IsActive:  i%3 != 0, // ~66% active
+			CreatedAt: baseTime.AddDate(0, 0, i),
+		})
+	}
+
+	db.Create(&users)
+	fmt.Printf("Seeded %d test users\n", len(users))
 }
