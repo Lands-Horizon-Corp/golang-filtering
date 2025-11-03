@@ -110,7 +110,10 @@ func main() {
         },
     }
 
-    result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
+    pageIndex := 1
+    pageSize := 10
+
+    result, err := filterHandler.DataQuery(users, filterRoot, pageIndex, pageSize)
     if err != nil {
         panic(err)
     }
@@ -175,7 +178,10 @@ func main() {
         },
     }
 
-    result, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
+    pageIndex := 1
+    pageSize := 10
+
+    result, err := filterHandler.DataGorm(db, filterRoot, pageIndex, pageSize)
     if err != nil {
         log.Fatal(err)
     }
@@ -201,7 +207,11 @@ func main() {
 **Automatically chooses** between in-memory and database filtering based on table size.
 
 ```go
-result, err := filterHandler.Hybrid(db, 10000, filterRoot, 1, 30)
+threshold := 10000  // Switch to DB queries if table has more than 10K rows
+pageIndex := 1
+pageSize := 30
+
+result, err := filterHandler.Hybrid(db, threshold, filterRoot, pageIndex, pageSize)
 ```
 
 **How it works:**
@@ -257,9 +267,9 @@ filter.ModeRange    // Between
 
 ```go
 {
-    Field:          "age",
-    Value:          filter.Range{From: 18, To: 65},
-    Mode:           filter.ModeRange,
+    Field:    "age",
+    Value:    filter.Range{From: 18, To: 65},
+    Mode:     filter.ModeRange,
     DataType: filter.DataTypeNumber,
 }
 ```
@@ -310,8 +320,12 @@ filterRoot := filter.Root{
 ## 📄 Pagination
 
 ```go
+pageIndex := 1   // First page (1-based)
+pageSize := 30   // 30 items per page
+
 result, err := filterHandler.DataQuery(data, filterRoot, pageIndex, pageSize)
-// or DataGorm / Hybrid
+// or DataGorm(db, filterRoot, pageIndex, pageSize)
+// or Hybrid(db, threshold, filterRoot, pageIndex, pageSize)
 ```
 
 **Result includes:**
@@ -509,6 +523,9 @@ Test the security yourself:
 
 ```go
 // Test SQL injection
+pageIndex := 1
+pageSize := 10
+
 result, err := handler.DataQuery(users, filter.Root{
     FieldFilters: []filter.FieldFilter{
         {
@@ -518,11 +535,11 @@ result, err := handler.DataQuery(users, filter.Root{
             DataType: filter.DataTypeText,
         },
     },
-}, 1, 10)
+}, pageIndex, pageSize)
 // Returns safe results, no SQL execution
 
 // Test XSS
-result, err := handler.DataQuery(users, filter.Root{
+result, err = handler.DataQuery(users, filter.Root{
     FieldFilters: []filter.FieldFilter{
         {
             Field:    "bio",
@@ -531,7 +548,7 @@ result, err := handler.DataQuery(users, filter.Root{
             DataType: filter.DataTypeText,
         },
     },
-}, 1, 10)
+}, pageIndex, pageSize)
 // HTML stripped, XSS prevented
 ```
 
