@@ -73,6 +73,7 @@ type Root struct {
 	FieldFilters []FieldFilter `json:"filters"`    // List of filter conditions
 	SortFields   []SortField   `json:"sortFields"` // List of sort fields
 	Logic        Logic         `json:"logic"`      // How to combine filters (AND/OR)
+	Preload      []string      `json:"preload"`    // List of related entities to preload (only applicable for GORM)
 }
 
 // Range represents a range of values for filtering

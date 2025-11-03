@@ -32,6 +32,13 @@ func (f *Handler[T]) DataGorm(
 	// Build the query
 	query := db.Model(new(T))
 
+	// Apply preloads (GORM only feature)
+	if len(filterRoot.Preload) > 0 {
+		for _, preloadField := range filterRoot.Preload {
+			query = query.Preload(preloadField)
+		}
+	}
+
 	// Apply filters
 	if len(filterRoot.FieldFilters) > 0 {
 		query = f.applysGorm(query, filterRoot)

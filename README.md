@@ -200,6 +200,59 @@ func main() {
 - Database-level filtering (no loading all records)
 - Perfect for large datasets
 
+#### Preloading Related Entities (GORM Only)
+
+The `Preload` field in `Root` allows you to eagerly load related entities. This is **only available for GORM** and is optional (can be empty or omitted).
+
+```go
+type Author struct {
+    ID    uint   `gorm:"primaryKey" json:"id"`
+    Name  string `json:"name"`
+    Posts []Post `gorm:"foreignKey:AuthorID" json:"posts"`
+}
+
+type Post struct {
+    ID       uint   `gorm:"primaryKey" json:"id"`
+    Title    string `json:"title"`
+    AuthorID uint   `json:"author_id"`
+    Author   Author `gorm:"foreignKey:AuthorID" json:"author"` // Related entity
+}
+
+filterHandler := filter.NewFilter[Post]()
+
+filterRoot := filter.Root{
+    Logic:        filter.LogicAnd,
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "title",
+            Value:    "Go",
+            Mode:     filter.ModeContains,
+            DataType: filter.DataTypeText,
+        },
+    },
+    Preload: []string{"Author"}, // Eagerly load the Author relationship
+}
+
+pageIndex := 1
+pageSize := 10
+
+result, err := filterHandler.DataGorm(db, filterRoot, pageIndex, pageSize)
+// result.Data[0].Author will be populated
+
+// Multiple preloads
+filterRoot.Preload = []string{"Author", "Comments"}
+
+// Empty preload (no related entities loaded)
+filterRoot.Preload = []string{}
+```
+
+**Preload Features:**
+
+- Optional field (can be empty array or omitted)
+- Supports multiple relations
+- Works with filtering, sorting, and pagination
+- GORM-only feature (ignored in `DataQuery` and `Hybrid`)
+
 ---
 
 ### 3. Hybrid Filtering (`Hybrid`) – Auto-Switching
