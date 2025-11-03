@@ -6,6 +6,7 @@
   
   <p><strong>A high-performance, memory-efficient filtering package for Go with automatic field detection and support for both in-memory and GORM database filtering.</strong></p>
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/Lands-Horizon-Corp/golang-filtering.svg)](https://pkg.go.dev/github.com/Lands-Horizon-Corp/golang-filtering)
 [![Go Version](https://img.shields.io/badge/Go-1.18+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Security](https://img.shields.io/badge/security-SQL%20%7C%20XSS%20protected-green.svg)](#security)
