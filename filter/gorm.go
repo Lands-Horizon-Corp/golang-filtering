@@ -8,11 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type FilterHandler[T any] struct{}
 
-func NewFilter[T any]() *FilterHandler[T] {
-	return &FilterHandler[T]{}
-}
 
 func (f *FilterHandler[T]) FilterDataGorm(
 	db *gorm.DB,
