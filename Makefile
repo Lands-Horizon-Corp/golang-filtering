@@ -1,42 +1,85 @@
-.PHONY: help seed test clean
+.PHONY: help build run test test-verbose test-coverage clean lint fmt vet install-deps update-deps
 
+# Default target
 help:
-	@echo "Available commands:"
-	@echo "  make seed-small    - Seed 100 test records"
-	@echo "  make seed          - Seed 1,000 records (default)"
-	@echo "  make seed-stress   - Seed 1,000,000 records (stress test)"
-	@echo "  make seed-custom   - Seed with custom parameters (use RECORDS=n BATCH=n)"
-	@echo "  make test          - Run filter performance tests"
-	@echo "  make test-page     - Run tests with custom page (use PAGE=n SIZE=n)"
-	@echo "  make clean         - Remove database file"
-	@echo ""
-	@echo "Examples:"
-	@echo "  make seed-custom RECORDS=50000 BATCH=1000"
-	@echo "  make test-page PAGE=2 SIZE=100"
+	@echo "Available targets:"
+	@echo "  make build         - Build the application"
+	@echo "  make run           - Run the application"
+	@echo "  make test          - Run all tests"
+	@echo "  make test-verbose  - Run tests with verbose output"
+	@echo "  make test-coverage - Run tests with coverage report"
+	@echo "  make clean         - Clean build artifacts and test files"
+	@echo "  make lint          - Run golangci-lint"
+	@echo "  make fmt           - Format code with gofmt"
+	@echo "  make vet           - Run go vet"
+	@echo "  make install-deps  - Install dependencies"
+	@echo "  make update-deps   - Update all dependencies"
 
-seed-small:
-	go run cmd/seed/main.go -preset=small
+# Build the application
+build:
+	@echo "Building..."
+	@go build -o bin/app .
 
-seed:
-	go run cmd/seed/main.go -preset=default
+# Run the application
+run:
+	@echo "Running..."
+	@go run .
 
-seed-stress:
-	go run cmd/seed/main.go -preset=stress
-
-seed-custom:
-	go run cmd/seed/main.go -count=$(or $(RECORDS),1000) -batch=$(or $(BATCH),500) -clear
-
+# Run all tests
 test:
-	go run cmd/test/main.go
+	@echo "Running tests..."
+	@go test ./... -v
 
-test-page:
-	go run cmd/test/main.go -page=$(or $(PAGE),1) -page-size=$(or $(SIZE),50)
+# Run tests with verbose output
+test-verbose:
+	@echo "Running tests with verbose output..."
+	@go test ./... -v -count=1
 
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test ./test -coverpkg=./filter -coverprofile=coverage.out
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+	@echo ""
+	@echo "Coverage Summary:"
+	@go tool cover -func=coverage.out | grep total
+
+# Clean build artifacts and test files
 clean:
-	rm -f test.db
+	@echo "Cleaning..."
+	@rm -f bin/app
+	@rm -f test.db
+	@rm -f coverage.out coverage.html
+	@rm -rf bin/
 
-# Quick test workflow
-quick: clean seed-small test
+# Run golangci-lint
+lint:
+	@echo "Running linter..."
+	@golangci-lint run
 
-# Full stress test workflow
-stress: clean seed-stress test
+# Format code
+fmt:
+	@echo "Formatting code..."
+	@go fmt ./...
+
+# Run go vet
+vet:
+	@echo "Running go vet..."
+	@go vet ./...
+
+# Install dependencies
+install-deps:
+	@echo "Installing dependencies..."
+	@go mod download
+	@go mod tidy
+
+# Update all dependencies
+update-deps:
+	@echo "Updating dependencies..."
+	@go get -u ./...
+	@go mod tidy
+
+# Run all quality checks
+check: fmt vet lint test
+	@echo "All checks passed!"

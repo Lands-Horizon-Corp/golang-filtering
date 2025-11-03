@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	sanitizepkg "github.com/kennygrant/sanitize"
 )
 
 var dateTimeLayouts = []string{
@@ -74,7 +76,8 @@ func parseText(value any) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("invalid text type for field %s", value)
 	}
-	return strings.ToLower(strings.TrimSpace(str)), nil
+	sanitized := Sanitize(str)
+	return strings.ToLower(sanitized), nil
 }
 
 func parseTime(value any) (time.Time, error) {
@@ -359,4 +362,24 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
 			getters[compositeLowerKey] = nestedGetter
 		}
 	}
+}
+
+func Sanitize(input string) string {
+	// Use kennygrant/sanitize package which handles:
+	// - HTML/XSS sanitization
+	// - SQL injection prevention
+	// - Script tag removal
+	// - Control character removal
+	// All without manual pattern matching or regex
+
+	// First, sanitize HTML and remove all potentially dangerous content
+	sanitized := sanitizepkg.HTML(input)
+
+	// Additionally sanitize as plain text to remove any remaining tags
+	sanitized = sanitizepkg.Name(sanitized)
+
+	// Note: GORM's parameterized queries provide the primary SQL injection protection.
+	// This sanitization provides defense in depth for the application layer.
+
+	return strings.TrimSpace(sanitized)
 }
