@@ -8,8 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
-
 func (f *FilterHandler[T]) FilterDataGorm(
 	db *gorm.DB,
 	filterRoot FilterRoot,
@@ -227,7 +225,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTime := HasTimeComponent(t)
+		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s = ?", field), []any{t}
 		} else {
@@ -240,7 +238,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTime := HasTimeComponent(t)
+		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s != ?", field), []any{t}
 		} else {
@@ -253,7 +251,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTime := HasTimeComponent(t)
+		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s >= ?", field), []any{t}
 		} else {
@@ -265,7 +263,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTime := HasTimeComponent(t)
+		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s < ?", field), []any{t}
 		} else {
@@ -277,7 +275,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTime := HasTimeComponent(t)
+		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s <= ?", field), []any{t}
 		} else {
@@ -289,7 +287,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTime := HasTimeComponent(t)
+		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s < ?", field), []any{t}
 		} else {
@@ -301,7 +299,7 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTime := HasTimeComponent(t)
+		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s > ?", field), []any{t}
 		} else {
@@ -313,8 +311,8 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		if err != nil {
 			return "", nil
 		}
-		hasTimeFrom := HasTimeComponent(rangeVal.From)
-		hasTimeTo := HasTimeComponent(rangeVal.To)
+		hasTimeFrom := hasTimeComponent(rangeVal.From)
+		hasTimeTo := hasTimeComponent(rangeVal.To)
 
 		if hasTimeFrom && hasTimeTo {
 			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}

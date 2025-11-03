@@ -3,9 +3,12 @@ package filter
 
 type FilterHandler[T any] struct {
 	getters map[string]func(*T) any
-	key     string
 }
 
+// NewFilter creates a new filter handler that automatically generates getters using reflection
 func NewFilter[T any]() *FilterHandler[T] {
-	return &FilterHandler[T]{}
+	getters := generateGetters[T]()
+	return &FilterHandler[T]{
+		getters: getters,
+	}
 }
