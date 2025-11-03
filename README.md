@@ -1,8 +1,6 @@
 <div align="center">
-  <h1>
-    <img src=".github/assets/logo.png" alt="Golang Filtering Logo" width="60" style="vertical-align: middle;"/>
-    Golang Filtering
-  </h1>
+  <img src=".github/assets/logo.png" alt="Golang Filtering Logo" width="80"/>
+  <h1>Golang Filtering</h1>
   
   <p><strong>A high-performance, memory-efficient filtering package for Go with automatic field detection and support for both in-memory and GORM database filtering.</strong></p>
 
