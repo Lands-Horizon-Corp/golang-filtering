@@ -86,3 +86,5 @@ type FilterRangeDate struct {
 	From time.Time
 	To   time.Time
 }
+
+type ProgressCallback func(processed, total int, percentage float32)

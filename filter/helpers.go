@@ -48,7 +48,7 @@ var timeLayouts = []string{
 	"15:04:05-07:00",     // New: Offset without Z
 }
 
-func ParseNumber(value any) (float64, error) {
+func parseNumber(value any) (float64, error) {
 	var num float64
 
 	switch v := value.(type) {
@@ -68,7 +68,7 @@ func ParseNumber(value any) (float64, error) {
 	return num, nil
 }
 
-func ParseText(value any) (string, error) {
+func parseText(value any) (string, error) {
 	str, ok := value.(string)
 	if !ok {
 		return "", fmt.Errorf("invalid text type for field %s", value)
@@ -76,7 +76,7 @@ func ParseText(value any) (string, error) {
 	return strings.ToLower(strings.TrimSpace(str)), nil
 }
 
-func ParseTime(value any) (time.Time, error) {
+func parseTime(value any) (time.Time, error) {
 	var t time.Time
 	var err error
 
@@ -84,15 +84,15 @@ func ParseTime(value any) (time.Time, error) {
 	case time.Time:
 		t = v
 	case string:
-		var Parsed bool
+		var parsed bool
 		for _, layout := range timeLayouts {
 			t, err = time.Parse(layout, v)
 			if err == nil {
-				Parsed = true
+				parsed = true
 				break
 			}
 		}
-		if !Parsed {
+		if !parsed {
 			// Fallback to datetime layouts if time-only fails
 			for _, layout := range dateTimeLayouts {
 				t, err = time.Parse(layout, v)
@@ -113,7 +113,7 @@ func ParseTime(value any) (time.Time, error) {
 	return timeOnly, nil
 }
 
-func ParseDateTime(value any) (time.Time, error) {
+func parseDateTime(value any) (time.Time, error) {
 	switch v := value.(type) {
 	case time.Time:
 		return v, nil
@@ -130,16 +130,16 @@ func ParseDateTime(value any) (time.Time, error) {
 	}
 }
 
-func ParseRangeNumber(value any) (FilterRangeNumber, error) {
+func parseRangeNumber(value any) (FilterRangeNumber, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
 		return FilterRangeNumber{}, fmt.Errorf("invalid range type for field %s", value)
 	}
-	from, err := ParseNumber(rng.From)
+	from, err := parseNumber(rng.From)
 	if err != nil {
 		return FilterRangeNumber{}, err
 	}
-	to, err := ParseNumber(rng.To)
+	to, err := parseNumber(rng.To)
 	if err != nil {
 		return FilterRangeNumber{}, err
 	}
@@ -149,16 +149,16 @@ func ParseRangeNumber(value any) (FilterRangeNumber, error) {
 	}, nil
 }
 
-func ParseRangeDateTime(value any) (FilterRangeDate, error) {
+func parseRangeDateTime(value any) (FilterRangeDate, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
 		return FilterRangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}
-	from, err := ParseDateTime(rng.From)
+	from, err := parseDateTime(rng.From)
 	if err != nil {
 		return FilterRangeDate{}, err
 	}
-	to, err := ParseDateTime(rng.To)
+	to, err := parseDateTime(rng.To)
 	if err != nil {
 		return FilterRangeDate{}, err
 	}
@@ -171,16 +171,16 @@ func ParseRangeDateTime(value any) (FilterRangeDate, error) {
 	}, nil
 }
 
-func ParseRangeTime(value any) (FilterRangeDate, error) {
+func parseRangeTime(value any) (FilterRangeDate, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
 		return FilterRangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}
-	from, err := ParseTime(rng.From)
+	from, err := parseTime(rng.From)
 	if err != nil {
 		return FilterRangeDate{}, err
 	}
-	to, err := ParseTime(rng.To)
+	to, err := parseTime(rng.To)
 	if err != nil {
 		return FilterRangeDate{}, err
 	}
@@ -196,7 +196,7 @@ func ParseRangeTime(value any) (FilterRangeDate, error) {
 	}, nil
 }
 
-func ParseBool(value any) (bool, error) {
+func parseBool(value any) (bool, error) {
 	b, ok := value.(bool)
 	if !ok {
 		return false, fmt.Errorf("invalid boolean type for field %s", value)
@@ -212,9 +212,9 @@ func HasTimeComponent(t time.Time) bool {
 }
 
 func CompareValues(a, b any) int {
-	// Try to Parse both values to standardized types
-	numA, errA := ParseNumber(a)
-	numB, errB := ParseNumber(b)
+	// Try to parse both values to standardized types
+	numA, errA := parseNumber(a)
+	numB, errB := parseNumber(b)
 	if errA == nil && errB == nil {
 		if numA < numB {
 			return -1
@@ -224,14 +224,14 @@ func CompareValues(a, b any) int {
 		return 0
 	}
 
-	strA, errA := ParseText(a)
-	strB, errB := ParseText(b)
+	strA, errA := parseText(a)
+	strB, errB := parseText(b)
 	if errA == nil && errB == nil {
 		return strings.Compare(strA, strB)
 	}
 
-	boolA, errA := ParseBool(a)
-	boolB, errB := ParseBool(b)
+	boolA, errA := parseBool(a)
+	boolB, errB := parseBool(b)
 	if errA == nil && errB == nil {
 		if boolA == boolB {
 			return 0
@@ -243,8 +243,8 @@ func CompareValues(a, b any) int {
 	}
 
 	// Try datetime comparison
-	timeA, errA := ParseDateTime(a)
-	timeB, errB := ParseDateTime(b)
+	timeA, errA := parseDateTime(a)
+	timeB, errB := parseDateTime(b)
 	if errA == nil && errB == nil {
 		if timeA.Before(timeB) {
 			return -1
@@ -255,8 +255,8 @@ func CompareValues(a, b any) int {
 	}
 
 	// Try time-only comparison
-	timeOnlyA, errA := ParseTime(a)
-	timeOnlyB, errB := ParseTime(b)
+	timeOnlyA, errA := parseTime(a)
+	timeOnlyB, errB := parseTime(b)
 	if errA == nil && errB == nil {
 		if timeOnlyA.Before(timeOnlyB) {
 			return -1
