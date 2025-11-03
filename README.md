@@ -14,16 +14,16 @@
 
 ## ✨ Features
 
-- **Automatic field getter generation** using reflection
-- **Parallel processing** for in-memory filtering
-- **Memory efficient** – zero data cloning, pointer-based operations
-- **GORM integration** for database queries
-- **Built-in security** – SQL injection, XSS protection, Command Injection, Null Byte Attacks
-- **Rich filter modes** – text, number, boolean, date, time
-- **Sorting** with multiple fields
-- **Pagination** built-in
-- **JSON tag support**
-- **Nested struct support**
+- **Dynamic field access without manual getters** – Automatically inspects your struct fields at runtime using reflection, eliminating the need to write custom getter functions for every field. Supports JSON tags and nested structures out of the box.
+- **Parallel processing** for in-memory filtering – Utilizes all available CPU cores to process large datasets concurrently, significantly improving performance on multi-core systems
+- **Memory efficient** – Zero data cloning, pointer-based operations that work directly on your original data without creating copies
+- **GORM integration** for database queries – Seamless integration with GORM v2, automatically generating optimized SQL queries with proper parameterization
+- **Built-in security** – Multi-layer protection against SQL injection, XSS attacks, Command Injection, and Null Byte Attacks using industry-standard sanitization
+- **Rich filter modes** – Comprehensive filtering options for text (contains, starts with, ends with), numbers (ranges, comparisons), booleans, dates, and times
+- **Sorting** with multiple fields – Sort by multiple columns with ascending/descending order support
+- **Pagination** built-in – Automatic pagination with total count, page count, and configurable page sizes
+- **JSON tag support** – Respects your JSON field tags for API-friendly filtering
+- **Nested struct support** – Filter on deeply nested struct fields using dot notation (e.g., `user.address.city`)
 
 [Features](#features) • [Installation](#installation) • [Quick Start](#quick-start) • [Examples](#examples) • [Security](#security) • [Performance](#performance) • [API Reference](#api-reference)
 

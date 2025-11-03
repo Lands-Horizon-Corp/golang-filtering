@@ -350,7 +350,7 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
 		nestedIndex := i
 		nestedGetter := func(v *T) any {
 			val := reflect.ValueOf(v)
-			if val.Kind() == reflect.Ptr {
+			if val.Kind() == reflect.Pointer {
 				val = val.Elem()
 			}
 			parentVal := val.Field(parentIndex)
