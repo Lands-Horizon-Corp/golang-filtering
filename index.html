@@ -59,11 +59,11 @@
 				
 				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (66.2%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (82.4%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (83.5%)</option>
 				
 				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (44.2%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (63.7%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (64.3%)</option>
 				
 				</select>
 			</div>
@@ -639,7 +639,7 @@ func parseRangeDateTime(value any) (RangeDate, error) <span class="cov8" title="
         if err != nil </span><span class="cov0" title="0">{
                 return RangeDate{}, err
         }</span>
-        <span class="cov8" title="1">if from.After(to) </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if from.After(to) </span><span class="cov8" title="1">{
                 return RangeDate{}, fmt.Errorf("range from date cannot be after to date")
         }</span>
         <span class="cov8" title="1">return RangeDate{
@@ -663,7 +663,7 @@ func parseRangeTime(value any) (RangeDate, error) <span class="cov8" title="1">{
         }</span>
 
         // Validate that from &lt;= to
-        <span class="cov8" title="1">if from.After(to) </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if from.After(to) </span><span class="cov8" title="1">{
                 return RangeDate{}, fmt.Errorf("range from time cannot be after to time")
         }</span>
 
@@ -1452,7 +1452,7 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                 }</span>
         case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeDateTime(filter.Value)
-                if err != nil </span><span class="cov0" title="0">{
+                if err != nil </span><span class="cov8" title="1">{
                         return false, data, err
                 }</span>
                 <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
@@ -1541,7 +1541,7 @@ func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, 
 
         case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeTime(filter.Value)
-                if err != nil </span><span class="cov0" title="0">{
+                if err != nil </span><span class="cov8" title="1">{
                         return false, data, err
                 }</span>
                 <span class="cov8" title="1">return !data.Before(rangeVal.From) &amp;&amp; !data.After(rangeVal.To), data, nil</span>
