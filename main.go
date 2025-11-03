@@ -88,7 +88,7 @@ func main() {
 	testActiveUsers(filterHandler, db)
 }
 
-func testHybrid(filterHandler *filter.Handler[User], db *gorm.DB, filterRoot filter.Root, threshold int64, description string) {
+func testHybrid(filterHandler *filter.Handler[User], db *gorm.DB, filterRoot filter.Root, threshold int, description string) {
 	fmt.Printf("Description: %s\n", description)
 	fmt.Printf("Threshold: %d rows\n", threshold)
 
@@ -105,7 +105,7 @@ func testHybrid(filterHandler *filter.Handler[User], db *gorm.DB, filterRoot fil
 	estimatedRows := est.Rows
 
 	expectedStrategy := "DATABASE"
-	if estimatedRows <= threshold {
+	if estimatedRows <= int64(threshold) {
 		expectedStrategy = "IN-MEMORY"
 	}
 	fmt.Printf("Estimated rows: %d, Expected strategy: %s\n", estimatedRows, expectedStrategy)

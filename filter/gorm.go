@@ -58,7 +58,7 @@ func (f *Handler[T]) DataGorm(
 
 	// Apply pagination
 	offset := (result.PageIndex - 1) * result.PageSize
-	query = query.Offset(offset).Limit(result.PageSize)
+	query = query.Offset(int(offset)).Limit(int(result.PageSize))
 
 	// Execute query
 	var data []*T

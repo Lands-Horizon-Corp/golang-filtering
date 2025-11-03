@@ -12,7 +12,7 @@ import (
 // uses in-memory filtering for better performance. Otherwise, it uses database filtering.
 func (f *Handler[T]) Hybrid(
 	db *gorm.DB,
-	threshold int64,
+	threshold int,
 	filterRoot Root,
 	pageIndex int,
 	pageSize int,
@@ -32,7 +32,7 @@ func (f *Handler[T]) Hybrid(
 	}
 
 	// Decide which strategy to use
-	if estimatedRows <= threshold {
+	if estimatedRows <= int64(threshold) {
 		// Use in-memory filtering for better performance on small datasets
 		var allData []*T
 		if err := db.Find(&allData).Error; err != nil {

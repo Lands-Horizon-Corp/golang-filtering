@@ -57,13 +57,13 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (34.3%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (66.2%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (43.8%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (76.7%)</option>
 				
 				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (44.2%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (40.3%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (54.3%)</option>
 				
 				</select>
 			</div>
@@ -154,7 +154,7 @@ func (f *Handler[T]) DataGorm(
 
         // Apply pagination
         <span class="cov8" title="1">offset := (result.PageIndex - 1) * result.PageSize
-        query = query.Offset(offset).Limit(result.PageSize)
+        query = query.Offset(int(offset)).Limit(int(result.PageSize))
 
         // Execute query
         var data []*T
@@ -216,7 +216,7 @@ func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) <span cl
                 return f.buildBoolCondition(field, filter.Mode, value)</span>
         case DataTypeDate:<span class="cov8" title="1">
                 return f.buildDateCondition(field, filter.Mode, value)</span>
-        case DataTypeTime:<span class="cov0" title="0">
+        case DataTypeTime:<span class="cov8" title="1">
                 return f.buildTimeCondition(field, filter.Mode, value)</span>
         default:<span class="cov0" title="0">
                 return "", nil</span>
@@ -226,42 +226,42 @@ func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) <span cl
 // buildNumberCondition builds SQL condition for number filters
 func (f *Handler[T]) buildNumberCondition(field string, mode Mode, value any) (string, []any) <span class="cov8" title="1">{
         switch mode </span>{
-        case ModeEqual:<span class="cov0" title="0">
+        case ModeEqual:<span class="cov8" title="1">
                 num, err := parseNumber(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s = ?", field), []any{num}</span>
-        case ModeNotEqual:<span class="cov0" title="0">
+                <span class="cov8" title="1">return fmt.Sprintf("%s = ?", field), []any{num}</span>
+        case ModeNotEqual:<span class="cov8" title="1">
                 num, err := parseNumber(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s != ?", field), []any{num}</span>
-        case ModeGT:<span class="cov0" title="0">
+                <span class="cov8" title="1">return fmt.Sprintf("%s != ?", field), []any{num}</span>
+        case ModeGT:<span class="cov8" title="1">
                 num, err := parseNumber(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s &gt; ?", field), []any{num}</span>
+                <span class="cov8" title="1">return fmt.Sprintf("%s &gt; ?", field), []any{num}</span>
         case ModeGTE:<span class="cov8" title="1">
                 num, err := parseNumber(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
                 <span class="cov8" title="1">return fmt.Sprintf("%s &gt;= ?", field), []any{num}</span>
-        case ModeLT:<span class="cov0" title="0">
+        case ModeLT:<span class="cov8" title="1">
                 num, err := parseNumber(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s &lt; ?", field), []any{num}</span>
-        case ModeLTE:<span class="cov0" title="0">
+                <span class="cov8" title="1">return fmt.Sprintf("%s &lt; ?", field), []any{num}</span>
+        case ModeLTE:<span class="cov8" title="1">
                 num, err := parseNumber(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s &lt;= ?", field), []any{num}</span>
+                <span class="cov8" title="1">return fmt.Sprintf("%s &lt;= ?", field), []any{num}</span>
         case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeNumber(value)
                 if err != nil </span><span class="cov0" title="0">{
@@ -286,15 +286,15 @@ func (f *Handler[T]) buildTextCondition(field string, mode Mode, value any) (str
                 return fmt.Sprintf("LOWER(%s) != LOWER(?)", field), []any{str}</span>
         case ModeContains:<span class="cov8" title="1">
                 return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []any{"%" + str + "%"}</span>
-        case ModeNotContains:<span class="cov0" title="0">
+        case ModeNotContains:<span class="cov8" title="1">
                 return fmt.Sprintf("LOWER(%s) NOT LIKE LOWER(?)", field), []any{"%" + str + "%"}</span>
-        case ModeStartsWith:<span class="cov0" title="0">
+        case ModeStartsWith:<span class="cov8" title="1">
                 return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []any{str + "%"}</span>
-        case ModeEndsWith:<span class="cov0" title="0">
+        case ModeEndsWith:<span class="cov8" title="1">
                 return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []any{"%" + str}</span>
-        case ModeIsEmpty:<span class="cov0" title="0">
+        case ModeIsEmpty:<span class="cov8" title="1">
                 return fmt.Sprintf("(%s IS NULL OR %s = '')", field, field), []any{}</span>
-        case ModeIsNotEmpty:<span class="cov0" title="0">
+        case ModeIsNotEmpty:<span class="cov8" title="1">
                 return fmt.Sprintf("(%s IS NOT NULL AND %s != '')", field, field), []any{}</span>
         }
         <span class="cov0" title="0">return "", nil</span>
@@ -318,28 +318,28 @@ func (f *Handler[T]) buildBoolCondition(field string, mode Mode, value any) (str
 // buildDateCondition builds SQL condition for date/datetime filters
 func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (string, []any) <span class="cov8" title="1">{
         switch mode </span>{
-        case ModeEqual:<span class="cov0" title="0">
+        case ModeEqual:<span class="cov8" title="1">
                 t, err := parseDateTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">hasTime := hasTimeComponent(t)
+                <span class="cov8" title="1">hasTime := hasTimeComponent(t)
                 if hasTime </span><span class="cov0" title="0">{
                         return fmt.Sprintf("%s = ?", field), []any{t}
                 }</span>
-                <span class="cov0" title="0">startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+                <span class="cov8" title="1">startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
                 endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
                 return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}</span>
-        case ModeNotEqual:<span class="cov0" title="0">
+        case ModeNotEqual:<span class="cov8" title="1">
                 t, err := parseDateTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">hasTime := hasTimeComponent(t)
+                <span class="cov8" title="1">hasTime := hasTimeComponent(t)
                 if hasTime </span><span class="cov0" title="0">{
                         return fmt.Sprintf("%s != ?", field), []any{t}
                 }</span>
-                <span class="cov0" title="0">startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+                <span class="cov8" title="1">startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
                 endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
                 return fmt.Sprintf("(%s &lt; ? OR %s &gt; ?)", field, field), []any{startOfDay, endOfDay}</span>
         case ModeGTE:<span class="cov0" title="0">
@@ -378,15 +378,15 @@ func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (str
                         endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
                         return fmt.Sprintf("%s &lt;= ?", field), []any{endOfDay}
                 }</span>
-        case ModeBefore:<span class="cov0" title="0">
+        case ModeBefore:<span class="cov8" title="1">
                 t, err := parseDateTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">hasTime := hasTimeComponent(t)
+                <span class="cov8" title="1">hasTime := hasTimeComponent(t)
                 if hasTime </span><span class="cov0" title="0">{
                         return fmt.Sprintf("%s &lt; ?", field), []any{t}
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
                         return fmt.Sprintf("%s &lt; ?", field), []any{startOfDay}
                 }</span>
@@ -402,17 +402,17 @@ func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (str
                         endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
                         return fmt.Sprintf("%s &gt; ?", field), []any{endOfDay}
                 }</span>
-        case ModeRange:<span class="cov0" title="0">
+        case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeDateTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">hasTimeFrom := hasTimeComponent(rangeVal.From)
+                <span class="cov8" title="1">hasTimeFrom := hasTimeComponent(rangeVal.From)
                 hasTimeTo := hasTimeComponent(rangeVal.To)
 
                 if hasTimeFrom &amp;&amp; hasTimeTo </span><span class="cov0" title="0">{
                         return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
                         endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
                         return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
@@ -422,50 +422,50 @@ func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (str
 }
 
 // buildTimeCondition builds SQL condition for time filters
-func (f *Handler[T]) buildTimeCondition(field string, mode Mode, value any) (string, []any) <span class="cov0" title="0">{
+func (f *Handler[T]) buildTimeCondition(field string, mode Mode, value any) (string, []any) <span class="cov8" title="1">{
         switch mode </span>{
-        case ModeEqual:<span class="cov0" title="0">
+        case ModeEqual:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s = ?", field), []any{t}</span>
-        case ModeNotEqual:<span class="cov0" title="0">
+                <span class="cov8" title="1">return fmt.Sprintf("%s = ?", field), []any{t}</span>
+        case ModeNotEqual:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s != ?", field), []any{t}</span>
+                <span class="cov8" title="1">return fmt.Sprintf("%s != ?", field), []any{t}</span>
         case ModeGT:<span class="cov0" title="0">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
                 <span class="cov0" title="0">return fmt.Sprintf("%s &gt; ?", field), []any{t}</span>
-        case ModeGTE, ModeAfter:<span class="cov0" title="0">
+        case ModeGTE, ModeAfter:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s &gt;= ?", field), []any{t}</span>
-        case ModeLT, ModeBefore:<span class="cov0" title="0">
+                <span class="cov8" title="1">return fmt.Sprintf("%s &gt;= ?", field), []any{t}</span>
+        case ModeLT, ModeBefore:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s &lt; ?", field), []any{t}</span>
+                <span class="cov8" title="1">return fmt.Sprintf("%s &lt; ?", field), []any{t}</span>
         case ModeLTE:<span class="cov0" title="0">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
                 <span class="cov0" title="0">return fmt.Sprintf("%s &lt;= ?", field), []any{t}</span>
-        case ModeRange:<span class="cov0" title="0">
+        case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}</span>
+                <span class="cov8" title="1">return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}</span>
         }
         <span class="cov0" title="0">return "", nil</span>
 }
@@ -553,31 +553,31 @@ func parseText(value any) (string, error) <span class="cov8" title="1">{
         return strings.ToLower(sanitized), nil</span>
 }
 
-func parseTime(value any) (time.Time, error) <span class="cov0" title="0">{
+func parseTime(value any) (time.Time, error) <span class="cov8" title="1">{
         var t time.Time
         var err error
 
         switch v := value.(type) </span>{
-        case time.Time:<span class="cov0" title="0">
+        case time.Time:<span class="cov8" title="1">
                 t = v</span>
-        case string:<span class="cov0" title="0">
+        case string:<span class="cov8" title="1">
                 var parsed bool
-                for _, layout := range timeLayouts </span><span class="cov0" title="0">{
+                for _, layout := range timeLayouts </span><span class="cov8" title="1">{
                         t, err = time.Parse(layout, v)
-                        if err == nil </span><span class="cov0" title="0">{
+                        if err == nil </span><span class="cov8" title="1">{
                                 parsed = true
                                 break</span>
                         }
                 }
-                <span class="cov0" title="0">if !parsed </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if !parsed </span><span class="cov8" title="1">{
                         // Fallback to datetime layouts if time-only fails
-                        for _, layout := range dateTimeLayouts </span><span class="cov0" title="0">{
+                        for _, layout := range dateTimeLayouts </span><span class="cov8" title="1">{
                                 t, err = time.Parse(layout, v)
-                                if err == nil </span><span class="cov0" title="0">{
+                                if err == nil </span><span class="cov8" title="1">{
                                         break</span>
                                 }
                         }
-                        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
                                 return time.Time{}, fmt.Errorf("invalid time format: %v", v)
                         }</span>
                 }
@@ -586,7 +586,7 @@ func parseTime(value any) (time.Time, error) <span class="cov0" title="0">{
         }
 
         // Normalize to time-only in UTC
-        <span class="cov0" title="0">timeOnly := time.Date(0, time.January, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
+        <span class="cov8" title="1">timeOnly := time.Date(0, time.January, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
         return timeOnly, nil</span>
 }
 
@@ -594,10 +594,10 @@ func parseDateTime(value any) (time.Time, error) <span class="cov8" title="1">{
         switch v := value.(type) </span>{
         case time.Time:<span class="cov8" title="1">
                 return v, nil</span>
-        case string:<span class="cov0" title="0">
-                for _, layout := range dateTimeLayouts </span><span class="cov0" title="0">{
+        case string:<span class="cov8" title="1">
+                for _, layout := range dateTimeLayouts </span><span class="cov8" title="1">{
                         t, err := time.Parse(layout, v)
-                        if err == nil </span><span class="cov0" title="0">{
+                        if err == nil </span><span class="cov8" title="1">{
                                 return t, nil
                         }</span>
                 }
@@ -626,48 +626,48 @@ func parseRangeNumber(value any) (RangeNumber, error) <span class="cov8" title="
         }, nil</span>
 }
 
-func parseRangeDateTime(value any) (RangeDate, error) <span class="cov0" title="0">{
+func parseRangeDateTime(value any) (RangeDate, error) <span class="cov8" title="1">{
         rng, ok := value.(Range)
         if !ok </span><span class="cov0" title="0">{
                 return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
         }</span>
-        <span class="cov0" title="0">from, err := parseDateTime(rng.From)
+        <span class="cov8" title="1">from, err := parseDateTime(rng.From)
         if err != nil </span><span class="cov0" title="0">{
                 return RangeDate{}, err
         }</span>
-        <span class="cov0" title="0">to, err := parseDateTime(rng.To)
+        <span class="cov8" title="1">to, err := parseDateTime(rng.To)
         if err != nil </span><span class="cov0" title="0">{
                 return RangeDate{}, err
         }</span>
-        <span class="cov0" title="0">if from.After(to) </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if from.After(to) </span><span class="cov0" title="0">{
                 return RangeDate{}, fmt.Errorf("range from date cannot be after to date")
         }</span>
-        <span class="cov0" title="0">return RangeDate{
+        <span class="cov8" title="1">return RangeDate{
                 From: from,
                 To:   to,
         }, nil</span>
 }
 
-func parseRangeTime(value any) (RangeDate, error) <span class="cov0" title="0">{
+func parseRangeTime(value any) (RangeDate, error) <span class="cov8" title="1">{
         rng, ok := value.(Range)
         if !ok </span><span class="cov0" title="0">{
                 return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
         }</span>
-        <span class="cov0" title="0">from, err := parseTime(rng.From)
+        <span class="cov8" title="1">from, err := parseTime(rng.From)
         if err != nil </span><span class="cov0" title="0">{
                 return RangeDate{}, err
         }</span>
-        <span class="cov0" title="0">to, err := parseTime(rng.To)
+        <span class="cov8" title="1">to, err := parseTime(rng.To)
         if err != nil </span><span class="cov0" title="0">{
                 return RangeDate{}, err
         }</span>
 
         // Validate that from &lt;= to
-        <span class="cov0" title="0">if from.After(to) </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if from.After(to) </span><span class="cov0" title="0">{
                 return RangeDate{}, fmt.Errorf("range from time cannot be after to time")
         }</span>
 
-        <span class="cov0" title="0">return RangeDate{
+        <span class="cov8" title="1">return RangeDate{
                 From: from,
                 To:   to,
         }, nil</span>
@@ -685,7 +685,7 @@ func hasTimeComponent(t time.Time) bool <span class="cov8" title="1">{
         if t.Hour() == 0 &amp;&amp; t.Minute() == 0 &amp;&amp; t.Second() == 0 &amp;&amp; t.Nanosecond() == 0 </span><span class="cov8" title="1">{
                 return false
         }</span>
-        <span class="cov0" title="0">return true</span>
+        <span class="cov8" title="1">return true</span>
 }
 
 func compareValues(a, b any) int <span class="cov8" title="1">{
@@ -703,7 +703,7 @@ func compareValues(a, b any) int <span class="cov8" title="1">{
 
         <span class="cov8" title="1">strA, errA := parseText(a)
         strB, errB := parseText(b)
-        if errA == nil &amp;&amp; errB == nil </span><span class="cov0" title="0">{
+        if errA == nil &amp;&amp; errB == nil </span><span class="cov8" title="1">{
                 return strings.Compare(strA, strB)
         }</span>
 
@@ -804,34 +804,34 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
                         continue</span>
                 }
 
-                <span class="cov0" title="0">nestedFieldName := nestedField.Name
+                <span class="cov8" title="1">nestedFieldName := nestedField.Name
                 nestedKey := nestedFieldName
 
                 // Check for json tag on nested field
-                if jsonTag := nestedField.Tag.Get("json"); jsonTag != "" </span><span class="cov0" title="0">{
+                if jsonTag := nestedField.Tag.Get("json"); jsonTag != "" </span><span class="cov8" title="1">{
                         tagValue := strings.Split(jsonTag, ",")[0]
-                        if tagValue != "" &amp;&amp; tagValue != "-" </span><span class="cov0" title="0">{
+                        if tagValue != "" &amp;&amp; tagValue != "-" </span><span class="cov8" title="1">{
                                 nestedKey = tagValue
                         }</span>
                 }
 
                 // Create composite key: parent.nested
-                <span class="cov0" title="0">compositeKey := parentKey + "." + nestedKey
+                <span class="cov8" title="1">compositeKey := parentKey + "." + nestedKey
                 compositeLowerKey := parentKey + "." + strings.ToLower(nestedFieldName)
 
                 // Create getter for nested field
                 nestedIndex := i
-                nestedGetter := func(v *T) any </span><span class="cov0" title="0">{
+                nestedGetter := func(v *T) any </span><span class="cov8" title="1">{
                         val := reflect.ValueOf(v)
-                        if val.Kind() == reflect.Ptr </span><span class="cov0" title="0">{
+                        if val.Kind() == reflect.Ptr </span><span class="cov8" title="1">{
                                 val = val.Elem()
                         }</span>
-                        <span class="cov0" title="0">parentVal := val.Field(parentIndex)
+                        <span class="cov8" title="1">parentVal := val.Field(parentIndex)
                         return parentVal.Field(nestedIndex).Interface()</span>
                 }
 
-                <span class="cov0" title="0">getters[compositeKey] = nestedGetter
-                if compositeKey != compositeLowerKey </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">getters[compositeKey] = nestedGetter
+                if compositeKey != compositeLowerKey </span><span class="cov8" title="1">{
                         getters[compositeLowerKey] = nestedGetter
                 }</span>
         }
@@ -872,7 +872,7 @@ import (
 // uses in-memory filtering for better performance. Otherwise, it uses database filtering.
 func (f *Handler[T]) Hybrid(
         db *gorm.DB,
-        threshold int64,
+        threshold int,
         filterRoot Root,
         pageIndex int,
         pageSize int,
@@ -892,7 +892,7 @@ func (f *Handler[T]) Hybrid(
         }</span>
 
         // Decide which strategy to use
-        <span class="cov8" title="1">if estimatedRows &lt;= threshold </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if estimatedRows &lt;= int64(threshold) </span><span class="cov8" title="1">{
                 // Use in-memory filtering for better performance on small datasets
                 var allData []*T
                 if err := db.Find(&amp;allData).Error; err != nil </span><span class="cov0" title="0">{
@@ -1086,11 +1086,11 @@ func (f *Handler[T]) DataQuery(
                                                 match, _, err = f.applyNumber(value, fg.filter)</span>
                                         case DataTypeText:<span class="cov8" title="1">
                                                 match, _, err = f.applyText(value, fg.filter)</span>
-                                        case DataTypeDate:<span class="cov0" title="0">
+                                        case DataTypeDate:<span class="cov8" title="1">
                                                 match, _, err = f.applyDate(value, fg.filter)</span>
                                         case DataTypeBool:<span class="cov8" title="1">
                                                 match, _, err = f.applyBool(value, fg.filter)</span>
-                                        case DataTypeTime:<span class="cov0" title="0">
+                                        case DataTypeTime:<span class="cov8" title="1">
                                                 match, _, err = f.applyTime(value, fg.filter)</span>
                                         default:<span class="cov0" title="0">
                                                 err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)</span>
@@ -1337,7 +1337,7 @@ func (f *Handler[T]) applyBool(value any, filter FieldFilter) (bool, bool, error
         <span class="cov8" title="1">switch filter.Mode </span>{
         case ModeEqual:<span class="cov8" title="1">
                 return data == val, data, nil</span>
-        case ModeNotEqual:<span class="cov0" title="0">
+        case ModeNotEqual:<span class="cov8" title="1">
                 return data != val, data, nil</span>
         case ModeContains:<span class="cov0" title="0">
                 return false, data, fmt.Errorf("contains filter not supported for boolean field %s", filter.Field)</span>
@@ -1371,32 +1371,32 @@ func (f *Handler[T]) applyBool(value any, filter FieldFilter) (bool, bool, error
 }
 
 // applyDate applies a date filter and returns whether the value matches the filter
-func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, error) <span class="cov0" title="0">{
+func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, error) <span class="cov8" title="1">{
         data, err := parseDateTime(value)
         if err != nil </span><span class="cov0" title="0">{
                 return false, time.Time{}, err
         }</span>
-        <span class="cov0" title="0">hasTime := hasTimeComponent(data)
+        <span class="cov8" title="1">hasTime := hasTimeComponent(data)
 
         switch filter.Mode </span>{
-        case ModeEqual:<span class="cov0" title="0">
+        case ModeEqual:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">if hasTime </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return data.Equal(filterVal), data, nil
                 }</span> else<span class="cov0" title="0"> {
                         startOfDay := time.Date(data.Year(), data.Month(), data.Day(), 0, 0, 0, 0, data.Location())
                         endOfDay := time.Date(data.Year(), data.Month(), data.Day(), 23, 59, 59, 999999999, data.Location())
                         return !filterVal.Before(startOfDay) &amp;&amp; !filterVal.After(endOfDay), data, nil
                 }</span>
-        case ModeNotEqual:<span class="cov0" title="0">
+        case ModeNotEqual:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">if hasTime </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return !data.Equal(filterVal), data, nil
                 }</span> else<span class="cov0" title="0"> {
                         startOfDay := time.Date(data.Year(), data.Month(), data.Day(), 0, 0, 0, 0, data.Location())
@@ -1450,35 +1450,35 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                         endOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 23, 59, 59, 999999999, filterVal.Location())
                         return data.Equal(endOfDay) || data.Before(endOfDay), data, nil
                 }</span>
-        case ModeRange:<span class="cov0" title="0">
+        case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeDateTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">if hasTime </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return !data.Before(rangeVal.From) &amp;&amp; !data.After(rangeVal.To), data, nil
                 }</span> else<span class="cov0" title="0"> {
                         startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
                         endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
                         return !data.Before(startOfDay) &amp;&amp; !data.After(endOfDay), data, nil
                 }</span>
-        case ModeBefore:<span class="cov0" title="0">
+        case ModeBefore:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">if hasTime </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return data.Before(filterVal), data, nil
                 }</span> else<span class="cov0" title="0"> {
                         startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
                         return data.Before(startOfDay), data, nil
                 }</span>
-        case ModeAfter:<span class="cov0" title="0">
+        case ModeAfter:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">if hasTime </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return data.After(filterVal), data, nil
                 }</span> else<span class="cov0" title="0"> {
                         // After the end of the day
@@ -1491,18 +1491,18 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
 }
 
 // applyTime applies a time filter and returns whether the value matches the filter
-func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, error) <span class="cov0" title="0">{
+func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, error) <span class="cov8" title="1">{
         data, err := parseTime(value)
         if err != nil </span><span class="cov0" title="0">{
                 return false, time.Time{}, err
         }</span>
-        <span class="cov0" title="0">switch filter.Mode </span>{
-        case ModeEqual:<span class="cov0" title="0">
+        <span class="cov8" title="1">switch filter.Mode </span>{
+        case ModeEqual:<span class="cov8" title="1">
                 filterVal, err := parseTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">return data.Equal(filterVal), data, nil</span>
+                <span class="cov8" title="1">return data.Equal(filterVal), data, nil</span>
 
         case ModeNotEqual:<span class="cov0" title="0">
                 filterVal, err := parseTime(filter.Value)
@@ -1511,12 +1511,12 @@ func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, 
                 }</span>
                 <span class="cov0" title="0">return !data.Equal(filterVal), data, nil</span>
 
-        case ModeGTE, ModeAfter:<span class="cov0" title="0">
+        case ModeGTE, ModeAfter:<span class="cov8" title="1">
                 filterVal, err := parseTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">return !data.Before(filterVal), data, nil</span>
+                <span class="cov8" title="1">return !data.Before(filterVal), data, nil</span>
 
         case ModeLTE:<span class="cov0" title="0">
                 filterVal, err := parseTime(filter.Value)
@@ -1525,12 +1525,12 @@ func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, 
                 }</span>
                 <span class="cov0" title="0">return !data.After(filterVal), data, nil</span>
 
-        case ModeLT, ModeBefore:<span class="cov0" title="0">
+        case ModeLT, ModeBefore:<span class="cov8" title="1">
                 filterVal, err := parseTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">return data.Before(filterVal), data, nil</span>
+                <span class="cov8" title="1">return data.Before(filterVal), data, nil</span>
 
         case ModeGT:<span class="cov0" title="0">
                 filterVal, err := parseTime(filter.Value)
@@ -1539,12 +1539,12 @@ func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, 
                 }</span>
                 <span class="cov0" title="0">return data.After(filterVal), data, nil</span>
 
-        case ModeRange:<span class="cov0" title="0">
+        case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">return !data.Before(rangeVal.From) &amp;&amp; !data.After(rangeVal.To), data, nil</span>
+                <span class="cov8" title="1">return !data.Before(rangeVal.From) &amp;&amp; !data.After(rangeVal.To), data, nil</span>
 
         case ModeContains, ModeNotContains, ModeStartsWith, ModeEndsWith,
                 ModeIsEmpty, ModeIsNotEmpty:<span class="cov0" title="0">
