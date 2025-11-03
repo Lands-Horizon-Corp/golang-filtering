@@ -67,7 +67,7 @@ filterHandler := filter.NewFilter[User]()
 
 ## 📚 Examples
 
-### 1. In-Memory Filtering (`FilterDataQuery`)
+### 1. In-Memory Filtering (`DataQuery`)
 
 Perfect for filtering data already loaded in memory with **parallel processing**.
 
@@ -88,28 +88,28 @@ func main() {
 
     filterHandler := filter.NewFilter[filter.User]()
 
-    filterRoot := filter.FilterRoot{
-        Logic: filter.FilterLogicAnd,
-        Filters: []filter.Filter{
+    filterRoot := filter.Root{
+        Logic: filter.LogicAnd,
+        FieldFilters: []filter.FieldFilter{
             {
                 Field:          "name",
                 Value:          "John",
-                Mode:           filter.FilterModeContains,
-                FilterDataType: filter.FilterDataTypeText,
+                Mode:           filter.ModeContains,
+                DataType: filter.DataTypeText,
             },
             {
                 Field:          "age",
                 Value:          18,
-                Mode:           filter.FilterModeGTE,
-                FilterDataType: filter.FilterDataTypeNumber,
+                Mode:           filter.ModeGTE,
+                DataType: filter.DataTypeNumber,
             },
         },
         SortFields: []filter.SortField{
-            {Field: "age", Order: filter.FilterSortOrderDesc},
+            {Field: "age", Order: filter.SortOrderDesc},
         },
     }
 
-    result, err := filterHandler.FilterDataQuery(users, filterRoot, 1, 10)
+    result, err := filterHandler.DataQuery(users, filterRoot, 1, 10)
     if err != nil {
         panic(err)
     }
@@ -129,7 +129,7 @@ func main() {
 
 ---
 
-### 2. GORM Database Filtering (`FilterDataGorm`)
+### 2. GORM Database Filtering (`DataGorm`)
 
 Perfect for querying databases with efficient SQL generation.
 
@@ -153,28 +153,28 @@ func main() {
 
     filterHandler := filter.NewFilter[filter.User]()
 
-    filterRoot := filter.FilterRoot{
-        Logic: filter.FilterLogicAnd,
-        Filters: []filter.Filter{
+    filterRoot := filter.Root{
+        Logic: filter.LogicAnd,
+        FieldFilters: []filter.FieldFilter{
             {
                 Field:          "name",
                 Value:          "John",
-                Mode:           filter.FilterModeContains,
-                FilterDataType: filter.FilterDataTypeText,
+                Mode:           filter.ModeContains,
+                DataType: filter.DataTypeText,
             },
             {
                 Field:          "age",
                 Value:          18,
-                Mode:           filter.FilterModeGTE,
-                FilterDataType: filter.FilterDataTypeNumber,
+                Mode:           filter.ModeGTE,
+                DataType: filter.DataTypeNumber,
             },
         },
         SortFields: []filter.SortField{
-            {Field: "age", Order: filter.FilterSortOrderDesc},
+            {Field: "age", Order: filter.SortOrderDesc},
         },
     }
 
-    result, err := filterHandler.FilterDataGorm(db, filterRoot, 1, 10)
+    result, err := filterHandler.DataGorm(db, filterRoot, 1, 10)
     if err != nil {
         log.Fatal(err)
     }
@@ -195,19 +195,19 @@ func main() {
 
 ---
 
-### 3. Hybrid Filtering (`FilterHybrid`) – Auto-Switching
+### 3. Hybrid Filtering (`Hybrid`) – Auto-Switching
 
 **Automatically chooses** between in-memory and database filtering based on table size.
 
 ```go
-result, err := filterHandler.FilterHybrid(db, 10000, filterRoot, 1, 30)
+result, err := filterHandler.Hybrid(db, 10000, filterRoot, 1, 30)
 ```
 
 **How it works:**
 
 1. Estimates table size using database metadata (instant)
-2. If ≤ threshold → `FilterDataQuery` (parallel processing)
-3. If > threshold → `FilterDataGorm` (SQL queries)
+2. If ≤ threshold → `DataQuery` (parallel processing)
+3. If > threshold → `DataGorm` (SQL queries)
 
 **Supported databases:**
 
@@ -230,26 +230,26 @@ result, err := filterHandler.FilterHybrid(db, 10000, filterRoot, 1, 30)
 ### Text Filters
 
 ```go
-filter.FilterModeEqual        // Exact match (case-insensitive)
-filter.FilterModeNotEqual     // Not equal
-filter.FilterModeContains     // Contains substring
-filter.FilterModeNotContains  // Does not contain
-filter.FilterModeStartsWith   // Starts with
-filter.FilterModeEndsWith     // Ends with
-filter.FilterModeIsEmpty      // Empty or null
-filter.FilterModeIsNotEmpty   // Not empty
+filter.ModeEqual        // Exact match (case-insensitive)
+filter.ModeNotEqual     // Not equal
+filter.ModeContains     // Contains substring
+filter.ModeNotContains  // Does not contain
+filter.ModeStartsWith   // Starts with
+filter.ModeEndsWith     // Ends with
+filter.ModeIsEmpty      // Empty or null
+filter.ModeIsNotEmpty   // Not empty
 ```
 
 ### Number Filters
 
 ```go
-filter.FilterModeEqual    // =
-filter.FilterModeNotEqual // !=
-filter.FilterModeGT       // >
-filter.FilterModeGTE      // >=
-filter.FilterModeLT       // <
-filter.FilterModeLTE      // <=
-filter.FilterModeRange    // Between
+filter.ModeEqual    // =
+filter.ModeNotEqual // !=
+filter.ModeGT       // >
+filter.ModeGTE      // >=
+filter.ModeLT       // <
+filter.ModeLTE      // <=
+filter.ModeRange    // Between
 ```
 
 **Range Example:**
@@ -257,29 +257,29 @@ filter.FilterModeRange    // Between
 ```go
 {
     Field:          "age",
-    Value:          filter.FilterRange{From: 18, To: 65},
-    Mode:           filter.FilterModeRange,
-    FilterDataType: filter.FilterDataTypeNumber,
+    Value:          filter.Range{From: 18, To: 65},
+    Mode:           filter.ModeRange,
+    DataType: filter.DataTypeNumber,
 }
 ```
 
 ### Boolean Filters
 
 ```go
-filter.FilterModeEqual    // true/false
-filter.FilterModeNotEqual // not
+filter.ModeEqual    // true/false
+filter.ModeNotEqual // not
 ```
 
 ### Date/DateTime Filters
 
 ```go
-filter.FilterModeEqual    // =
-filter.FilterModeNotEqual // !=
-filter.FilterModeBefore   // <
-filter.FilterModeAfter    // >
-filter.FilterModeGTE      // >=
-filter.FilterModeLTE      // <=
-filter.FilterModeRange    // Between
+filter.ModeEqual    // =
+filter.ModeNotEqual // !=
+filter.ModeBefore   // <
+filter.ModeAfter    // >
+filter.ModeGTE      // >=
+filter.ModeLTE      // <=
+filter.ModeRange    // Between
 ```
 
 ---
@@ -289,18 +289,18 @@ filter.FilterModeRange    // Between
 ### AND Logic
 
 ```go
-filterRoot := filter.FilterRoot{
-    Logic: filter.FilterLogicAnd,
-    Filters: []filter.Filter{ /* all must match */ },
+filterRoot := filter.Root{
+    Logic: filter.LogicAnd,
+    FieldFilters: []filter.FieldFilter{ /* all must match */ },
 }
 ```
 
 ### OR Logic
 
 ```go
-filterRoot := filter.FilterRoot{
-    Logic: filter.FilterLogicOr,
-    Filters: []filter.Filter{ /* any can match */ },
+filterRoot := filter.Root{
+    Logic: filter.LogicOr,
+    FieldFilters: []filter.FieldFilter{ /* any can match */ },
 }
 ```
 
@@ -309,8 +309,8 @@ filterRoot := filter.FilterRoot{
 ## 📄 Pagination
 
 ```go
-result, err := filterHandler.FilterDataQuery(data, filterRoot, pageIndex, pageSize)
-// or FilterDataGorm / FilterHybrid
+result, err := filterHandler.DataQuery(data, filterRoot, pageIndex, pageSize)
+// or DataGorm / Hybrid
 ```
 
 **Result includes:**
@@ -333,10 +333,10 @@ result.PageSize   // int
 ## 🎯 Sorting
 
 ```go
-filterRoot := filter.FilterRoot{
+filterRoot := filter.Root{
     SortFields: []filter.SortField{
-        {Field: "age", Order: filter.FilterSortOrderDesc},
-        {Field: "name", Order: filter.FilterSortOrderAsc},
+        {Field: "age", Order: filter.SortOrderDesc},
+        {Field: "name", Order: filter.SortOrderAsc},
     },
 }
 ```
@@ -546,14 +546,14 @@ result, err := handler.DataQuery(users, filter.Root{
 
 ## ⚡ Performance
 
-### In-Memory (`FilterDataQuery`)
+### In-Memory (`DataQuery`)
 
 - Parallel processing across all CPU cores
 - Zero data cloning – pointer-based
 - Pre-allocated slices
 - Reflection cached once
 
-### Database (`FilterDataGorm`)
+### Database (`DataGorm`)
 
 - Efficient SQL generation
 - Leverages database indexes
@@ -572,7 +572,7 @@ result, err := handler.DataQuery(users, filter.Root{
 | 1M      | 1s        | 100ms    | **Database** |
 | 10M     | OOM       | 500ms    | **Database** |
 
-**Use `FilterHybrid` for automatic optimization!**
+**Use `Hybrid` for automatic optimization!**
 
 ---
 
@@ -583,17 +583,17 @@ result, err := handler.DataQuery(users, filter.Root{
 ```go
 type Handler[T any] struct { /* cached getters */ }
 
-type FilterRoot struct {
-    Logic      FilterLogic
-    Filters    []Filter
-    SortFields []SortField
+type Root struct {
+    Logic        Logic
+    FieldFilters []FieldFilter
+    SortFields   []SortField
 }
 
-type Filter struct {
-    Field          string
-    Value          any
-    Mode           FilterMode
-    FilterDataType FilterDataType
+type FieldFilter struct {
+    Field    string
+    Value    any
+    Mode     Mode
+    DataType DataType
 }
 
 type PaginationResult[T any] struct {
@@ -607,22 +607,22 @@ type PaginationResult[T any] struct {
 
 ### Methods
 
-| Method                 | Description                            |
-| ---------------------- | -------------------------------------- |
-| `NewFilter[T any]()`   | Creates handler with cached reflection |
-| `FilterDataQuery(...)` | In-memory parallel filtering           |
-| `FilterDataGorm(...)`  | GORM database filtering                |
-| `FilterHybrid(...)`    | Auto-switches based on size            |
+| Method               | Description                            |
+| -------------------- | -------------------------------------- |
+| `NewFilter[T any]()` | Creates handler with cached reflection |
+| `DataQuery(...)`     | In-memory parallel filtering           |
+| `DataGorm(...)`      | GORM database filtering                |
+| `Hybrid(...)`        | Auto-switches based on size            |
 
 ---
 
 ## 🎯 When to Use Each Method
 
-| Use Case                    | Recommended       |
-| --------------------------- | ----------------- |
-| Data in memory, < 100K      | `FilterDataQuery` |
-| Large DB tables             | `FilterDataGorm`  |
-| Unknown size / multi-tenant | `FilterHybrid`    |
+| Use Case                    | Recommended |
+| --------------------------- | ----------- |
+| Data in memory, < 100K      | `DataQuery` |
+| Large DB tables             | `DataGorm`  |
+| Unknown size / multi-tenant | `Hybrid`    |
 
 ---
 
@@ -655,5 +655,3 @@ go test ./...
   <p><strong>Made with ❤️ by <a href="https://github.com/Lands-Horizon-Corp">Lands Horizon Corp</a></strong></p>
   <p>Star this project if you find it useful! ⭐</p>
 </div>
-
-avoid SQL Injection, We have sanitization as well
