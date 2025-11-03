@@ -199,6 +199,7 @@ func main() {
 - Built-in `COUNT` for pagination
 - Database-level filtering (no loading all records)
 - Perfect for large datasets
+- Preload related entities (eager loading)
 
 #### Preloading Related Entities (GORM Only)
 
