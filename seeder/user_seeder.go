@@ -63,8 +63,20 @@ func (s *UserSeeder) Seed() error {
 
 		users := s.generateUsers(currentBatchSize)
 
-		if err := s.db.Create(&users).Error; err != nil {
-			return fmt.Errorf("failed to insert batch at index %d: %w", i, err)
+		// SQLite has a limit of ~999 variables per query
+		// Each user has 6 fields, so we can insert ~166 records at once
+		// Split into smaller chunks to avoid "too many SQL variables" error
+		chunkSize := 150 // Safe limit for SQLite
+		for j := 0; j < len(users); j += chunkSize {
+			end := j + chunkSize
+			if end > len(users) {
+				end = len(users)
+			}
+			chunk := users[j:end]
+
+			if err := s.db.Create(&chunk).Error; err != nil {
+				return fmt.Errorf("failed to insert batch at index %d (chunk %d): %w", i, j, err)
+			}
 		}
 
 		if s.config.ShowProgress && (i+currentBatchSize)%10000 == 0 {

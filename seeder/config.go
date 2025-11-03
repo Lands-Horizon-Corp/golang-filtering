@@ -28,8 +28,8 @@ func DefaultConfig() SeederConfig {
 // StressTestConfig returns configuration for stress testing (large dataset)
 func StressTestConfig() SeederConfig {
 	return SeederConfig{
-		RecordCount:   1_000_000, // 1 million records
-		BatchSize:     10_000,
+		RecordCount:   10_000_000, // 10 million records
+		BatchSize:     5_000,      // SQLite limit: ~999 variables / 6 fields = ~166 records max, use 5000 with chunking
 		ClearExisting: true,
 		ShowProgress:  true,
 	}
