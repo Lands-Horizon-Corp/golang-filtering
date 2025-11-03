@@ -39,8 +39,8 @@ test-verbose:
 test-coverage:
 	@echo "Running tests with coverage..."
 	@go test ./test -coverpkg=./filter -coverprofile=coverage.out
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
+	@go tool cover -html=coverage.out -o index.html
+	@echo "Coverage report generated: index.html"
 	@echo ""
 	@echo "Coverage Summary:"
 	@go tool cover -func=coverage.out | grep total
@@ -50,7 +50,7 @@ clean:
 	@echo "Cleaning..."
 	@rm -f bin/app
 	@rm -f test.db
-	@rm -f coverage.out coverage.html
+	@rm -f coverage.out index.html
 	@rm -rf bin/
 
 # Run golangci-lint
