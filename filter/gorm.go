@@ -142,29 +142,55 @@ func (f *FilterHandler[T]) buildFilterCondition(filter Filter) (string, []any) {
 func (f *FilterHandler[T]) buildNumberCondition(field string, mode FilterMode, value any) (string, []any) {
 	switch mode {
 	case FilterModeEqual:
-		return fmt.Sprintf("%s = ?", field), []any{value}
-	case FilterModeNotEqual:
-		return fmt.Sprintf("%s != ?", field), []any{value}
-	case FilterModeGT:
-		return fmt.Sprintf("%s > ?", field), []any{value}
-	case FilterModeGTE:
-		return fmt.Sprintf("%s >= ?", field), []any{value}
-	case FilterModeLT:
-		return fmt.Sprintf("%s < ?", field), []any{value}
-	case FilterModeLTE:
-		return fmt.Sprintf("%s <= ?", field), []any{value}
-	case FilterModeRange:
-		if rng, ok := value.(FilterRange); ok {
-			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rng.From, rng.To}
+		num, err := ParseNumber(value)
+		if err != nil {
+			return "", nil
 		}
+		return fmt.Sprintf("%s = ?", field), []any{num}
+	case FilterModeNotEqual:
+		num, err := ParseNumber(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s != ?", field), []any{num}
+	case FilterModeGT:
+		num, err := ParseNumber(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s > ?", field), []any{num}
+	case FilterModeGTE:
+		num, err := ParseNumber(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s >= ?", field), []any{num}
+	case FilterModeLT:
+		num, err := ParseNumber(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s < ?", field), []any{num}
+	case FilterModeLTE:
+		num, err := ParseNumber(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s <= ?", field), []any{num}
+	case FilterModeRange:
+		rangeVal, err := ParseRangeNumber(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
 	}
 	return "", nil
 }
 
 // buildTextCondition builds SQL condition for text filters
 func (f *FilterHandler[T]) buildTextCondition(field string, mode FilterMode, value any) (string, []any) {
-	str, ok := value.(string)
-	if !ok {
+	str, err := ParseText(value)
+	if err != nil {
 		return "", nil
 	}
 
@@ -191,11 +217,15 @@ func (f *FilterHandler[T]) buildTextCondition(field string, mode FilterMode, val
 
 // buildBoolCondition builds SQL condition for boolean filters
 func (f *FilterHandler[T]) buildBoolCondition(field string, mode FilterMode, value any) (string, []any) {
+	boolVal, err := ParseBool(value)
+	if err != nil {
+		return "", nil
+	}
 	switch mode {
 	case FilterModeEqual:
-		return fmt.Sprintf("%s = ?", field), []any{value}
+		return fmt.Sprintf("%s = ?", field), []any{boolVal}
 	case FilterModeNotEqual:
-		return fmt.Sprintf("%s != ?", field), []any{value}
+		return fmt.Sprintf("%s != ?", field), []any{boolVal}
 	}
 	return "", nil
 }
@@ -204,30 +234,105 @@ func (f *FilterHandler[T]) buildBoolCondition(field string, mode FilterMode, val
 func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, value any) (string, []any) {
 	switch mode {
 	case FilterModeEqual:
-		if t, ok := value.(time.Time); ok {
+		t, err := ParseDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTime := HasTimeComponent(t)
+		if hasTime {
+			return fmt.Sprintf("%s = ?", field), []any{t}
+		} else {
 			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
 		}
 	case FilterModeNotEqual:
-		if t, ok := value.(time.Time); ok {
+		t, err := ParseDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTime := HasTimeComponent(t)
+		if hasTime {
+			return fmt.Sprintf("%s != ?", field), []any{t}
+		} else {
 			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 			return fmt.Sprintf("(%s < ? OR %s > ?)", field, field), []any{startOfDay, endOfDay}
 		}
 	case FilterModeGTE:
-		return fmt.Sprintf("%s >= ?", field), []any{value}
+		t, err := ParseDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTime := HasTimeComponent(t)
+		if hasTime {
+			return fmt.Sprintf("%s >= ?", field), []any{t}
+		} else {
+			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+			return fmt.Sprintf("%s >= ?", field), []any{startOfDay}
+		}
 	case FilterModeLT:
-		return fmt.Sprintf("%s < ?", field), []any{value}
+		t, err := ParseDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTime := HasTimeComponent(t)
+		if hasTime {
+			return fmt.Sprintf("%s < ?", field), []any{t}
+		} else {
+			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+			return fmt.Sprintf("%s < ?", field), []any{startOfDay}
+		}
 	case FilterModeLTE:
-		return fmt.Sprintf("%s <= ?", field), []any{value}
+		t, err := ParseDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTime := HasTimeComponent(t)
+		if hasTime {
+			return fmt.Sprintf("%s <= ?", field), []any{t}
+		} else {
+			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
+			return fmt.Sprintf("%s <= ?", field), []any{endOfDay}
+		}
 	case FilterModeBefore:
-		return fmt.Sprintf("%s < ?", field), []any{value}
+		t, err := ParseDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTime := HasTimeComponent(t)
+		if hasTime {
+			return fmt.Sprintf("%s < ?", field), []any{t}
+		} else {
+			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+			return fmt.Sprintf("%s < ?", field), []any{startOfDay}
+		}
 	case FilterModeAfter:
-		return fmt.Sprintf("%s > ?", field), []any{value}
+		t, err := ParseDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTime := HasTimeComponent(t)
+		if hasTime {
+			return fmt.Sprintf("%s > ?", field), []any{t}
+		} else {
+			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
+			return fmt.Sprintf("%s > ?", field), []any{endOfDay}
+		}
 	case FilterModeRange:
-		if rng, ok := value.(FilterRange); ok {
-			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rng.From, rng.To}
+		rangeVal, err := ParseRangeDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		hasTimeFrom := HasTimeComponent(rangeVal.From)
+		hasTimeTo := HasTimeComponent(rangeVal.To)
+
+		if hasTimeFrom && hasTimeTo {
+			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
+		} else {
+			startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
+			endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
+			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
 		}
 	}
 	return "", nil
@@ -237,21 +342,47 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 func (f *FilterHandler[T]) buildTimeCondition(field string, mode FilterMode, value any) (string, []any) {
 	switch mode {
 	case FilterModeEqual:
-		return fmt.Sprintf("%s = ?", field), []any{value}
-	case FilterModeNotEqual:
-		return fmt.Sprintf("%s != ?", field), []any{value}
-	case FilterModeGT:
-		return fmt.Sprintf("%s > ?", field), []any{value}
-	case FilterModeGTE, FilterModeAfter:
-		return fmt.Sprintf("%s >= ?", field), []any{value}
-	case FilterModeLT, FilterModeBefore:
-		return fmt.Sprintf("%s < ?", field), []any{value}
-	case FilterModeLTE:
-		return fmt.Sprintf("%s <= ?", field), []any{value}
-	case FilterModeRange:
-		if rng, ok := value.(FilterRange); ok {
-			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rng.From, rng.To}
+		t, err := ParseTime(value)
+		if err != nil {
+			return "", nil
 		}
+		return fmt.Sprintf("%s = ?", field), []any{t}
+	case FilterModeNotEqual:
+		t, err := ParseTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s != ?", field), []any{t}
+	case FilterModeGT:
+		t, err := ParseTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s > ?", field), []any{t}
+	case FilterModeGTE, FilterModeAfter:
+		t, err := ParseTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s >= ?", field), []any{t}
+	case FilterModeLT, FilterModeBefore:
+		t, err := ParseTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s < ?", field), []any{t}
+	case FilterModeLTE:
+		t, err := ParseTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s <= ?", field), []any{t}
+	case FilterModeRange:
+		rangeVal, err := ParseRangeTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
 	}
 	return "", nil
 }

@@ -1,5 +1,7 @@
 package filter
 
+import "time"
+
 type FilterMode string
 
 const (
@@ -73,4 +75,14 @@ type PaginationResult[T any] struct {
 	TotalPage int  `json:"totalPage"`
 	PageIndex int  `json:"pageIndex"`
 	PageSize  int  `json:"pageSize"`
+}
+
+type FilterRangeNumber struct {
+	From float64
+	To   float64
+}
+
+type FilterRangeDate struct {
+	From time.Time
+	To   time.Time
 }
