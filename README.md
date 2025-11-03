@@ -1,8 +1,10 @@
-# Golang Filtering Package
-
 <div align="center">
-  <h1>🚀 Golang Filtering</h1>
-  <p>A high-performance, memory-efficient filtering package for Go with automatic field detection and support for both in-memory and GORM database filtering.</p>
+  <h1>
+    <img src=".github/assets/logo.png" alt="Golang Filtering Logo" width="60" style="vertical-align: middle;"/>
+    Golang Filtering
+  </h1>
+  
+  <p><strong>A high-performance, memory-efficient filtering package for Go with automatic field detection and support for both in-memory and GORM database filtering.</strong></p>
 
 [![Go Version](https://img.shields.io/badge/Go-1.18+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
