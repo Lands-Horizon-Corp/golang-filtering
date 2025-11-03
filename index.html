@@ -59,11 +59,11 @@
 				
 				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (66.2%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (76.7%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (82.4%)</option>
 				
 				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (44.2%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (54.3%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (63.7%)</option>
 				
 				</select>
 			</div>
@@ -577,7 +577,7 @@ func parseTime(value any) (time.Time, error) <span class="cov8" title="1">{
                                         break</span>
                                 }
                         }
-                        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
                                 return time.Time{}, fmt.Errorf("invalid time format: %v", v)
                         }</span>
                 }
@@ -601,7 +601,7 @@ func parseDateTime(value any) (time.Time, error) <span class="cov8" title="1">{
                                 return t, nil
                         }</span>
                 }
-                <span class="cov0" title="0">return time.Time{}, fmt.Errorf("invalid datetime format: %v", v)</span>
+                <span class="cov8" title="1">return time.Time{}, fmt.Errorf("invalid datetime format: %v", v)</span>
         default:<span class="cov0" title="0">
                 return time.Time{}, fmt.Errorf("invalid type for datetime: %T", value)</span>
         }
@@ -675,7 +675,7 @@ func parseRangeTime(value any) (RangeDate, error) <span class="cov8" title="1">{
 
 func parseBool(value any) (bool, error) <span class="cov8" title="1">{
         b, ok := value.(bool)
-        if !ok </span><span class="cov0" title="0">{
+        if !ok </span><span class="cov8" title="1">{
                 return false, fmt.Errorf("invalid boolean type for field %s", value)
         }</span>
         <span class="cov8" title="1">return b, nil</span>
@@ -720,12 +720,12 @@ func compareValues(a, b any) int <span class="cov8" title="1">{
         }
 
         // Try datetime comparison
-        <span class="cov0" title="0">timeA, errA := parseDateTime(a)
+        <span class="cov8" title="1">timeA, errA := parseDateTime(a)
         timeB, errB := parseDateTime(b)
-        if errA == nil &amp;&amp; errB == nil </span><span class="cov0" title="0">{
-                if timeA.Before(timeB) </span><span class="cov0" title="0">{
+        if errA == nil &amp;&amp; errB == nil </span><span class="cov8" title="1">{
+                if timeA.Before(timeB) </span><span class="cov8" title="1">{
                         return -1
-                }</span> else<span class="cov0" title="0"> if timeA.After(timeB) </span><span class="cov0" title="0">{
+                }</span> else<span class="cov8" title="1"> if timeA.After(timeB) </span><span class="cov8" title="1">{
                         return 1
                 }</span>
                 <span class="cov0" title="0">return 0</span>
@@ -1095,12 +1095,12 @@ func (f *Handler[T]) DataQuery(
                                         default:<span class="cov0" title="0">
                                                 err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)</span>
                                         }
-                                        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                                        <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
                                                 mu.Lock()
-                                                if filterErr == nil </span><span class="cov0" title="0">{
+                                                if filterErr == nil </span><span class="cov8" title="1">{
                                                         filterErr = err
                                                 }</span>
-                                                <span class="cov0" title="0">mu.Unlock()
+                                                <span class="cov8" title="1">mu.Unlock()
                                                 return</span>
                                         }
                                         <span class="cov8" title="1">if match != (filterRoot.Logic == LogicAnd) </span><span class="cov8" title="1">{
@@ -1119,7 +1119,7 @@ func (f *Handler[T]) DataQuery(
 
         <span class="cov8" title="1">wg.Wait()
 
-        if filterErr != nil </span><span class="cov0" title="0">{
+        if filterErr != nil </span><span class="cov8" title="1">{
                 return nil, filterErr
         }</span>
 
@@ -1381,12 +1381,12 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
         switch filter.Mode </span>{
         case ModeEqual:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
-                if err != nil </span><span class="cov0" title="0">{
+                if err != nil </span><span class="cov8" title="1">{
                         return false, data, err
                 }</span>
                 <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return data.Equal(filterVal), data, nil
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         startOfDay := time.Date(data.Year(), data.Month(), data.Day(), 0, 0, 0, 0, data.Location())
                         endOfDay := time.Date(data.Year(), data.Month(), data.Day(), 23, 59, 59, 999999999, data.Location())
                         return !filterVal.Before(startOfDay) &amp;&amp; !filterVal.After(endOfDay), data, nil
@@ -1417,14 +1417,14 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                 return false, data, fmt.Errorf("is not empty filter not supported for date field %s", filter.Field)</span>
         case ModeGT:<span class="cov0" title="0">
                 return false, data, fmt.Errorf("greater than filter not supported for date field %s", filter.Field)</span>
-        case ModeGTE:<span class="cov0" title="0">
+        case ModeGTE:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">if hasTime </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if hasTime </span><span class="cov0" title="0">{
                         return data.Equal(filterVal) || data.After(filterVal), data, nil
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
                         return data.Equal(startOfDay) || data.After(startOfDay), data, nil
                 }</span>
@@ -1439,14 +1439,14 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                         startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
                         return data.Before(startOfDay), data, nil
                 }</span>
-        case ModeLTE:<span class="cov0" title="0">
+        case ModeLTE:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">if hasTime </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if hasTime </span><span class="cov0" title="0">{
                         return data.Equal(filterVal) || data.Before(filterVal), data, nil
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         endOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 23, 59, 59, 999999999, filterVal.Location())
                         return data.Equal(endOfDay) || data.Before(endOfDay), data, nil
                 }</span>
@@ -1457,7 +1457,7 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                 }</span>
                 <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return !data.Before(rangeVal.From) &amp;&amp; !data.After(rangeVal.To), data, nil
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
                         endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
                         return !data.Before(startOfDay) &amp;&amp; !data.After(endOfDay), data, nil
@@ -1469,7 +1469,7 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                 }</span>
                 <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return data.Before(filterVal), data, nil
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         startOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 0, 0, 0, 0, filterVal.Location())
                         return data.Before(startOfDay), data, nil
                 }</span>
@@ -1480,7 +1480,7 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                 }</span>
                 <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
                         return data.After(filterVal), data, nil
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         // After the end of the day
                         endOfDay := time.Date(filterVal.Year(), filterVal.Month(), filterVal.Day(), 23, 59, 59, 999999999, filterVal.Location())
                         return data.After(endOfDay), data, nil
@@ -1499,7 +1499,7 @@ func (f *Handler[T]) applyTime(value any, filter FieldFilter) (bool, time.Time, 
         <span class="cov8" title="1">switch filter.Mode </span>{
         case ModeEqual:<span class="cov8" title="1">
                 filterVal, err := parseTime(filter.Value)
-                if err != nil </span><span class="cov0" title="0">{
+                if err != nil </span><span class="cov8" title="1">{
                         return false, data, err
                 }</span>
                 <span class="cov8" title="1">return data.Equal(filterVal), data, nil</span>

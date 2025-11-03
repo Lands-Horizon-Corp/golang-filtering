@@ -648,7 +648,7 @@ go test ./...
 ## 💬 Support
 
 - Issues: [GitHub Issues](https://github.com/Lands-Horizon-Corp/golang-filtering/issues)
-- Email: support@landshorizon.com
+- Email: lands.horizon.corp@gmail.com
 
 ---
 
