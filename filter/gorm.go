@@ -8,6 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// FilterDataGorm performs database-level filtering using GORM queries.
+// It generates SQL WHERE clauses based on the filter configuration and returns paginated results.
 func (f *FilterHandler[T]) FilterDataGorm(
 	db *gorm.DB,
 	filterRoot FilterRoot,

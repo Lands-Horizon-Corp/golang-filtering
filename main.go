@@ -1,3 +1,4 @@
+// Package main demonstrates FilterHybrid functionality with SQLite
 package main
 
 import (
@@ -29,7 +30,9 @@ func main() {
 	}
 
 	// Auto migrate
-	db.AutoMigrate(&User{})
+	if err := db.AutoMigrate(&User{}); err != nil {
+		log.Fatal(err)
+	}
 
 	// Seed test data
 	seedData(db)
@@ -91,7 +94,10 @@ func testHybridFilter(filterHandler *filter.FilterHandler[User], db *gorm.DB, fi
 
 	// Get estimated rows to see what strategy will be used
 	stmt := &gorm.Statement{DB: db}
-	stmt.Parse(new(User))
+	if err := stmt.Parse(new(User)); err != nil {
+		log.Printf("Warning: failed to parse model: %v\n", err)
+		return
+	}
 
 	// Try to get estimation (simplified version without exposing internal method)
 	var est struct{ Rows int64 }

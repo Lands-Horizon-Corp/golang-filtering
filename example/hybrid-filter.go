@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Order represents a sample order model for hybrid filtering examples
 type Order struct {
 	ID          uint      `json:"id" gorm:"primaryKey"`
 	OrderNumber string    `json:"order_number"`
@@ -19,6 +20,7 @@ type Order struct {
 	ShipDate    time.Time `json:"ship_date"`
 }
 
+// HybridFilterSample demonstrates automatic strategy selection using FilterHybrid
 func HybridFilterSample(db *gorm.DB) {
 	fmt.Println("=== Hybrid Filter Example ===")
 	fmt.Println("Automatically switches between in-memory and database filtering based on data size")

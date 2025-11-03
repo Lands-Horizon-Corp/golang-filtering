@@ -1,3 +1,4 @@
+// Package example provides sample implementations for the filtering package
 package example
 
 import (
@@ -8,6 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Product represents a sample product model for GORM filtering examples
 type Product struct {
 	ID          uint      `json:"id" gorm:"primaryKey"`
 	Name        string    `json:"name"`
@@ -19,6 +21,7 @@ type Product struct {
 	Description string    `json:"description"`
 }
 
+// GormFilterSample demonstrates database filtering using FilterDataGorm
 func GormFilterSample(db *gorm.DB) {
 	fmt.Println("=== GORM Database Filter Example ===")
 

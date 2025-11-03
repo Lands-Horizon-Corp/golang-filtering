@@ -1,0 +1,45 @@
+version: 2
+
+run:
+  timeout: 30m # Increased for large monolith to avoid timeouts
+  concurrency: 8 # Parallel processing for faster runs on big codebases
+  issues-exit-code: 1 # Fail CI/CD on issues for enforcement
+  tests: true # Lint test files, crucial for reliability in finance logic
+
+linters:
+  disable-all: true # Start fresh to avoid defaults; enable selectively
+  enable:
+    - modernize # Kept from your config for Go modernization
+    - staticcheck # Kept for advanced static analysis
+    - govet # Basic vetting for suspicious constructs
+    - errcheck # Ensures errors are checked, vital for finance ops
+    - gosec # Security scanner for vulnerabilities like crypto weaknesses
+    - ineffassign # Detects ineffective assignments
+    - unused # Finds unused code to slim down monolith
+    - revive # Style and best practices enforcement
+    - bodyclose # Ensures HTTP response bodies are closed
+    - asciicheck # Checks for non-ASCII identifiers
+    - rowserrcheck # SQL row error checking, useful if using databases
+    - sqlclosecheck # Ensures SQL resources are closed
+    - unparam # Unused parameters
+    - gocritic # Opinionated checks for better patterns
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true # Stricter error handling
+    check-blank: true
+  gosec:
+    excludes: # Optional: Tune if false positives arise
+      - G107 # Example: Skip variable URL checks if needed
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      - hugeParam # Avoid noise in performance-critical finance code
+
+issues:
+  max-issues-per-linter: 0 # Show all issues for thorough review
+  max-same-issues: 0
+  exclude-use-default: false # Include common exclusions if desired

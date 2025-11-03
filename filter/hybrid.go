@@ -49,7 +49,7 @@ func (f *FilterHandler[T]) FilterHybrid(
 // It uses database-specific methods for fast estimation without scanning the entire table.
 func (f *FilterHandler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, error) {
 	// Get the database driver name
-	dialectName := db.Dialector.Name()
+	dialectName := db.Name()
 
 	type Estimate struct {
 		Rows int64
@@ -100,8 +100,9 @@ func (f *FilterHandler[T]) estimateTableRows(db *gorm.DB, tableName string) (int
 			parts := strings.Split(statRows, " ")
 			if len(parts) > 0 {
 				var rowCount int64
-				fmt.Sscanf(parts[0], "%d", &rowCount)
-				return rowCount, nil
+				if _, err := fmt.Sscanf(parts[0], "%d", &rowCount); err == nil {
+					return rowCount, nil
+				}
 			}
 		}
 

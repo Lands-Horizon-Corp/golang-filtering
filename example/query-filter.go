@@ -7,6 +7,7 @@ import (
 	"github.com/Lands-Horizon-Corp/golang-filtering/filter"
 )
 
+// User1 represents a sample user model for in-memory filtering examples
 type User1 struct {
 	ID        uint      `json:"id"`
 	Name      string    `json:"name"`
@@ -17,6 +18,7 @@ type User1 struct {
 	Role      string    `json:"role"`
 }
 
+// QueryFilterSample demonstrates in-memory filtering using FilterDataQuery
 func QueryFilterSample() {
 	fmt.Println("=== In-Memory Query Filter Example ===")
 
