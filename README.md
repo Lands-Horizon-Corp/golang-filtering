@@ -426,3 +426,7 @@ result.PageSize   // int - Records per page
 - 📊 Efficient SQL generation
 - 🔍 Leverages database indexes
 - 💡 Add indexes on frequently filtered fields for best performance
+
+```bash
+rm -f test.db && go run .
+```
