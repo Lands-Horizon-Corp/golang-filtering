@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (f *FilterHandler[T]) FilterData(
+func (f *FilterHandler[T]) FilterDataQuery(
 	data []*T,
 	filterRoot FilterRoot,
 	pageIndex int,
