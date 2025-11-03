@@ -77,7 +77,7 @@ func gormExample2(filterHandler *filter.FilterHandler[Product], db *gorm.DB) {
 		Filters: []filter.Filter{
 			{
 				Field:          "price",
-				Value:          filter.FilterRange{From: 500, To: 1500},
+				Value:          filter.Range{From: 500, To: 1500},
 				Mode:           filter.FilterModeRange,
 				FilterDataType: filter.FilterDataTypeNumber,
 			},

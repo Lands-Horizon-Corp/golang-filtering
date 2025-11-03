@@ -96,7 +96,7 @@ func queryExample2(filterHandler *filter.FilterHandler[User1], users []*User1) {
 		Filters: []filter.Filter{
 			{
 				Field:          "age",
-				Value:          filter.FilterRange{From: 25, To: 35},
+				Value:          filter.Range{From: 25, To: 35},
 				Mode:           filter.FilterModeRange,
 				FilterDataType: filter.FilterDataTypeNumber,
 			},

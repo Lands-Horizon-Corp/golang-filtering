@@ -132,7 +132,7 @@ func parseDateTime(value any) (time.Time, error) {
 }
 
 func parseRangeNumber(value any) (RangeNumber, error) {
-	rng, ok := value.(FilterRange)
+	rng, ok := value.(Range)
 	if !ok {
 		return RangeNumber{}, fmt.Errorf("invalid range type for field %s", value)
 	}
@@ -151,7 +151,7 @@ func parseRangeNumber(value any) (RangeNumber, error) {
 }
 
 func parseRangeDateTime(value any) (RangeDate, error) {
-	rng, ok := value.(FilterRange)
+	rng, ok := value.(Range)
 	if !ok {
 		return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}
@@ -173,7 +173,7 @@ func parseRangeDateTime(value any) (RangeDate, error) {
 }
 
 func parseRangeTime(value any) (RangeDate, error) {
-	rng, ok := value.(FilterRange)
+	rng, ok := value.(Range)
 	if !ok {
 		return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}

@@ -76,7 +76,7 @@ type FilterRoot struct {
 }
 
 // FilterRange represents a range of values for filtering
-type FilterRange struct {
+type Range struct {
 	From any `json:"from"` // Start of range
 	To   any `json:"to"`   // End of range
 }
@@ -90,13 +90,13 @@ type PaginationResult[T any] struct {
 	PageSize  int  `json:"pageSize"`  // Records per page
 }
 
-// FilterRangeNumber represents a numeric range
+// RangeNumber represents a numeric range
 type RangeNumber struct {
 	From float64 // Start of numeric range
 	To   float64 // End of numeric range
 }
 
-// FilterRangeDate represents a date range
+// RangeDate represents a date range
 type RangeDate struct {
 	From time.Time // Start date
 	To   time.Time // End date

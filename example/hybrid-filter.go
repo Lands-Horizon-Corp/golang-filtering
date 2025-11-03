@@ -158,7 +158,7 @@ func hybridExample4(filterHandler *filter.FilterHandler[Order], db *gorm.DB) {
 			},
 			{
 				Field:          "total_amount",
-				Value:          filter.FilterRange{From: 50, To: 500},
+				Value:          filter.Range{From: 50, To: 500},
 				Mode:           filter.FilterModeRange,
 				FilterDataType: filter.FilterDataTypeNumber,
 			},
