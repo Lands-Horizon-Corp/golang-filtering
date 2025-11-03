@@ -91,13 +91,13 @@ type PaginationResult[T any] struct {
 }
 
 // FilterRangeNumber represents a numeric range
-type FilterRangeNumber struct {
+type RangeNumber struct {
 	From float64 // Start of numeric range
 	To   float64 // End of numeric range
 }
 
 // FilterRangeDate represents a date range
-type FilterRangeDate struct {
+type RangeDate struct {
 	From time.Time // Start date
 	To   time.Time // End date
 }

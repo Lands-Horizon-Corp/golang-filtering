@@ -230,11 +230,10 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s = ?", field), []any{t}
-		} else {
-			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
-			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
 		}
+		startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+		endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
+		return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
 	case FilterModeNotEqual:
 		t, err := parseDateTime(value)
 		if err != nil {
@@ -243,11 +242,10 @@ func (f *FilterHandler[T]) buildDateCondition(field string, mode FilterMode, val
 		hasTime := hasTimeComponent(t)
 		if hasTime {
 			return fmt.Sprintf("%s != ?", field), []any{t}
-		} else {
-			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
-			return fmt.Sprintf("(%s < ? OR %s > ?)", field, field), []any{startOfDay, endOfDay}
 		}
+		startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+		endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
+		return fmt.Sprintf("(%s < ? OR %s > ?)", field, field), []any{startOfDay, endOfDay}
 	case FilterModeGTE:
 		t, err := parseDateTime(value)
 		if err != nil {

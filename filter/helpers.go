@@ -131,67 +131,67 @@ func parseDateTime(value any) (time.Time, error) {
 	}
 }
 
-func parseRangeNumber(value any) (FilterRangeNumber, error) {
+func parseRangeNumber(value any) (RangeNumber, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
-		return FilterRangeNumber{}, fmt.Errorf("invalid range type for field %s", value)
+		return RangeNumber{}, fmt.Errorf("invalid range type for field %s", value)
 	}
 	from, err := parseNumber(rng.From)
 	if err != nil {
-		return FilterRangeNumber{}, err
+		return RangeNumber{}, err
 	}
 	to, err := parseNumber(rng.To)
 	if err != nil {
-		return FilterRangeNumber{}, err
+		return RangeNumber{}, err
 	}
-	return FilterRangeNumber{
+	return RangeNumber{
 		From: from,
 		To:   to,
 	}, nil
 }
 
-func parseRangeDateTime(value any) (FilterRangeDate, error) {
+func parseRangeDateTime(value any) (RangeDate, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
-		return FilterRangeDate{}, fmt.Errorf("invalid range type for field %s", value)
+		return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}
 	from, err := parseDateTime(rng.From)
 	if err != nil {
-		return FilterRangeDate{}, err
+		return RangeDate{}, err
 	}
 	to, err := parseDateTime(rng.To)
 	if err != nil {
-		return FilterRangeDate{}, err
+		return RangeDate{}, err
 	}
 	if from.After(to) {
-		return FilterRangeDate{}, fmt.Errorf("range from date cannot be after to date")
+		return RangeDate{}, fmt.Errorf("range from date cannot be after to date")
 	}
-	return FilterRangeDate{
+	return RangeDate{
 		From: from,
 		To:   to,
 	}, nil
 }
 
-func parseRangeTime(value any) (FilterRangeDate, error) {
+func parseRangeTime(value any) (RangeDate, error) {
 	rng, ok := value.(FilterRange)
 	if !ok {
-		return FilterRangeDate{}, fmt.Errorf("invalid range type for field %s", value)
+		return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
 	}
 	from, err := parseTime(rng.From)
 	if err != nil {
-		return FilterRangeDate{}, err
+		return RangeDate{}, err
 	}
 	to, err := parseTime(rng.To)
 	if err != nil {
-		return FilterRangeDate{}, err
+		return RangeDate{}, err
 	}
 
 	// Validate that from <= to
 	if from.After(to) {
-		return FilterRangeDate{}, fmt.Errorf("range from time cannot be after to time")
+		return RangeDate{}, fmt.Errorf("range from time cannot be after to time")
 	}
 
-	return FilterRangeDate{
+	return RangeDate{
 		From: from,
 		To:   to,
 	}, nil

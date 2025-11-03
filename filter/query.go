@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// FilterDataQuery performs in-memory filtering with parallel processing.
+// It filters the provided data slice based on the filter configuration and returns paginated results.
 func (f *FilterHandler[T]) FilterDataQuery(
 	data []*T,
 	filterRoot FilterRoot,
