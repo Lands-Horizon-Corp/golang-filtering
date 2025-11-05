@@ -49,7 +49,14 @@ func (f *Handler[T]) Hybrid(
 		// IMPORTANT: This respects any pre-existing WHERE conditions on db
 		// Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
 		var allData []*T
-		if err := db.Find(&allData).Error; err != nil {
+
+		// Apply preload relationships before fetching data
+		queryDB := db
+		for _, relation := range filterRoot.Preload {
+			queryDB = queryDB.Preload(relation)
+		}
+
+		if err := queryDB.Find(&allData).Error; err != nil {
 			return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
 		}
 		return f.DataQuery(allData, filterRoot, pageIndex, pageSize)

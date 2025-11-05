@@ -69,6 +69,9 @@ func (f *Handler[T]) DataGorm(
 	// Build the query - db may already have WHERE conditions, they will be preserved
 	query := db.Model(new(T))
 
+	// Auto-join related tables based on field filters and sort fields
+	query = f.autoJoinRelatedTables(query, filterRoot.FieldFilters, filterRoot.SortFields)
+
 	// Apply preloads (GORM only feature)
 	if len(filterRoot.Preload) > 0 {
 		for _, preloadField := range filterRoot.Preload {
@@ -96,7 +99,16 @@ func (f *Handler[T]) DataGorm(
 			if sortField.Order == SortOrderDesc {
 				order = "DESC"
 			}
-			query = query.Order(fmt.Sprintf("%s %s", sortField.Field, order))
+			// Normalize nested field names: "member_profile.name" -> "MemberProfile.name"
+			field := sortField.Field
+			if strings.Contains(field, ".") {
+				parts := strings.Split(field, ".")
+				if len(parts) >= 2 {
+					parts[0] = f.toPascalCase(parts[0])
+					field = strings.Join(parts, ".")
+				}
+			}
+			query = query.Order(fmt.Sprintf("%s %s", field, order))
 		}
 	}
 
@@ -172,6 +184,23 @@ func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
 	return db
 }
 
+// toPascalCase converts snake_case or lowercase to PascalCase
+// Examples: "member_profile" -> "MemberProfile", "currency" -> "Currency"
+func (f *Handler[T]) toPascalCase(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	// Split by underscore for snake_case
+	parts := strings.Split(s, "_")
+	for i, part := range parts {
+		if len(part) > 0 {
+			parts[i] = strings.ToUpper(part[:1]) + part[1:]
+		}
+	}
+	return strings.Join(parts, "")
+}
+
 // applyGorm applies a single filter to the GORM query
 func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB {
 	condition, values := f.buildCondition(filter)
@@ -185,6 +214,17 @@ func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB {
 func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) {
 	field := filter.Field
 	value := filter.Value
+
+	// Normalize nested field names: "member_profile.name" -> "MemberProfile.name"
+	if strings.Contains(field, ".") {
+		parts := strings.Split(field, ".")
+		if len(parts) >= 2 {
+			// Convert snake_case or lowercase to PascalCase for GORM struct fields
+			// "member_profile" -> "MemberProfile", "currency" -> "Currency"
+			parts[0] = f.toPascalCase(parts[0])
+			field = strings.Join(parts, ".")
+		}
+	}
 
 	switch filter.DataType {
 	case DataTypeNumber:
@@ -253,6 +293,24 @@ func (f *Handler[T]) buildNumberCondition(field string, mode Mode, value any) (s
 
 // buildTextCondition builds SQL condition for text filters
 func (f *Handler[T]) buildTextCondition(field string, mode Mode, value any) (string, []any) {
+	// Handle Range mode separately since value is a Range struct, not a string
+	if mode == ModeRange {
+		rangeVal, ok := value.(Range)
+		if !ok {
+			return "", nil
+		}
+		fromStr, err := parseText(rangeVal.From)
+		if err != nil {
+			return "", nil
+		}
+		toStr, err := parseText(rangeVal.To)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{fromStr, toStr}
+	}
+
+	// For all other modes, parse value as text
 	str, err := parseText(value)
 	if err != nil {
 		return "", nil
@@ -275,6 +333,18 @@ func (f *Handler[T]) buildTextCondition(field string, mode Mode, value any) (str
 		return fmt.Sprintf("(%s IS NULL OR %s = '')", field, field), []any{}
 	case ModeIsNotEmpty:
 		return fmt.Sprintf("(%s IS NOT NULL AND %s != '')", field, field), []any{}
+	case ModeGT:
+		// Support for text comparison (useful for time strings like "08:00:00")
+		return fmt.Sprintf("%s > ?", field), []any{str}
+	case ModeGTE, ModeAfter:
+		// Support for text comparison (useful for time strings like "08:00:00")
+		return fmt.Sprintf("%s >= ?", field), []any{str}
+	case ModeLT, ModeBefore:
+		// Support for text comparison (useful for time strings like "08:00:00")
+		return fmt.Sprintf("%s < ?", field), []any{str}
+	case ModeLTE:
+		// Support for text comparison (useful for time strings like "08:00:00")
+		return fmt.Sprintf("%s <= ?", field), []any{str}
 	}
 	return "", nil
 }
@@ -408,43 +478,92 @@ func (f *Handler[T]) buildTimeCondition(field string, mode Mode, value any) (str
 		if err != nil {
 			return "", nil
 		}
-		return fmt.Sprintf("%s = ?", field), []any{t}
+		// Format time as HH:MM:SS for SQLite TEXT comparison
+		// Use time() function to extract time from datetime columns
+		timeStr := t.Format("15:04:05")
+		return fmt.Sprintf("time(%s) = ?", field), []any{timeStr}
 	case ModeNotEqual:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
-		return fmt.Sprintf("%s != ?", field), []any{t}
+		timeStr := t.Format("15:04:05")
+		return fmt.Sprintf("time(%s) != ?", field), []any{timeStr}
 	case ModeGT:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
-		return fmt.Sprintf("%s > ?", field), []any{t}
+		timeStr := t.Format("15:04:05")
+		return fmt.Sprintf("time(%s) > ?", field), []any{timeStr}
 	case ModeGTE, ModeAfter:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
-		return fmt.Sprintf("%s >= ?", field), []any{t}
+		timeStr := t.Format("15:04:05")
+		return fmt.Sprintf("time(%s) >= ?", field), []any{timeStr}
 	case ModeLT, ModeBefore:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
-		return fmt.Sprintf("%s < ?", field), []any{t}
+		timeStr := t.Format("15:04:05")
+		return fmt.Sprintf("time(%s) < ?", field), []any{timeStr}
 	case ModeLTE:
 		t, err := parseTime(value)
 		if err != nil {
 			return "", nil
 		}
-		return fmt.Sprintf("%s <= ?", field), []any{t}
+		timeStr := t.Format("15:04:05")
+		return fmt.Sprintf("time(%s) <= ?", field), []any{timeStr}
 	case ModeRange:
 		rangeVal, err := parseRangeTime(value)
 		if err != nil {
 			return "", nil
 		}
-		return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
+		fromStr := rangeVal.From.Format("15:04:05")
+		toStr := rangeVal.To.Format("15:04:05")
+		return fmt.Sprintf("time(%s) BETWEEN ? AND ?", field), []any{fromStr, toStr}
 	}
 	return "", nil
+}
+
+// autoJoinRelatedTables automatically joins related tables when filters or sort fields reference nested fields
+func (f *Handler[T]) autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []SortField) *gorm.DB {
+	joinedTables := make(map[string]bool)
+
+	// Check filters for nested fields
+	for _, filter := range filters {
+		if strings.Contains(filter.Field, ".") {
+			parts := strings.Split(filter.Field, ".")
+			if len(parts) >= 2 {
+				// Convert snake_case/lowercase to PascalCase (e.g., "member_profile" -> "MemberProfile")
+				tableName := f.toPascalCase(parts[0])
+				if !joinedTables[tableName] {
+					// GORM will auto-join based on the relationship
+					db = db.Joins(tableName)
+					joinedTables[tableName] = true
+				}
+			}
+		}
+	}
+
+	// Check sort fields for nested fields
+	for _, sortField := range sortFields {
+		if strings.Contains(sortField.Field, ".") {
+			parts := strings.Split(sortField.Field, ".")
+			if len(parts) >= 2 {
+				// Convert snake_case/lowercase to PascalCase
+				tableName := f.toPascalCase(parts[0])
+				if !joinedTables[tableName] {
+					// GORM will auto-join based on the relationship
+					db = db.Joins(tableName)
+					joinedTables[tableName] = true
+				}
+			}
+		}
+	}
+
+	return db
 }

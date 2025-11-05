@@ -15,17 +15,19 @@
 ## ✨ Features
 
 - **Dynamic field access without manual getters** – Automatically inspects your struct fields at runtime using reflection, eliminating the need to write custom getter functions for every field. Supports JSON tags and nested structures out of the box.
+- **Nested struct filtering (up to 3 levels)** – Filter on deeply nested relationships using dot notation (e.g., `team.department.company.name`) with automatic JOIN generation for GORM queries
 - **Parallel processing** for in-memory filtering – Utilizes all available CPU cores to process large datasets concurrently, significantly improving performance on multi-core systems
 - **Memory efficient** – Zero data cloning, pointer-based operations that work directly on your original data without creating copies
-- **GORM integration** for database queries – Seamless integration with GORM v2, automatically generating optimized SQL queries with proper parameterization
+- **GORM integration** for database queries – Seamless integration with GORM v2, automatically generating optimized SQL queries with proper parameterization and automatic JOINs for nested fields
 - **Built-in security** – Multi-layer protection against SQL injection, XSS attacks, Command Injection, and Null Byte Attacks using industry-standard sanitization
-- **Rich filter modes** – Comprehensive filtering options for text (contains, starts with, ends with), numbers (ranges, comparisons), booleans, dates, and times
-- **Sorting** with multiple fields – Sort by multiple columns with ascending/descending order support
+- **Rich filter modes** – Comprehensive filtering options for text (contains, starts with, ends with), numbers (ranges, comparisons), booleans, dates, times, and custom types
+- **Custom type support** – Handle custom types (like `TimeOfDay`) with `sql.Scanner` and `driver.Valuer` interfaces for specialized database storage
+- **Sorting** with multiple fields – Sort by multiple columns (including nested fields) with ascending/descending order support
 - **Pagination** built-in – Automatic pagination with total count, page count, and configurable page sizes
 - **JSON tag support** – Respects your JSON field tags for API-friendly filtering
-- **Nested struct support** – Filter on deeply nested struct fields using dot notation (e.g., `user.address.city`)
+- **Preload support** – Eagerly load related entities with GORM's Preload feature
 
-[Features](#features) • [Installation](#installation) • [Quick Start](#quick-start) • [Examples](#examples) • [Security](#security) • [Performance](#performance) • [API Reference](#api-reference)
+[Features](#features) • [Installation](#installation) • [Quick Start](#quick-start) • [Examples](#examples) • [Nested Filtering](#-nested-struct-filtering) • [Security](#security) • [Performance](#performance) • [API Reference](#api-reference)
 
 ---
 
@@ -566,6 +568,262 @@ result, err := filterHandler.Hybrid(db, threshold, filterRoot, pageIndex, pageSi
 
 - **DataQuery path** (small dataset): Fetches data using your preset WHERE conditions, then applies `filterRoot` filters in memory
 - **DataGorm path** (large dataset): Combines your preset conditions with `filterRoot` filters in a single SQL query
+
+---
+
+## 🔗 Nested Struct Filtering
+
+Filter on **deeply nested relationships** using dot notation. Supports up to **3 levels of nesting** with automatic JOIN generation for GORM queries.
+
+### Basic Nested Filtering
+
+```go
+type Address struct {
+    ID      uint   `json:"id"`
+    City    string `json:"city"`
+    Country string `json:"country"`
+}
+
+type User struct {
+    ID       uint     `json:"id"`
+    Name     string   `json:"name"`
+    Address  *Address `gorm:"foreignKey:AddressID" json:"address"`
+}
+
+// Filter by nested field using dot notation
+filterRoot := filter.Root{
+    Logic: filter.LogicAnd,
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "address.city",        // Nested field
+            Value:    "New York",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeText,
+        },
+    },
+}
+
+result, err := handler.DataGorm(db, filterRoot, 1, 10)
+// Automatically generates: SELECT * FROM users
+// INNER JOIN addresses ON users.address_id = addresses.id
+// WHERE addresses.city = 'New York'
+```
+
+### Multi-Level Nesting (Up to 3 Levels)
+
+```go
+type Company struct {
+    ID   uint   `json:"id"`
+    Name string `json:"name"`
+}
+
+type Department struct {
+    ID        uint     `json:"id"`
+    Name      string   `json:"name"`
+    CompanyID uint     `json:"company_id"`
+    Company   *Company `gorm:"foreignKey:CompanyID" json:"company"`
+}
+
+type Team struct {
+    ID           uint        `json:"id"`
+    Name         string      `json:"name"`
+    DepartmentID uint        `json:"department_id"`
+    Department   *Department `gorm:"foreignKey:DepartmentID" json:"department"`
+}
+
+type Employee struct {
+    ID     uint   `json:"id"`
+    Name   string `json:"name"`
+    TeamID uint   `json:"team_id"`
+    Team   *Team  `gorm:"foreignKey:TeamID" json:"team"`
+}
+
+// Level 1: team.name
+filterRoot := filter.Root{
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "team.name",
+            Value:    "Engineering",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeText,
+        },
+    },
+}
+
+// Level 2: team.department.name
+filterRoot := filter.Root{
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "team.department.name",
+            Value:    "Technology",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeText,
+        },
+    },
+}
+
+// Level 3: team.department.company.name (maximum depth)
+filterRoot := filter.Root{
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "team.department.company.name",
+            Value:    "Acme Corp",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeText,
+        },
+    },
+}
+```
+
+### Nested Time Filtering with Custom Types
+
+For time fields stored as TEXT in SQLite, use custom types with `sql.Scanner` and `driver.Valuer`:
+
+```go
+import (
+    "database/sql/driver"
+    "time"
+)
+
+// Custom time type for SQLite TEXT storage
+type TimeOfDay struct {
+    time.Time
+}
+
+func (t *TimeOfDay) Scan(value interface{}) error {
+    if value == nil {
+        return nil
+    }
+    str, ok := value.(string)
+    if !ok {
+        return fmt.Errorf("cannot scan type %T into TimeOfDay", value)
+    }
+    parsed, err := time.Parse("15:04:05", str)
+    if err != nil {
+        return err
+    }
+    t.Time = parsed
+    return nil
+}
+
+func (t TimeOfDay) Value() (driver.Value, error) {
+    return t.Time.Format("15:04:05"), nil
+}
+
+// Model with custom time type
+type WorkShift struct {
+    ID        uint      `json:"id"`
+    Name      string    `json:"name"`
+    StartTime TimeOfDay `gorm:"type:varchar(8)" json:"start_time"` // Stored as "HH:MM:SS"
+    EndTime   TimeOfDay `gorm:"type:varchar(8)" json:"end_time"`
+}
+
+type Attendance struct {
+    ID          uint       `json:"id"`
+    Employee    string     `json:"employee"`
+    WorkShiftID uint       `json:"work_shift_id"`
+    WorkShift   *WorkShift `gorm:"foreignKey:WorkShiftID" json:"work_shift"`
+}
+
+// Filter by nested time field
+filterRoot := filter.Root{
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "work_shift.start_time",
+            Value:    "08:00:00",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeTime,
+        },
+    },
+}
+
+result, err := handler.DataGorm(db, filterRoot, 1, 10)
+// Finds all attendances with shifts starting at 8:00 AM
+```
+
+### Nested Filtering with Preload
+
+Combine nested filtering with eager loading:
+
+```go
+filterRoot := filter.Root{
+    Logic: filter.LogicAnd,
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "work_shift.start_time",
+            Value:    filter.Range{From: "06:00:00", To: "14:00:00"},
+            Mode:     filter.ModeRange,
+            DataType: filter.DataTypeTime,
+        },
+    },
+    Preload: []string{"WorkShift"}, // Eagerly load the relationship
+}
+
+result, err := handler.DataGorm(db, filterRoot, 1, 10)
+// Returns attendances with shifts between 6:00 AM - 2:00 PM
+// result.Data[0].WorkShift is fully populated
+```
+
+### Nested Sorting
+
+Sort by nested fields:
+
+```go
+filterRoot := filter.Root{
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "team.department.name",
+            Value:    "Engineering",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeText,
+        },
+    },
+    SortFields: []filter.SortField{
+        {Field: "team.name", Order: filter.SortOrderAsc},           // Sort by team name
+        {Field: "team.department.name", Order: filter.SortOrderAsc}, // Then by department
+    },
+}
+```
+
+### Nested Filtering Limitations
+
+- **Maximum depth**: 3 levels (e.g., `a.b.c.d` is blocked)
+- **GORM only**: Automatic JOIN generation works with `DataGorm` and `Hybrid`
+- **DataQuery**: Nested filtering requires data to be pre-loaded with relationships
+- **Performance**: Deep nesting may impact query performance; use indexes on foreign keys
+
+### Nested Field Examples
+
+```go
+// ✅ Supported patterns
+"profile.email"                    // Level 1
+"address.city"                     // Level 1
+"team.department.name"             // Level 2
+"order.customer.address.city"      // Level 3 (maximum)
+
+// ❌ Blocked patterns
+"a.b.c.d.e"                        // Level 4+ (too deep)
+```
+
+### Automatic JOIN Generation (GORM)
+
+The package automatically generates SQL JOINs for nested fields:
+
+```go
+// Filter: address.city = "NYC"
+// Generated SQL:
+// SELECT users.* FROM users
+// INNER JOIN addresses ON users.address_id = addresses.id
+// WHERE addresses.city = 'NYC'
+
+// Filter: team.department.company.name = "Acme"
+// Generated SQL:
+// SELECT employees.* FROM employees
+// INNER JOIN teams ON employees.team_id = teams.id
+// INNER JOIN departments ON teams.department_id = departments.id
+// INNER JOIN companies ON departments.company_id = companies.id
+// WHERE companies.name = 'Acme'
+```
 
 ---
 

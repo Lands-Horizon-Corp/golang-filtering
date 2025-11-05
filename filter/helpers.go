@@ -52,10 +52,23 @@ var timeLayouts = []string{
 }
 
 func parseNumber(value any) (float64, error) {
+	// Handle nil values from nested pointers
+	if value == nil {
+		return 0, nil
+	}
 	var num float64
-
 	switch v := value.(type) {
 	case int:
+		num = float64(v)
+	case uint:
+		num = float64(v)
+	case int8:
+		num = float64(v)
+	case uint8:
+		num = float64(v)
+	case int16:
+		num = float64(v)
+	case uint16:
 		num = float64(v)
 	case int32:
 		num = float64(v)
@@ -72,6 +85,10 @@ func parseNumber(value any) (float64, error) {
 }
 
 func parseText(value any) (string, error) {
+	// Handle nil values from nested pointers
+	if value == nil {
+		return "", nil
+	}
 	str, ok := value.(string)
 	if !ok {
 		return "", fmt.Errorf("invalid text type for field %s", value)
@@ -82,6 +99,10 @@ func parseText(value any) (string, error) {
 }
 
 func parseTime(value any) (time.Time, error) {
+	// Handle nil values from nested pointers
+	if value == nil {
+		return time.Time{}, nil
+	}
 	var t time.Time
 	var err error
 
@@ -110,7 +131,17 @@ func parseTime(value any) (time.Time, error) {
 			}
 		}
 	default:
-		return time.Time{}, fmt.Errorf("invalid type for time: %T", value)
+		// Try to extract time.Time from embedded structs (e.g., custom time types)
+		if timeVal := reflect.ValueOf(value); timeVal.Kind() == reflect.Struct {
+			// Look for an embedded time.Time field
+			if timeField := timeVal.FieldByName("Time"); timeField.IsValid() && timeField.Type() == reflect.TypeOf(time.Time{}) {
+				t = timeField.Interface().(time.Time)
+			} else {
+				return time.Time{}, fmt.Errorf("invalid type for time: %T", value)
+			}
+		} else {
+			return time.Time{}, fmt.Errorf("invalid type for time: %T", value)
+		}
 	}
 
 	// Normalize to time-only in UTC
@@ -119,6 +150,10 @@ func parseTime(value any) (time.Time, error) {
 }
 
 func parseDateTime(value any) (time.Time, error) {
+	// Handle nil values from nested pointers
+	if value == nil {
+		return time.Time{}, nil
+	}
 	switch v := value.(type) {
 	case time.Time:
 		return v, nil
@@ -202,6 +237,10 @@ func parseRangeTime(value any) (RangeDate, error) {
 }
 
 func parseBool(value any) (bool, error) {
+	// Handle nil values from nested pointers
+	if value == nil {
+		return false, nil
+	}
 	b, ok := value.(bool)
 	if !ok {
 		return false, fmt.Errorf("invalid boolean type for field %s", value)
@@ -313,17 +352,33 @@ func generateGetters[T any]() map[string]func(*T) any {
 		if key != lowerKey {
 			getters[lowerKey] = getter
 		}
-		if field.Type.Kind() == reflect.Struct {
-			generateNestedGetters(getters, field, fieldIndex, key)
+
+		// Handle nested structs (both direct and pointer types)
+		// Limit nesting to 3 levels to avoid circular references
+		fieldType := field.Type
+		if fieldType.Kind() == reflect.Pointer {
+			fieldType = fieldType.Elem()
+		}
+		if fieldType.Kind() == reflect.Struct {
+			generateNestedGetters(getters, field, fieldIndex, key, field.Type.Kind() == reflect.Pointer, 1)
 		}
 	}
 
 	return getters
 }
 
-// generateNestedGetters generates getters for nested struct fields
-func generateNestedGetters[T any](getters map[string]func(*T) any, parentField reflect.StructField, parentIndex int, parentKey string) {
+// generateNestedGetters generates getters for nested struct fields with depth limit
+// maxDepth is set to 3 to prevent circular references and excessive nesting
+func generateNestedGetters[T any](getters map[string]func(*T) any, parentField reflect.StructField, parentIndex int, parentKey string, isPointer bool, depth int) {
+	const maxDepth = 3
+	if depth > maxDepth {
+		return // Stop at maximum depth to avoid circular references
+	}
+
 	nestedType := parentField.Type
+	if isPointer {
+		nestedType = nestedType.Elem()
+	}
 
 	for i := 0; i < nestedType.NumField(); i++ {
 		nestedField := nestedType.Field(i)
@@ -355,6 +410,93 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
 				val = val.Elem()
 			}
 			parentVal := val.Field(parentIndex)
+
+			// Handle pointer to struct
+			if isPointer {
+				if parentVal.IsNil() {
+					return nil
+				}
+				parentVal = parentVal.Elem()
+			}
+
+			return parentVal.Field(nestedIndex).Interface()
+		}
+
+		getters[compositeKey] = nestedGetter
+		if compositeKey != compositeLowerKey {
+			getters[compositeLowerKey] = nestedGetter
+		}
+
+		// Recursively handle deeply nested structs with depth limit
+		nestedFieldType := nestedField.Type
+		isNestedPointer := false
+		if nestedFieldType.Kind() == reflect.Pointer {
+			nestedFieldType = nestedFieldType.Elem()
+			isNestedPointer = true
+		}
+		if nestedFieldType.Kind() == reflect.Struct && depth < maxDepth {
+			generateNestedGettersRecursive(getters, nestedField, parentIndex, nestedIndex, compositeKey, isPointer, isNestedPointer, depth+1)
+		}
+	}
+}
+
+// generateNestedGettersRecursive handles deeply nested struct fields with depth limit
+func generateNestedGettersRecursive[T any](getters map[string]func(*T) any, parentField reflect.StructField, rootIndex, parentIndex int, parentKey string, rootIsPointer, parentIsPointer bool, depth int) {
+	const maxDepth = 3
+	if depth > maxDepth {
+		return // Stop at maximum depth
+	}
+
+	nestedType := parentField.Type
+	if parentIsPointer {
+		nestedType = nestedType.Elem()
+	}
+
+	for i := 0; i < nestedType.NumField(); i++ {
+		nestedField := nestedType.Field(i)
+
+		if !nestedField.IsExported() {
+			continue
+		}
+
+		nestedFieldName := nestedField.Name
+		nestedKey := nestedFieldName
+
+		if jsonTag := nestedField.Tag.Get("json"); jsonTag != "" {
+			tagValue := strings.Split(jsonTag, ",")[0]
+			if tagValue != "" && tagValue != "-" {
+				nestedKey = tagValue
+			}
+		}
+
+		compositeKey := parentKey + "." + nestedKey
+		compositeLowerKey := parentKey + "." + strings.ToLower(nestedFieldName)
+
+		nestedIndex := i
+		nestedGetter := func(v *T) any {
+			val := reflect.ValueOf(v)
+			if val.Kind() == reflect.Pointer {
+				val = val.Elem()
+			}
+
+			// Navigate to root parent
+			rootVal := val.Field(rootIndex)
+			if rootIsPointer {
+				if rootVal.IsNil() {
+					return nil
+				}
+				rootVal = rootVal.Elem()
+			}
+
+			// Navigate to immediate parent
+			parentVal := rootVal.Field(parentIndex)
+			if parentIsPointer {
+				if parentVal.IsNil() {
+					return nil
+				}
+				parentVal = parentVal.Elem()
+			}
+
 			return parentVal.Field(nestedIndex).Interface()
 		}
 
