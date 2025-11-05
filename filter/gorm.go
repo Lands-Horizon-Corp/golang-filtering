@@ -131,11 +131,15 @@ func (f *Handler[T]) DataGorm(
 				parts := strings.Split(field, ".")
 				if len(parts) >= 2 {
 					parts[0] = f.toPascalCase(parts[0])
-					field = strings.Join(parts, ".")
+					// Quote identifiers to preserve case
+					field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
+					for i := 2; i < len(parts); i++ {
+						field = fmt.Sprintf(`%s."%s"`, field, parts[i])
+					}
 				}
 			} else if mainTableName != "" {
 				// For non-nested fields, prefix with main table name to avoid ambiguity
-				field = fmt.Sprintf("%s.%s", mainTableName, field)
+				field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
 			}
 			query = query.Order(fmt.Sprintf("%s %s", field, order))
 		}
@@ -280,18 +284,27 @@ func (f *Handler[T]) buildConditionWithTableName(filter FieldFilter, mainTableNa
 	// Check if this is a nested field
 	isNestedField := strings.Contains(field, ".")
 
-	// Normalize nested field names: "member_profile.name" -> "MemberProfile.name"
+	// For nested fields, we need to normalize the relationship name to match GORM's struct field names
+	// Example: "currency.currency_code" should become "Currency.currency_code"
+	// We also need to quote identifiers to preserve case for PostgreSQL
 	if isNestedField {
 		parts := strings.Split(field, ".")
 		if len(parts) >= 2 {
-			// Convert snake_case or lowercase to PascalCase for GORM struct fields
-			// "member_profile" -> "MemberProfile", "currency" -> "Currency"
+			// Convert the first part (relationship name) to PascalCase to match struct field name
+			// GORM uses the struct field name for JOINs
 			parts[0] = f.toPascalCase(parts[0])
-			field = strings.Join(parts, ".")
+			// Quote identifiers to preserve case in PostgreSQL
+			// Format: "RelationName"."field_name"
+			field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
+			// For more than 2 parts, append remaining parts
+			for i := 2; i < len(parts); i++ {
+				field = fmt.Sprintf(`%s."%s"`, field, parts[i])
+			}
 		}
 	} else if mainTableName != "" {
 		// For non-nested fields, prefix with main table name to avoid ambiguity when JOINs are present
-		field = fmt.Sprintf("%s.%s", mainTableName, field)
+		// Quote both table and field names
+		field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
 	}
 
 	switch filter.DataType {
