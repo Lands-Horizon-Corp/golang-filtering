@@ -56,10 +56,10 @@ const (
 
 // represents a single filter condition
 type FieldFilter struct {
-	Field    string   `json:"field"`          // Field name to filter on
-	Value    any      `json:"value"`          // Value to compare against
-	Mode     Mode     `json:"mode"`           // Comparison mode
-	DataType DataType `json:"filterDataType"` // Data type of the field
+	Field    string   `json:"field"`    // Field name to filter on
+	Value    any      `json:"value"`    // Value to compare against
+	Mode     Mode     `json:"mode"`     // Comparison mode
+	DataType DataType `json:"dataType"` // Data type of the field
 }
 
 // SortField represents a field to sort by
