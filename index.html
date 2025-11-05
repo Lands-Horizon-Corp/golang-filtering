@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (66.7%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (68.6%)</option>
 				
 				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (84.1%)</option>
 				
@@ -338,7 +338,7 @@ func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (str
                         return "", nil
                 }</span>
                 <span class="cov8" title="1">hasTime := hasTimeComponent(t)
-                if hasTime </span><span class="cov0" title="0">{
+                if hasTime </span><span class="cov8" title="1">{
                         return fmt.Sprintf("%s = ?", field), []any{t}
                 }</span>
                 <span class="cov8" title="1">startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
@@ -450,12 +450,12 @@ func (f *Handler[T]) buildTimeCondition(field string, mode Mode, value any) (str
                         return "", nil
                 }</span>
                 <span class="cov8" title="1">return fmt.Sprintf("%s != ?", field), []any{t}</span>
-        case ModeGT:<span class="cov0" title="0">
+        case ModeGT:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s &gt; ?", field), []any{t}</span>
+                <span class="cov8" title="1">return fmt.Sprintf("%s &gt; ?", field), []any{t}</span>
         case ModeGTE, ModeAfter:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
