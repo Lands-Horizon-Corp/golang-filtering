@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (70.3%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (72.1%)</option>
 				
 				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (85.6%)</option>
 				
@@ -188,8 +188,34 @@ func (f *Handler[T]) DataGorm(
         <span class="cov8" title="1">result.TotalSize = int(totalCount)
         result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
 
+        // Check if any filters or sorts use nested fields (for table name disambiguation)
+        hasNestedFields := false
+        for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
+                if strings.Contains(filter.Field, ".") </span><span class="cov8" title="1">{
+                        hasNestedFields = true
+                        break</span>
+                }
+        }
+        <span class="cov8" title="1">if !hasNestedFields </span><span class="cov8" title="1">{
+                for _, sortField := range filterRoot.SortFields </span><span class="cov8" title="1">{
+                        if strings.Contains(sortField.Field, ".") </span><span class="cov8" title="1">{
+                                hasNestedFields = true
+                                break</span>
+                        }
+                }
+        }
+
+        // Get the main table name for disambiguation
+        <span class="cov8" title="1">var mainTableName string
+        if hasNestedFields </span><span class="cov8" title="1">{
+                stmt := &amp;gorm.Statement{DB: db}
+                if err := stmt.Parse(new(T)); err == nil </span><span class="cov8" title="1">{
+                        mainTableName = stmt.Schema.Table
+                }</span>
+        }
+
         // Apply sorting
-        if len(filterRoot.SortFields) &gt; 0 </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if len(filterRoot.SortFields) &gt; 0 </span><span class="cov8" title="1">{
                 for _, sortField := range filterRoot.SortFields </span><span class="cov8" title="1">{
                         order := "ASC"
                         if sortField.Order == SortOrderDesc </span><span class="cov8" title="1">{
@@ -203,7 +229,10 @@ func (f *Handler[T]) DataGorm(
                                         parts[0] = f.toPascalCase(parts[0])
                                         field = strings.Join(parts, ".")
                                 }</span>
-                        }
+                        } else<span class="cov8" title="1"> if mainTableName != "" </span><span class="cov8" title="1">{
+                                // For non-nested fields, prefix with main table name to avoid ambiguity
+                                field = fmt.Sprintf("%s.%s", mainTableName, field)
+                        }</span>
                         <span class="cov8" title="1">query = query.Order(fmt.Sprintf("%s %s", field, order))</span>
                 }
         }
@@ -258,16 +287,35 @@ func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB <span cla
                 return db
         }</span>
 
+        // Check if any filters use nested fields (which trigger JOINs)
+        <span class="cov8" title="1">hasNestedFields := false
+        for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
+                if strings.Contains(filter.Field, ".") </span><span class="cov8" title="1">{
+                        hasNestedFields = true
+                        break</span>
+                }
+        }
+
+        // Get the main table name for disambiguation
+        <span class="cov8" title="1">var mainTableName string
+        if hasNestedFields </span><span class="cov8" title="1">{
+                // Get table name from GORM
+                stmt := &amp;gorm.Statement{DB: db}
+                if err := stmt.Parse(new(T)); err == nil </span><span class="cov8" title="1">{
+                        mainTableName = stmt.Schema.Table
+                }</span>
+        }
+
         <span class="cov8" title="1">if filterRoot.Logic == LogicAnd </span><span class="cov8" title="1">{
                 for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
-                        db = f.applyGorm(db, filter)
+                        db = f.applyGormWithTableName(db, filter, mainTableName)
                 }</span>
         } else<span class="cov8" title="1"> {
                 var orConditions []string
                 var orValues []any
 
                 for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
-                        condition, values := f.buildCondition(filter)
+                        condition, values := f.buildConditionWithTableName(filter, mainTableName)
                         if condition != "" </span><span class="cov8" title="1">{
                                 orConditions = append(orConditions, condition)
                                 orValues = append(orValues, values...)
@@ -298,8 +346,17 @@ func (f *Handler[T]) toPascalCase(s string) string <span class="cov8" title="1">
 }
 
 // applyGorm applies a single filter to the GORM query
-func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB <span class="cov8" title="1">{
+func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB <span class="cov0" title="0">{
         condition, values := f.buildCondition(filter)
+        if condition != "" </span><span class="cov0" title="0">{
+                db = db.Where(condition, values...)
+        }</span>
+        <span class="cov0" title="0">return db</span>
+}
+
+// applyGormWithTableName applies a single filter with table name disambiguation
+func (f *Handler[T]) applyGormWithTableName(db *gorm.DB, filter FieldFilter, mainTableName string) *gorm.DB <span class="cov8" title="1">{
+        condition, values := f.buildConditionWithTableName(filter, mainTableName)
         if condition != "" </span><span class="cov8" title="1">{
                 db = db.Where(condition, values...)
         }</span>
@@ -307,12 +364,20 @@ func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB <span c
 }
 
 // buildCondition builds SQL condition and values for a filter
-func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) <span class="cov8" title="1">{
+func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) <span class="cov0" title="0">{
+        return f.buildConditionWithTableName(filter, "")
+}</span>
+
+// buildConditionWithTableName builds SQL condition with optional table name prefix for non-nested fields
+func (f *Handler[T]) buildConditionWithTableName(filter FieldFilter, mainTableName string) (string, []any) <span class="cov8" title="1">{
         field := filter.Field
         value := filter.Value
 
+        // Check if this is a nested field
+        isNestedField := strings.Contains(field, ".")
+
         // Normalize nested field names: "member_profile.name" -&gt; "MemberProfile.name"
-        if strings.Contains(field, ".") </span><span class="cov8" title="1">{
+        if isNestedField </span><span class="cov8" title="1">{
                 parts := strings.Split(field, ".")
                 if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
                         // Convert snake_case or lowercase to PascalCase for GORM struct fields
@@ -320,7 +385,10 @@ func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) <span cl
                         parts[0] = f.toPascalCase(parts[0])
                         field = strings.Join(parts, ".")
                 }</span>
-        }
+        } else<span class="cov8" title="1"> if mainTableName != "" </span><span class="cov8" title="1">{
+                // For non-nested fields, prefix with main table name to avoid ambiguity when JOINs are present
+                field = fmt.Sprintf("%s.%s", mainTableName, field)
+        }</span>
 
         <span class="cov8" title="1">switch filter.DataType </span>{
         case DataTypeNumber:<span class="cov8" title="1">
