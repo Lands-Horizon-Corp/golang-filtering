@@ -348,6 +348,153 @@ result, err := filterHandler.DataGorm(db, userFilters, pageIndex, pageSize)
 
 ✅ **Security** - Tenant isolation enforced at query level  
 ✅ **Performance** - Database can use indexes on preset columns  
+✅ **Flexibility** - Combine fixed scope with dynamic user filters  
+✅ **Clean Code** - Separation of concerns (business rules vs. user input)
+
+---
+
+#### Using Preset Conditions with Structs (Recommended)
+
+For better type safety and cleaner code, you can use **structs** to define preset conditions:
+
+**Method 1: Using `ApplyPresetConditions` Helper**
+
+```go
+// Define your preset condition struct
+type AccountTag struct {
+    OrganizationID uint `gorm:"column:organization_id"`
+    BranchID       uint `gorm:"column:branch_id"`
+}
+
+filterHandler := filter.NewFilter[BillAndCoin]()
+
+func GetUserBills(db *gorm.DB, user *User, userFilters filter.Root) (*filter.PaginationResult[BillAndCoin], error) {
+    // Create preset conditions from user context
+    tag := &AccountTag{
+        OrganizationID: user.OrganizationID,
+        BranchID:       *user.BranchID,
+    }
+
+    // Apply preset conditions to db
+    db = filter.ApplyPresetConditions(db, tag)
+
+    // DataGorm will apply userFilters on top of preset conditions
+    return filterHandler.DataGorm(db, userFilters, 1, 30)
+}
+```
+
+**Method 2: Using `DataGormWithPreset` Convenience Method (Even Cleaner!)**
+
+```go
+func GetUserBills(db *gorm.DB, user *User, userFilters filter.Root) (*filter.PaginationResult[BillAndCoin], error) {
+    tag := &AccountTag{
+        OrganizationID: user.OrganizationID,
+        BranchID:       *user.BranchID,
+    }
+
+    // One-liner: applies preset AND user filters
+    return filterHandler.DataGormWithPreset(db, tag, userFilters, 1, 30)
+}
+```
+
+**Complete Example:**
+
+```go
+package main
+
+import (
+    "github.com/Lands-Horizon-Corp/golang-filtering/filter"
+    "gorm.io/gorm"
+)
+
+type User struct {
+    ID             uint
+    OrganizationID uint
+    BranchID       *uint  // Pointer allows nil for users without branch
+}
+
+type Transaction struct {
+    ID             uint    `gorm:"primaryKey"`
+    OrganizationID uint    `json:"organization_id"`
+    BranchID       uint    `json:"branch_id"`
+    Amount         float64 `json:"amount"`
+    Currency       string  `json:"currency"`
+    Status         string  `json:"status"`
+}
+
+type AccountTag struct {
+    OrganizationID uint `gorm:"column:organization_id"`
+    BranchID       uint `gorm:"column:branch_id"`
+}
+
+func GetTransactions(db *gorm.DB, user *User, pageIndex, pageSize int) (*filter.PaginationResult[Transaction], error) {
+    handler := filter.NewFilter[Transaction]()
+
+    // User's dynamic filters (from query parameters, form, etc.)
+    userFilters := filter.Root{
+        Logic: filter.LogicAnd,
+        FieldFilters: []filter.FieldFilter{
+            {
+                Field:    "status",
+                Value:    "completed",
+                Mode:     filter.ModeEqual,
+                DataType: filter.DataTypeText,
+            },
+            {
+                Field:    "currency",
+                Value:    "USD",
+                Mode:     filter.ModeEqual,
+                DataType: filter.DataTypeText,
+            },
+        },
+        SortFields: []filter.SortField{
+            {Field: "amount", Order: filter.SortOrderDesc},
+        },
+    }
+
+    // Apply multi-tenant isolation automatically
+    tag := &AccountTag{
+        OrganizationID: user.OrganizationID,
+        BranchID:       *user.BranchID,
+    }
+
+    // Returns: completed USD transactions for user's org+branch, sorted by amount DESC
+    return handler.DataGormWithPreset(db, tag, userFilters, pageIndex, pageSize)
+}
+```
+
+**Benefits of Struct-Based Approach:**
+
+✅ **Type Safety** - Compile-time checking for field names  
+✅ **Reusability** - Define preset structs once, use everywhere  
+✅ **Clean Code** - No string concatenation for WHERE clauses  
+✅ **IDE Support** - Auto-completion and refactoring support  
+✅ **Maintainability** - Easy to add/remove preset fields
+
+**Flexible Preset Conditions:**
+
+```go
+// Example 1: Organization only
+type OrgFilter struct {
+    OrganizationID uint `gorm:"column:organization_id"`
+}
+
+// Example 2: Organization + Branch + Status
+type ScopedFilter struct {
+    OrganizationID uint   `gorm:"column:organization_id"`
+    BranchID       uint   `gorm:"column:branch_id"`
+    IsActive       bool   `gorm:"column:is_active"`
+}
+
+// Example 3: Nil preset (no restrictions)
+result, err := handler.DataGormWithPreset(db, nil, userFilters, 1, 30)
+// Works like regular DataGorm - no preset conditions
+```
+
+**Why This Matters:**
+
+✅ **Security** - Tenant isolation enforced at query level  
+✅ **Performance** - Database can use indexes on preset columns  
 ✅ **Flexibility** - Combine hard-coded business rules with dynamic user filters  
 ✅ **Multi-tenancy** - Perfect for SaaS apps with organization/branch structures  
 ✅ **Backward compatible** - Works with or without preset conditions

@@ -8,12 +8,42 @@ import (
 	"gorm.io/gorm"
 )
 
+// ApplyPresetConditions applies struct fields as WHERE conditions to the db query.
+// This is a helper to easily apply preset filters from a struct.
+//
+// Example usage:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint
+//	    BranchID       uint
+//	}
+//
+//	tag := &AccountTag{OrganizationID: 1, BranchID: 2}
+//	db = filter.ApplyPresetConditions(db, tag)
+//	result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
+func ApplyPresetConditions(db *gorm.DB, conditions any) *gorm.DB {
+	if conditions == nil {
+		return db
+	}
+	return db.Where(conditions)
+}
+
 // DataGorm performs database-level filtering using GORM queries.
 // It generates SQL WHERE clauses based on the filter configuration and returns paginated results.
 // The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
 // and DataGorm will apply additional filters from filterRoot on top of those.
 //
-// Example with preset conditions:
+// Example with preset conditions using struct:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint
+//	    BranchID       uint
+//	}
+//	tag := &AccountTag{OrganizationID: user.OrganizationID, BranchID: *user.BranchID}
+//	db = filter.ApplyPresetConditions(db, tag)
+//	result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
+//
+// Example with preset conditions using Where:
 //
 //	presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
 //	result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -82,6 +112,37 @@ func (f *Handler[T]) DataGorm(
 
 	result.Data = data
 	return &result, nil
+}
+
+// DataGormWithPreset is a convenience method that combines ApplyPresetConditions and DataGorm.
+// It accepts preset conditions as a struct and applies them before filtering.
+//
+// Example usage:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint `gorm:"column:organization_id"`
+//	    BranchID       uint `gorm:"column:branch_id"`
+//	}
+//
+//	tag := &AccountTag{
+//	    OrganizationID: user.OrganizationID,
+//	    BranchID:       *user.BranchID,
+//	}
+//	result, err := handler.DataGormWithPreset(db, tag, filterRoot, pageIndex, pageSize)
+func (f *Handler[T]) DataGormWithPreset(
+	db *gorm.DB,
+	presetConditions any,
+	filterRoot Root,
+	pageIndex int,
+	pageSize int,
+) (*PaginationResult[T], error) {
+	// Apply preset conditions to db
+	if presetConditions != nil {
+		db = db.Where(presetConditions)
+	}
+
+	// Call regular DataGorm with the modified db
+	return f.DataGorm(db, filterRoot, pageIndex, pageSize)
 }
 
 func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
