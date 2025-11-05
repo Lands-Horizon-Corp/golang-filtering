@@ -254,6 +254,104 @@ filterRoot.Preload = []string{}
 - Works with filtering, sorting, and pagination
 - GORM-only feature (ignored in `DataQuery` and `Hybrid`)
 
+#### Using Preset Conditions with DataGorm (Multi-Tenant / Scoped Queries)
+
+You can pass a `*gorm.DB` with **existing WHERE conditions** to `DataGorm`, and the package will apply `filterRoot` filters **on top of** your preset conditions. This is perfect for multi-tenant apps, branch-specific queries, or any scenario where you need base filtering.
+
+**Use Case: Multi-Tenant Financial App**
+
+```go
+type BillAndCoin struct {
+    ID             uint    `gorm:"primaryKey"`
+    OrganizationID uint    `json:"organization_id"`  // Tenant isolation
+    BranchID       uint    `json:"branch_id"`        // Branch isolation
+    Amount         float64 `json:"amount"`
+    Currency       string  `json:"currency"`
+    Status         string  `json:"status"`
+}
+
+filterHandler := filter.NewFilter[BillAndCoin]()
+
+// Scenario 1: Organization + Branch scoping with user filters
+func GetBills(db *gorm.DB, orgID, branchID uint, userFilters filter.Root) (*filter.PaginationResult[BillAndCoin], error) {
+    // Apply preset conditions (tenant/branch isolation)
+    presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+
+    // User's dynamic filters will be added on top
+    // Final SQL: SELECT * FROM bill_and_coins
+    //            WHERE organization_id = ? AND branch_id = ?  -- Your preset
+    //            AND [user's filterRoot conditions]           -- User filters
+    //            ORDER BY [sort fields] LIMIT ? OFFSET ?
+
+    pageIndex := 1
+    pageSize := 30
+
+    return filterHandler.DataGorm(presetDB, userFilters, pageIndex, pageSize)
+}
+
+// Example usage:
+orgID := uint(1)
+branchID := uint(5)
+
+userFilters := filter.Root{
+    Logic: filter.LogicAnd,
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "status",
+            Value:    "active",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeText,
+        },
+        {
+            Field:    "amount",
+            Value:    filter.Range{From: 100, To: 1000},
+            Mode:     filter.ModeRange,
+            DataType: filter.DataTypeNumber,
+        },
+    },
+    SortFields: []filter.SortField{
+        {Field: "amount", Order: filter.SortOrderDesc},
+    },
+}
+
+result, err := GetBills(db, orgID, branchID, userFilters)
+// Returns: active bills for org=1, branch=5, with amount between 100-1000, sorted by amount DESC
+```
+
+**Scenario 2: Organization-only scoping**
+
+```go
+// Simpler: just organization-level isolation
+presetDB := db.Where("organization_id = ?", orgID)
+result, err := filterHandler.DataGorm(presetDB, userFilters, pageIndex, pageSize)
+```
+
+**Scenario 3: Complex preset conditions**
+
+```go
+// Multiple branches with date range
+presetDB := db.Where("organization_id = ? AND branch_id IN ? AND created_at >= ?",
+    orgID, []uint{1, 2, 3}, time.Now().AddDate(0, -1, 0))
+
+result, err := filterHandler.DataGorm(presetDB, userFilters, pageIndex, pageSize)
+```
+
+**Scenario 4: No preset conditions (backward compatible)**
+
+```go
+// If you don't need preset conditions, just pass db as-is
+result, err := filterHandler.DataGorm(db, userFilters, pageIndex, pageSize)
+// Works exactly as before - filters everything in the table
+```
+
+**Why This Matters:**
+
+✅ **Security** - Tenant isolation enforced at query level  
+✅ **Performance** - Database can use indexes on preset columns  
+✅ **Flexibility** - Combine hard-coded business rules with dynamic user filters  
+✅ **Multi-tenancy** - Perfect for SaaS apps with organization/branch structures  
+✅ **Backward compatible** - Works with or without preset conditions
+
 ---
 
 ### 3. Hybrid Filtering (`Hybrid`) – Auto-Switching

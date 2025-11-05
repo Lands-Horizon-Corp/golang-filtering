@@ -10,6 +10,13 @@ import (
 
 // DataGorm performs database-level filtering using GORM queries.
 // It generates SQL WHERE clauses based on the filter configuration and returns paginated results.
+// The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
+// and DataGorm will apply additional filters from filterRoot on top of those.
+//
+// Example with preset conditions:
+//
+//	presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//	result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
 func (f *Handler[T]) DataGorm(
 	db *gorm.DB,
 	filterRoot Root,
@@ -29,7 +36,7 @@ func (f *Handler[T]) DataGorm(
 		result.PageSize = 30
 	}
 
-	// Build the query
+	// Build the query - db may already have WHERE conditions, they will be preserved
 	query := db.Model(new(T))
 
 	// Apply preloads (GORM only feature)
