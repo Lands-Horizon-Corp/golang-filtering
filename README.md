@@ -386,6 +386,40 @@ result, err := filterHandler.Hybrid(db, threshold, filterRoot, pageIndex, pageSi
 - Smart switching
 - Scalable from dev to production
 
+#### Using Hybrid with Pre-existing DB Conditions
+
+Just like `DataGorm`, `Hybrid` respects any pre-existing WHERE conditions on your `*gorm.DB`:
+
+```go
+// Multi-tenant scenario: filter by organization and branch first
+db := gormDB.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+
+filterRoot := filter.Root{
+    Logic: filter.LogicAnd,
+    FieldFilters: []filter.FieldFilter{
+        {
+            Field:    "status",
+            Value:    "active",
+            Mode:     filter.ModeEqual,
+            DataType: filter.DataTypeText,
+        },
+    },
+}
+
+threshold := 10000
+pageIndex := 1
+pageSize := 10
+
+result, err := filterHandler.Hybrid(db, threshold, filterRoot, pageIndex, pageSize)
+// If DataQuery path chosen: fetches all records WHERE organization_id=? AND branch_id=?, then filters in-memory
+// If DataGorm path chosen: SELECT * WHERE organization_id=? AND branch_id=? AND status='active'
+```
+
+**Behavior:**
+
+- **DataQuery path** (small dataset): Fetches data using your preset WHERE conditions, then applies `filterRoot` filters in memory
+- **DataGorm path** (large dataset): Combines your preset conditions with `filterRoot` filters in a single SQL query
+
 ---
 
 ## Filter Modes

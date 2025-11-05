@@ -8,8 +8,18 @@ import (
 )
 
 // Hybrid intelligently chooses between in-memory (DataQuery) and database (DataGorm)
-// filtering based on estimated table size. If estimated rows <= threshold, it fetches all data and
-// uses in-memory filtering for better performance. Otherwise, it uses database filtering.
+// filtering based on estimated table size.
+//
+// IMPORTANT: Respects pre-existing WHERE conditions on the db parameter.
+// - If DataQuery is chosen (small dataset): fetches data using existing conditions, then filters in-memory
+// - If DataGorm is chosen (large dataset): combines existing conditions with filterRoot filters in SQL
+//
+// Example with pre-existing conditions:
+//
+//	db := gormDB.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//	result, err := handler.Hybrid(db, 10000, filterRoot, pageIndex, pageSize)
+//	// DataQuery path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? (fetch all, filter in-memory)
+//	// DataGorm path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? AND [filterRoot conditions]
 func (f *Handler[T]) Hybrid(
 	db *gorm.DB,
 	threshold int,
@@ -25,6 +35,8 @@ func (f *Handler[T]) Hybrid(
 	tableName := stmt.Table
 
 	// Estimate row count based on database type
+	// NOTE: Estimation uses the full table, not filtered by existing WHERE conditions
+	// This is intentional - we want to estimate total table size for strategy selection
 	estimatedRows, err := f.estimateTableRows(db, tableName)
 	if err != nil {
 		// If estimation fails, fall back to database filtering
@@ -34,6 +46,8 @@ func (f *Handler[T]) Hybrid(
 	// Decide which strategy to use
 	if estimatedRows <= int64(threshold) {
 		// Use in-memory filtering for better performance on small datasets
+		// IMPORTANT: This respects any pre-existing WHERE conditions on db
+		// Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
 		var allData []*T
 		if err := db.Find(&allData).Error; err != nil {
 			return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
@@ -42,11 +56,13 @@ func (f *Handler[T]) Hybrid(
 	}
 
 	// Use database filtering for large datasets
+	// DataGorm will combine existing WHERE conditions with filterRoot filters
 	return f.DataGorm(db, filterRoot, pageIndex, pageSize)
 }
 
 // estimateTableRows returns an estimated row count for a table.
 // It uses database-specific methods for fast estimation without scanning the entire table.
+// NOTE: This estimates the FULL table size, ignoring any WHERE conditions on the db parameter.
 func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, error) {
 	// Get the database driver name
 	dialectName := db.Name()
@@ -55,6 +71,10 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 		Rows int64
 	}
 	var est Estimate
+
+	// Create a fresh session without any WHERE conditions for estimation
+	// We want to estimate the full table size, not filtered results
+	freshDB := db.Session(&gorm.Session{NewDB: true})
 
 	switch dialectName {
 	case "postgres":
@@ -65,7 +85,7 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 			WHERE relname = '%s'
 		`, tableName)
 
-		if err := db.Raw(query).Scan(&est).Error; err != nil {
+		if err := freshDB.Raw(query).Scan(&est).Error; err != nil {
 			return 0, fmt.Errorf("postgres estimation failed: %w", err)
 		}
 		return est.Rows, nil
@@ -79,7 +99,7 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 			  AND TABLE_NAME = ?
 		`
 
-		if err := db.Raw(query, tableName).Scan(&est).Error; err != nil {
+		if err := freshDB.Raw(query, tableName).Scan(&est).Error; err != nil {
 			return 0, fmt.Errorf("mysql estimation failed: %w", err)
 		}
 		return est.Rows, nil
@@ -95,22 +115,27 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 		`, tableName)
 
 		var statRows string
-		if err := db.Raw(query).Scan(&statRows).Error; err == nil && statRows != "" {
+		err := freshDB.Raw(query).Scan(&statRows).Error
+
+		// If sqlite_stat1 exists and has data, parse it
+		if err == nil && statRows != "" {
 			// Parse the first number from the stat string
 			parts := strings.Split(statRows, " ")
 			if len(parts) > 0 {
 				var rowCount int64
-				if _, err := fmt.Sscanf(parts[0], "%d", &rowCount); err == nil {
+				if _, scanErr := fmt.Sscanf(parts[0], "%d", &rowCount); scanErr == nil {
 					return rowCount, nil
 				}
 			}
 		}
 
-		// Fall back to COUNT(*) for SQLite (it's usually fast for small databases)
-		if err := db.Table(tableName).Count(&est.Rows).Error; err != nil {
+		// Fall back to COUNT(*) for SQLite
+		// This works even if sqlite_stat1 doesn't exist
+		var countRows int64
+		if err := freshDB.Table(tableName).Count(&countRows).Error; err != nil {
 			return 0, fmt.Errorf("sqlite count failed: %w", err)
 		}
-		return est.Rows, nil
+		return countRows, nil
 
 	case "sqlserver":
 		// SQL Server: Use system views
@@ -122,14 +147,14 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 			  AND p.index_id IN (0, 1)
 		`, tableName)
 
-		if err := db.Raw(query).Scan(&est).Error; err != nil {
+		if err := freshDB.Raw(query).Scan(&est).Error; err != nil {
 			return 0, fmt.Errorf("sqlserver estimation failed: %w", err)
 		}
 		return est.Rows, nil
 
 	default:
 		// Unsupported database: fall back to COUNT(*)
-		if err := db.Table(tableName).Count(&est.Rows).Error; err != nil {
+		if err := freshDB.Table(tableName).Count(&est.Rows).Error; err != nil {
 			return 0, fmt.Errorf("count fallback failed: %w", err)
 		}
 		return est.Rows, nil
