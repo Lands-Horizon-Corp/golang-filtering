@@ -19,6 +19,7 @@ func (f *Handler[T]) DataQuery(
 	pageSize int,
 ) (*PaginationResult[T], error) {
 	result := PaginationResult[T]{
+		Data:      data,
 		PageIndex: pageIndex,
 		PageSize:  pageSize,
 	}
