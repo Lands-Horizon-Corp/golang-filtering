@@ -92,6 +92,32 @@ func (f *Handler[T]) DataGorm(
 	result.TotalSize = int(totalCount)
 	result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
 
+	// Check if any filters or sorts use nested fields (for table name disambiguation)
+	hasNestedFields := false
+	for _, filter := range filterRoot.FieldFilters {
+		if strings.Contains(filter.Field, ".") {
+			hasNestedFields = true
+			break
+		}
+	}
+	if !hasNestedFields {
+		for _, sortField := range filterRoot.SortFields {
+			if strings.Contains(sortField.Field, ".") {
+				hasNestedFields = true
+				break
+			}
+		}
+	}
+
+	// Get the main table name for disambiguation
+	var mainTableName string
+	if hasNestedFields {
+		stmt := &gorm.Statement{DB: db}
+		if err := stmt.Parse(new(T)); err == nil {
+			mainTableName = stmt.Schema.Table
+		}
+	}
+
 	// Apply sorting
 	if len(filterRoot.SortFields) > 0 {
 		for _, sortField := range filterRoot.SortFields {
@@ -107,6 +133,9 @@ func (f *Handler[T]) DataGorm(
 					parts[0] = f.toPascalCase(parts[0])
 					field = strings.Join(parts, ".")
 				}
+			} else if mainTableName != "" {
+				// For non-nested fields, prefix with main table name to avoid ambiguity
+				field = fmt.Sprintf("%s.%s", mainTableName, field)
 			}
 			query = query.Order(fmt.Sprintf("%s %s", field, order))
 		}
@@ -162,16 +191,35 @@ func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
 		return db
 	}
 
+	// Check if any filters use nested fields (which trigger JOINs)
+	hasNestedFields := false
+	for _, filter := range filterRoot.FieldFilters {
+		if strings.Contains(filter.Field, ".") {
+			hasNestedFields = true
+			break
+		}
+	}
+
+	// Get the main table name for disambiguation
+	var mainTableName string
+	if hasNestedFields {
+		// Get table name from GORM
+		stmt := &gorm.Statement{DB: db}
+		if err := stmt.Parse(new(T)); err == nil {
+			mainTableName = stmt.Schema.Table
+		}
+	}
+
 	if filterRoot.Logic == LogicAnd {
 		for _, filter := range filterRoot.FieldFilters {
-			db = f.applyGorm(db, filter)
+			db = f.applyGormWithTableName(db, filter, mainTableName)
 		}
 	} else {
 		var orConditions []string
 		var orValues []any
 
 		for _, filter := range filterRoot.FieldFilters {
-			condition, values := f.buildCondition(filter)
+			condition, values := f.buildConditionWithTableName(filter, mainTableName)
 			if condition != "" {
 				orConditions = append(orConditions, condition)
 				orValues = append(orValues, values...)
@@ -210,13 +258,30 @@ func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB {
 	return db
 }
 
+// applyGormWithTableName applies a single filter with table name disambiguation
+func (f *Handler[T]) applyGormWithTableName(db *gorm.DB, filter FieldFilter, mainTableName string) *gorm.DB {
+	condition, values := f.buildConditionWithTableName(filter, mainTableName)
+	if condition != "" {
+		db = db.Where(condition, values...)
+	}
+	return db
+}
+
 // buildCondition builds SQL condition and values for a filter
 func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) {
+	return f.buildConditionWithTableName(filter, "")
+}
+
+// buildConditionWithTableName builds SQL condition with optional table name prefix for non-nested fields
+func (f *Handler[T]) buildConditionWithTableName(filter FieldFilter, mainTableName string) (string, []any) {
 	field := filter.Field
 	value := filter.Value
 
+	// Check if this is a nested field
+	isNestedField := strings.Contains(field, ".")
+
 	// Normalize nested field names: "member_profile.name" -> "MemberProfile.name"
-	if strings.Contains(field, ".") {
+	if isNestedField {
 		parts := strings.Split(field, ".")
 		if len(parts) >= 2 {
 			// Convert snake_case or lowercase to PascalCase for GORM struct fields
@@ -224,6 +289,9 @@ func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) {
 			parts[0] = f.toPascalCase(parts[0])
 			field = strings.Join(parts, ".")
 		}
+	} else if mainTableName != "" {
+		// For non-nested fields, prefix with main table name to avoid ambiguity when JOINs are present
+		field = fmt.Sprintf("%s.%s", mainTableName, field)
 	}
 
 	switch filter.DataType {
