@@ -76,8 +76,9 @@ func parseText(value any) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("invalid text type for field %s", value)
 	}
-	sanitized := Sanitize(str)
-	return strings.ToLower(sanitized), nil
+	// Don't sanitize - GORM's parameterized queries handle SQL injection protection
+	// Sanitizing converts spaces to hyphens which breaks text searches
+	return str, nil
 }
 
 func parseTime(value any) (time.Time, error) {

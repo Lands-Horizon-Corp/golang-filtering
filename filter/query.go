@@ -258,11 +258,15 @@ func (f *Handler[T]) applyNumber(value any, filter FieldFilter) (bool, float64, 
 }
 
 // applyText applies a text filter and returns whether the value matches the filter
+// All text comparisons are case-insensitive
 func (f *Handler[T]) applyText(value any, filter FieldFilter) (bool, string, error) {
 	data, err := parseText(value)
 	if err != nil {
 		return false, "", err
 	}
+
+	// Convert to lowercase for case-insensitive comparison
+	dataLower := strings.ToLower(data)
 
 	switch filter.Mode {
 	case ModeEqual:
@@ -270,37 +274,37 @@ func (f *Handler[T]) applyText(value any, filter FieldFilter) (bool, string, err
 		if err != nil {
 			return false, data, err
 		}
-		return data == substr, data, nil
+		return dataLower == strings.ToLower(substr), data, nil
 	case ModeNotEqual:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
-		return data != substr, data, nil
+		return dataLower != strings.ToLower(substr), data, nil
 	case ModeContains:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
-		return strings.Contains(data, substr), data, nil
+		return strings.Contains(dataLower, strings.ToLower(substr)), data, nil
 	case ModeNotContains:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
-		return !strings.Contains(data, substr), data, nil
+		return !strings.Contains(dataLower, strings.ToLower(substr)), data, nil
 	case ModeStartsWith:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
-		return strings.HasPrefix(data, substr), data, nil
+		return strings.HasPrefix(dataLower, strings.ToLower(substr)), data, nil
 	case ModeEndsWith:
 		substr, err := parseText(filter.Value)
 		if err != nil {
 			return false, data, err
 		}
-		return strings.HasSuffix(data, substr), data, nil
+		return strings.HasSuffix(dataLower, strings.ToLower(substr)), data, nil
 	case ModeIsEmpty:
 		return data == "", data, nil
 	case ModeIsNotEmpty:
