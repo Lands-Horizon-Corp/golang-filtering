@@ -57,13 +57,13 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (68.6%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (70.3%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (84.1%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (85.6%)</option>
 				
-				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (48.9%)</option>
+				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (52.0%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (64.3%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (64.8%)</option>
 				
 				</select>
 			</div>
@@ -104,12 +104,42 @@ import (
         "gorm.io/gorm"
 )
 
+// ApplyPresetConditions applies struct fields as WHERE conditions to the db query.
+// This is a helper to easily apply preset filters from a struct.
+//
+// Example usage:
+//
+//        type AccountTag struct {
+//            OrganizationID uint
+//            BranchID       uint
+//        }
+//
+//        tag := &amp;AccountTag{OrganizationID: 1, BranchID: 2}
+//        db = filter.ApplyPresetConditions(db, tag)
+//        result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
+func ApplyPresetConditions(db *gorm.DB, conditions any) *gorm.DB <span class="cov8" title="1">{
+        if conditions == nil </span><span class="cov0" title="0">{
+                return db
+        }</span>
+        <span class="cov8" title="1">return db.Where(conditions)</span>
+}
+
 // DataGorm performs database-level filtering using GORM queries.
 // It generates SQL WHERE clauses based on the filter configuration and returns paginated results.
 // The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
 // and DataGorm will apply additional filters from filterRoot on top of those.
 //
-// Example with preset conditions:
+// Example with preset conditions using struct:
+//
+//        type AccountTag struct {
+//            OrganizationID uint
+//            BranchID       uint
+//        }
+//        tag := &amp;AccountTag{OrganizationID: user.OrganizationID, BranchID: *user.BranchID}
+//        db = filter.ApplyPresetConditions(db, tag)
+//        result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
+//
+// Example with preset conditions using Where:
 //
 //        presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
 //        result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -134,6 +164,9 @@ func (f *Handler[T]) DataGorm(
 
         // Build the query - db may already have WHERE conditions, they will be preserved
         <span class="cov8" title="1">query := db.Model(new(T))
+
+        // Auto-join related tables based on field filters and sort fields
+        query = f.autoJoinRelatedTables(query, filterRoot.FieldFilters, filterRoot.SortFields)
 
         // Apply preloads (GORM only feature)
         if len(filterRoot.Preload) &gt; 0 </span><span class="cov8" title="1">{
@@ -162,7 +195,16 @@ func (f *Handler[T]) DataGorm(
                         if sortField.Order == SortOrderDesc </span><span class="cov8" title="1">{
                                 order = "DESC"
                         }</span>
-                        <span class="cov8" title="1">query = query.Order(fmt.Sprintf("%s %s", sortField.Field, order))</span>
+                        // Normalize nested field names: "member_profile.name" -&gt; "MemberProfile.name"
+                        <span class="cov8" title="1">field := sortField.Field
+                        if strings.Contains(field, ".") </span><span class="cov8" title="1">{
+                                parts := strings.Split(field, ".")
+                                if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
+                                        parts[0] = f.toPascalCase(parts[0])
+                                        field = strings.Join(parts, ".")
+                                }</span>
+                        }
+                        <span class="cov8" title="1">query = query.Order(fmt.Sprintf("%s %s", field, order))</span>
                 }
         }
 
@@ -178,6 +220,37 @@ func (f *Handler[T]) DataGorm(
 
         <span class="cov8" title="1">result.Data = data
         return &amp;result, nil</span>
+}
+
+// DataGormWithPreset is a convenience method that combines ApplyPresetConditions and DataGorm.
+// It accepts preset conditions as a struct and applies them before filtering.
+//
+// Example usage:
+//
+//        type AccountTag struct {
+//            OrganizationID uint `gorm:"column:organization_id"`
+//            BranchID       uint `gorm:"column:branch_id"`
+//        }
+//
+//        tag := &amp;AccountTag{
+//            OrganizationID: user.OrganizationID,
+//            BranchID:       *user.BranchID,
+//        }
+//        result, err := handler.DataGormWithPreset(db, tag, filterRoot, pageIndex, pageSize)
+func (f *Handler[T]) DataGormWithPreset(
+        db *gorm.DB,
+        presetConditions any,
+        filterRoot Root,
+        pageIndex int,
+        pageSize int,
+) (*PaginationResult[T], error) <span class="cov8" title="1">{
+        // Apply preset conditions to db
+        if presetConditions != nil </span><span class="cov8" title="1">{
+                db = db.Where(presetConditions)
+        }</span>
+
+        // Call regular DataGorm with the modified db
+        <span class="cov8" title="1">return f.DataGorm(db, filterRoot, pageIndex, pageSize)</span>
 }
 
 func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB <span class="cov8" title="1">{
@@ -207,6 +280,23 @@ func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB <span cla
         <span class="cov8" title="1">return db</span>
 }
 
+// toPascalCase converts snake_case or lowercase to PascalCase
+// Examples: "member_profile" -&gt; "MemberProfile", "currency" -&gt; "Currency"
+func (f *Handler[T]) toPascalCase(s string) string <span class="cov8" title="1">{
+        if len(s) == 0 </span><span class="cov0" title="0">{
+                return s
+        }</span>
+
+        // Split by underscore for snake_case
+        <span class="cov8" title="1">parts := strings.Split(s, "_")
+        for i, part := range parts </span><span class="cov8" title="1">{
+                if len(part) &gt; 0 </span><span class="cov8" title="1">{
+                        parts[i] = strings.ToUpper(part[:1]) + part[1:]
+                }</span>
+        }
+        <span class="cov8" title="1">return strings.Join(parts, "")</span>
+}
+
 // applyGorm applies a single filter to the GORM query
 func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB <span class="cov8" title="1">{
         condition, values := f.buildCondition(filter)
@@ -221,7 +311,18 @@ func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) <span cl
         field := filter.Field
         value := filter.Value
 
-        switch filter.DataType </span>{
+        // Normalize nested field names: "member_profile.name" -&gt; "MemberProfile.name"
+        if strings.Contains(field, ".") </span><span class="cov8" title="1">{
+                parts := strings.Split(field, ".")
+                if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
+                        // Convert snake_case or lowercase to PascalCase for GORM struct fields
+                        // "member_profile" -&gt; "MemberProfile", "currency" -&gt; "Currency"
+                        parts[0] = f.toPascalCase(parts[0])
+                        field = strings.Join(parts, ".")
+                }</span>
+        }
+
+        <span class="cov8" title="1">switch filter.DataType </span>{
         case DataTypeNumber:<span class="cov8" title="1">
                 return f.buildNumberCondition(field, filter.Mode, value)</span>
         case DataTypeText:<span class="cov8" title="1">
@@ -288,7 +389,25 @@ func (f *Handler[T]) buildNumberCondition(field string, mode Mode, value any) (s
 
 // buildTextCondition builds SQL condition for text filters
 func (f *Handler[T]) buildTextCondition(field string, mode Mode, value any) (string, []any) <span class="cov8" title="1">{
-        str, err := parseText(value)
+        // Handle Range mode separately since value is a Range struct, not a string
+        if mode == ModeRange </span><span class="cov0" title="0">{
+                rangeVal, ok := value.(Range)
+                if !ok </span><span class="cov0" title="0">{
+                        return "", nil
+                }</span>
+                <span class="cov0" title="0">fromStr, err := parseText(rangeVal.From)
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", nil
+                }</span>
+                <span class="cov0" title="0">toStr, err := parseText(rangeVal.To)
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", nil
+                }</span>
+                <span class="cov0" title="0">return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{fromStr, toStr}</span>
+        }
+
+        // For all other modes, parse value as text
+        <span class="cov8" title="1">str, err := parseText(value)
         if err != nil </span><span class="cov0" title="0">{
                 return "", nil
         }</span>
@@ -296,7 +415,7 @@ func (f *Handler[T]) buildTextCondition(field string, mode Mode, value any) (str
         <span class="cov8" title="1">switch mode </span>{
         case ModeEqual:<span class="cov8" title="1">
                 return fmt.Sprintf("LOWER(%s) = LOWER(?)", field), []any{str}</span>
-        case ModeNotEqual:<span class="cov0" title="0">
+        case ModeNotEqual:<span class="cov8" title="1">
                 return fmt.Sprintf("LOWER(%s) != LOWER(?)", field), []any{str}</span>
         case ModeContains:<span class="cov8" title="1">
                 return fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field), []any{"%" + str + "%"}</span>
@@ -310,6 +429,18 @@ func (f *Handler[T]) buildTextCondition(field string, mode Mode, value any) (str
                 return fmt.Sprintf("(%s IS NULL OR %s = '')", field, field), []any{}</span>
         case ModeIsNotEmpty:<span class="cov8" title="1">
                 return fmt.Sprintf("(%s IS NOT NULL AND %s != '')", field, field), []any{}</span>
+        case ModeGT:<span class="cov0" title="0">
+                // Support for text comparison (useful for time strings like "08:00:00")
+                return fmt.Sprintf("%s &gt; ?", field), []any{str}</span>
+        case ModeGTE, ModeAfter:<span class="cov0" title="0">
+                // Support for text comparison (useful for time strings like "08:00:00")
+                return fmt.Sprintf("%s &gt;= ?", field), []any{str}</span>
+        case ModeLT, ModeBefore:<span class="cov0" title="0">
+                // Support for text comparison (useful for time strings like "08:00:00")
+                return fmt.Sprintf("%s &lt; ?", field), []any{str}</span>
+        case ModeLTE:<span class="cov0" title="0">
+                // Support for text comparison (useful for time strings like "08:00:00")
+                return fmt.Sprintf("%s &lt;= ?", field), []any{str}</span>
         }
         <span class="cov0" title="0">return "", nil</span>
 }
@@ -443,45 +574,94 @@ func (f *Handler[T]) buildTimeCondition(field string, mode Mode, value any) (str
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov8" title="1">return fmt.Sprintf("%s = ?", field), []any{t}</span>
+                // Format time as HH:MM:SS for SQLite TEXT comparison
+                // Use time() function to extract time from datetime columns
+                <span class="cov8" title="1">timeStr := t.Format("15:04:05")
+                return fmt.Sprintf("time(%s) = ?", field), []any{timeStr}</span>
         case ModeNotEqual:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov8" title="1">return fmt.Sprintf("%s != ?", field), []any{t}</span>
+                <span class="cov8" title="1">timeStr := t.Format("15:04:05")
+                return fmt.Sprintf("time(%s) != ?", field), []any{timeStr}</span>
         case ModeGT:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov8" title="1">return fmt.Sprintf("%s &gt; ?", field), []any{t}</span>
+                <span class="cov8" title="1">timeStr := t.Format("15:04:05")
+                return fmt.Sprintf("time(%s) &gt; ?", field), []any{timeStr}</span>
         case ModeGTE, ModeAfter:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov8" title="1">return fmt.Sprintf("%s &gt;= ?", field), []any{t}</span>
+                <span class="cov8" title="1">timeStr := t.Format("15:04:05")
+                return fmt.Sprintf("time(%s) &gt;= ?", field), []any{timeStr}</span>
         case ModeLT, ModeBefore:<span class="cov8" title="1">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov8" title="1">return fmt.Sprintf("%s &lt; ?", field), []any{t}</span>
+                <span class="cov8" title="1">timeStr := t.Format("15:04:05")
+                return fmt.Sprintf("time(%s) &lt; ?", field), []any{timeStr}</span>
         case ModeLTE:<span class="cov0" title="0">
                 t, err := parseTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov0" title="0">return fmt.Sprintf("%s &lt;= ?", field), []any{t}</span>
+                <span class="cov0" title="0">timeStr := t.Format("15:04:05")
+                return fmt.Sprintf("time(%s) &lt;= ?", field), []any{timeStr}</span>
         case ModeRange:<span class="cov8" title="1">
                 rangeVal, err := parseRangeTime(value)
                 if err != nil </span><span class="cov0" title="0">{
                         return "", nil
                 }</span>
-                <span class="cov8" title="1">return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}</span>
+                <span class="cov8" title="1">fromStr := rangeVal.From.Format("15:04:05")
+                toStr := rangeVal.To.Format("15:04:05")
+                return fmt.Sprintf("time(%s) BETWEEN ? AND ?", field), []any{fromStr, toStr}</span>
         }
         <span class="cov0" title="0">return "", nil</span>
+}
+
+// autoJoinRelatedTables automatically joins related tables when filters or sort fields reference nested fields
+func (f *Handler[T]) autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []SortField) *gorm.DB <span class="cov8" title="1">{
+        joinedTables := make(map[string]bool)
+
+        // Check filters for nested fields
+        for _, filter := range filters </span><span class="cov8" title="1">{
+                if strings.Contains(filter.Field, ".") </span><span class="cov8" title="1">{
+                        parts := strings.Split(filter.Field, ".")
+                        if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
+                                // Convert snake_case/lowercase to PascalCase (e.g., "member_profile" -&gt; "MemberProfile")
+                                tableName := f.toPascalCase(parts[0])
+                                if !joinedTables[tableName] </span><span class="cov8" title="1">{
+                                        // GORM will auto-join based on the relationship
+                                        db = db.Joins(tableName)
+                                        joinedTables[tableName] = true
+                                }</span>
+                        }
+                }
+        }
+
+        // Check sort fields for nested fields
+        <span class="cov8" title="1">for _, sortField := range sortFields </span><span class="cov8" title="1">{
+                if strings.Contains(sortField.Field, ".") </span><span class="cov8" title="1">{
+                        parts := strings.Split(sortField.Field, ".")
+                        if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
+                                // Convert snake_case/lowercase to PascalCase
+                                tableName := f.toPascalCase(parts[0])
+                                if !joinedTables[tableName] </span><span class="cov8" title="1">{
+                                        // GORM will auto-join based on the relationship
+                                        db = db.Joins(tableName)
+                                        joinedTables[tableName] = true
+                                }</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">return db</span>
 }
 </pre>
 		
@@ -539,10 +719,23 @@ var timeLayouts = []string{
 }
 
 func parseNumber(value any) (float64, error) <span class="cov8" title="1">{
-        var num float64
-
+        // Handle nil values from nested pointers
+        if value == nil </span><span class="cov0" title="0">{
+                return 0, nil
+        }</span>
+        <span class="cov8" title="1">var num float64
         switch v := value.(type) </span>{
         case int:<span class="cov8" title="1">
+                num = float64(v)</span>
+        case uint:<span class="cov0" title="0">
+                num = float64(v)</span>
+        case int8:<span class="cov0" title="0">
+                num = float64(v)</span>
+        case uint8:<span class="cov0" title="0">
+                num = float64(v)</span>
+        case int16:<span class="cov0" title="0">
+                num = float64(v)</span>
+        case uint16:<span class="cov0" title="0">
                 num = float64(v)</span>
         case int32:<span class="cov0" title="0">
                 num = float64(v)</span>
@@ -559,16 +752,25 @@ func parseNumber(value any) (float64, error) <span class="cov8" title="1">{
 }
 
 func parseText(value any) (string, error) <span class="cov8" title="1">{
-        str, ok := value.(string)
+        // Handle nil values from nested pointers
+        if value == nil </span><span class="cov0" title="0">{
+                return "", nil
+        }</span>
+        <span class="cov8" title="1">str, ok := value.(string)
         if !ok </span><span class="cov8" title="1">{
                 return "", fmt.Errorf("invalid text type for field %s", value)
         }</span>
-        <span class="cov8" title="1">sanitized := Sanitize(str)
-        return strings.ToLower(sanitized), nil</span>
+        // Don't sanitize - GORM's parameterized queries handle SQL injection protection
+        // Sanitizing converts spaces to hyphens which breaks text searches
+        <span class="cov8" title="1">return str, nil</span>
 }
 
 func parseTime(value any) (time.Time, error) <span class="cov8" title="1">{
-        var t time.Time
+        // Handle nil values from nested pointers
+        if value == nil </span><span class="cov0" title="0">{
+                return time.Time{}, nil
+        }</span>
+        <span class="cov8" title="1">var t time.Time
         var err error
 
         switch v := value.(type) </span>{
@@ -595,8 +797,18 @@ func parseTime(value any) (time.Time, error) <span class="cov8" title="1">{
                                 return time.Time{}, fmt.Errorf("invalid time format: %v", v)
                         }</span>
                 }
-        default:<span class="cov0" title="0">
-                return time.Time{}, fmt.Errorf("invalid type for time: %T", value)</span>
+        default:<span class="cov8" title="1">
+                // Try to extract time.Time from embedded structs (e.g., custom time types)
+                if timeVal := reflect.ValueOf(value); timeVal.Kind() == reflect.Struct </span><span class="cov8" title="1">{
+                        // Look for an embedded time.Time field
+                        if timeField := timeVal.FieldByName("Time"); timeField.IsValid() &amp;&amp; timeField.Type() == reflect.TypeOf(time.Time{}) </span><span class="cov8" title="1">{
+                                t = timeField.Interface().(time.Time)
+                        }</span> else<span class="cov0" title="0"> {
+                                return time.Time{}, fmt.Errorf("invalid type for time: %T", value)
+                        }</span>
+                } else<span class="cov0" title="0"> {
+                        return time.Time{}, fmt.Errorf("invalid type for time: %T", value)
+                }</span>
         }
 
         // Normalize to time-only in UTC
@@ -605,7 +817,11 @@ func parseTime(value any) (time.Time, error) <span class="cov8" title="1">{
 }
 
 func parseDateTime(value any) (time.Time, error) <span class="cov8" title="1">{
-        switch v := value.(type) </span>{
+        // Handle nil values from nested pointers
+        if value == nil </span><span class="cov0" title="0">{
+                return time.Time{}, nil
+        }</span>
+        <span class="cov8" title="1">switch v := value.(type) </span>{
         case time.Time:<span class="cov8" title="1">
                 return v, nil</span>
         case string:<span class="cov8" title="1">
@@ -616,7 +832,7 @@ func parseDateTime(value any) (time.Time, error) <span class="cov8" title="1">{
                         }</span>
                 }
                 <span class="cov8" title="1">return time.Time{}, fmt.Errorf("invalid datetime format: %v", v)</span>
-        default:<span class="cov0" title="0">
+        default:<span class="cov8" title="1">
                 return time.Time{}, fmt.Errorf("invalid type for datetime: %T", value)</span>
         }
 }
@@ -688,7 +904,11 @@ func parseRangeTime(value any) (RangeDate, error) <span class="cov8" title="1">{
 }
 
 func parseBool(value any) (bool, error) <span class="cov8" title="1">{
-        b, ok := value.(bool)
+        // Handle nil values from nested pointers
+        if value == nil </span><span class="cov0" title="0">{
+                return false, nil
+        }</span>
+        <span class="cov8" title="1">b, ok := value.(bool)
         if !ok </span><span class="cov8" title="1">{
                 return false, fmt.Errorf("invalid boolean type for field %s", value)
         }</span>
@@ -746,15 +966,15 @@ func compareValues(a, b any) int <span class="cov8" title="1">{
         }
 
         // Try time-only comparison
-        <span class="cov0" title="0">timeOnlyA, errA := parseTime(a)
+        <span class="cov8" title="1">timeOnlyA, errA := parseTime(a)
         timeOnlyB, errB := parseTime(b)
-        if errA == nil &amp;&amp; errB == nil </span><span class="cov0" title="0">{
-                if timeOnlyA.Before(timeOnlyB) </span><span class="cov0" title="0">{
+        if errA == nil &amp;&amp; errB == nil </span><span class="cov8" title="1">{
+                if timeOnlyA.Before(timeOnlyB) </span><span class="cov8" title="1">{
                         return -1
-                }</span> else<span class="cov0" title="0"> if timeOnlyA.After(timeOnlyB) </span><span class="cov0" title="0">{
+                }</span> else<span class="cov8" title="1"> if timeOnlyA.After(timeOnlyB) </span><span class="cov8" title="1">{
                         return 1
                 }</span>
-                <span class="cov0" title="0">return 0</span>
+                <span class="cov8" title="1">return 0</span>
         }
 
         // Fallback: cannot compare
@@ -799,19 +1019,35 @@ func generateGetters[T any]() map[string]func(*T) any <span class="cov8" title="
                 if key != lowerKey </span><span class="cov8" title="1">{
                         getters[lowerKey] = getter
                 }</span>
-                <span class="cov8" title="1">if field.Type.Kind() == reflect.Struct </span><span class="cov8" title="1">{
-                        generateNestedGetters(getters, field, fieldIndex, key)
+
+                // Handle nested structs (both direct and pointer types)
+                // Limit nesting to 3 levels to avoid circular references
+                <span class="cov8" title="1">fieldType := field.Type
+                if fieldType.Kind() == reflect.Pointer </span><span class="cov8" title="1">{
+                        fieldType = fieldType.Elem()
+                }</span>
+                <span class="cov8" title="1">if fieldType.Kind() == reflect.Struct </span><span class="cov8" title="1">{
+                        generateNestedGetters(getters, field, fieldIndex, key, field.Type.Kind() == reflect.Pointer, 1)
                 }</span>
         }
 
         <span class="cov8" title="1">return getters</span>
 }
 
-// generateNestedGetters generates getters for nested struct fields
-func generateNestedGetters[T any](getters map[string]func(*T) any, parentField reflect.StructField, parentIndex int, parentKey string) <span class="cov8" title="1">{
-        nestedType := parentField.Type
+// generateNestedGetters generates getters for nested struct fields with depth limit
+// maxDepth is set to 3 to prevent circular references and excessive nesting
+func generateNestedGetters[T any](getters map[string]func(*T) any, parentField reflect.StructField, parentIndex int, parentKey string, isPointer bool, depth int) <span class="cov8" title="1">{
+        const maxDepth = 3
+        if depth &gt; maxDepth </span><span class="cov0" title="0">{
+                return // Stop at maximum depth to avoid circular references
+        }</span>
 
-        for i := 0; i &lt; nestedType.NumField(); i++ </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">nestedType := parentField.Type
+        if isPointer </span><span class="cov8" title="1">{
+                nestedType = nestedType.Elem()
+        }</span>
+
+        <span class="cov8" title="1">for i := 0; i &lt; nestedType.NumField(); i++ </span><span class="cov8" title="1">{
                 nestedField := nestedType.Field(i)
 
                 if !nestedField.IsExported() </span><span class="cov8" title="1">{
@@ -841,7 +1077,94 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
                                 val = val.Elem()
                         }</span>
                         <span class="cov8" title="1">parentVal := val.Field(parentIndex)
-                        return parentVal.Field(nestedIndex).Interface()</span>
+
+                        // Handle pointer to struct
+                        if isPointer </span><span class="cov8" title="1">{
+                                if parentVal.IsNil() </span><span class="cov0" title="0">{
+                                        return nil
+                                }</span>
+                                <span class="cov8" title="1">parentVal = parentVal.Elem()</span>
+                        }
+
+                        <span class="cov8" title="1">return parentVal.Field(nestedIndex).Interface()</span>
+                }
+
+                <span class="cov8" title="1">getters[compositeKey] = nestedGetter
+                if compositeKey != compositeLowerKey </span><span class="cov8" title="1">{
+                        getters[compositeLowerKey] = nestedGetter
+                }</span>
+
+                // Recursively handle deeply nested structs with depth limit
+                <span class="cov8" title="1">nestedFieldType := nestedField.Type
+                isNestedPointer := false
+                if nestedFieldType.Kind() == reflect.Pointer </span><span class="cov8" title="1">{
+                        nestedFieldType = nestedFieldType.Elem()
+                        isNestedPointer = true
+                }</span>
+                <span class="cov8" title="1">if nestedFieldType.Kind() == reflect.Struct &amp;&amp; depth &lt; maxDepth </span><span class="cov8" title="1">{
+                        generateNestedGettersRecursive(getters, nestedField, parentIndex, nestedIndex, compositeKey, isPointer, isNestedPointer, depth+1)
+                }</span>
+        }
+}
+
+// generateNestedGettersRecursive handles deeply nested struct fields with depth limit
+func generateNestedGettersRecursive[T any](getters map[string]func(*T) any, parentField reflect.StructField, rootIndex, parentIndex int, parentKey string, rootIsPointer, parentIsPointer bool, depth int) <span class="cov8" title="1">{
+        const maxDepth = 3
+        if depth &gt; maxDepth </span><span class="cov0" title="0">{
+                return // Stop at maximum depth
+        }</span>
+
+        <span class="cov8" title="1">nestedType := parentField.Type
+        if parentIsPointer </span><span class="cov8" title="1">{
+                nestedType = nestedType.Elem()
+        }</span>
+
+        <span class="cov8" title="1">for i := 0; i &lt; nestedType.NumField(); i++ </span><span class="cov8" title="1">{
+                nestedField := nestedType.Field(i)
+
+                if !nestedField.IsExported() </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">nestedFieldName := nestedField.Name
+                nestedKey := nestedFieldName
+
+                if jsonTag := nestedField.Tag.Get("json"); jsonTag != "" </span><span class="cov8" title="1">{
+                        tagValue := strings.Split(jsonTag, ",")[0]
+                        if tagValue != "" &amp;&amp; tagValue != "-" </span><span class="cov8" title="1">{
+                                nestedKey = tagValue
+                        }</span>
+                }
+
+                <span class="cov8" title="1">compositeKey := parentKey + "." + nestedKey
+                compositeLowerKey := parentKey + "." + strings.ToLower(nestedFieldName)
+
+                nestedIndex := i
+                nestedGetter := func(v *T) any </span><span class="cov8" title="1">{
+                        val := reflect.ValueOf(v)
+                        if val.Kind() == reflect.Pointer </span><span class="cov8" title="1">{
+                                val = val.Elem()
+                        }</span>
+
+                        // Navigate to root parent
+                        <span class="cov8" title="1">rootVal := val.Field(rootIndex)
+                        if rootIsPointer </span><span class="cov8" title="1">{
+                                if rootVal.IsNil() </span><span class="cov0" title="0">{
+                                        return nil
+                                }</span>
+                                <span class="cov8" title="1">rootVal = rootVal.Elem()</span>
+                        }
+
+                        // Navigate to immediate parent
+                        <span class="cov8" title="1">parentVal := rootVal.Field(parentIndex)
+                        if parentIsPointer </span><span class="cov8" title="1">{
+                                if parentVal.IsNil() </span><span class="cov0" title="0">{
+                                        return nil
+                                }</span>
+                                <span class="cov8" title="1">parentVal = parentVal.Elem()</span>
+                        }
+
+                        <span class="cov8" title="1">return parentVal.Field(nestedIndex).Interface()</span>
                 }
 
                 <span class="cov8" title="1">getters[compositeKey] = nestedGetter
@@ -923,7 +1246,14 @@ func (f *Handler[T]) Hybrid(
                 // IMPORTANT: This respects any pre-existing WHERE conditions on db
                 // Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
                 var allData []*T
-                if err := db.Find(&amp;allData).Error; err != nil </span><span class="cov0" title="0">{
+
+                // Apply preload relationships before fetching data
+                queryDB := db
+                for _, relation := range filterRoot.Preload </span><span class="cov8" title="1">{
+                        queryDB = queryDB.Preload(relation)
+                }</span>
+
+                <span class="cov8" title="1">if err := queryDB.Find(&amp;allData).Error; err != nil </span><span class="cov0" title="0">{
                         return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
                 }</span>
                 <span class="cov8" title="1">return f.DataQuery(allData, filterRoot, pageIndex, pageSize)</span>
@@ -1225,7 +1555,7 @@ func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int <span cla
                         return cmp
                 }</span>
         }
-        <span class="cov0" title="0">return 0</span>
+        <span class="cov8" title="1">return 0</span>
 }
 
 // applyNumber applies a number filter and returns whether the value matches the filter
@@ -1299,49 +1629,53 @@ func (f *Handler[T]) applyNumber(value any, filter FieldFilter) (bool, float64, 
 }
 
 // applyText applies a text filter and returns whether the value matches the filter
+// All text comparisons are case-insensitive
 func (f *Handler[T]) applyText(value any, filter FieldFilter) (bool, string, error) <span class="cov8" title="1">{
         data, err := parseText(value)
         if err != nil </span><span class="cov0" title="0">{
                 return false, "", err
         }</span>
 
-        <span class="cov8" title="1">switch filter.Mode </span>{
+        // Convert to lowercase for case-insensitive comparison
+        <span class="cov8" title="1">dataLower := strings.ToLower(data)
+
+        switch filter.Mode </span>{
         case ModeEqual:<span class="cov8" title="1">
                 substr, err := parseText(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov8" title="1">return data == substr, data, nil</span>
+                <span class="cov8" title="1">return dataLower == strings.ToLower(substr), data, nil</span>
         case ModeNotEqual:<span class="cov8" title="1">
                 substr, err := parseText(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov8" title="1">return data != substr, data, nil</span>
+                <span class="cov8" title="1">return dataLower != strings.ToLower(substr), data, nil</span>
         case ModeContains:<span class="cov8" title="1">
                 substr, err := parseText(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov8" title="1">return strings.Contains(data, substr), data, nil</span>
+                <span class="cov8" title="1">return strings.Contains(dataLower, strings.ToLower(substr)), data, nil</span>
         case ModeNotContains:<span class="cov0" title="0">
                 substr, err := parseText(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov0" title="0">return !strings.Contains(data, substr), data, nil</span>
+                <span class="cov0" title="0">return !strings.Contains(dataLower, strings.ToLower(substr)), data, nil</span>
         case ModeStartsWith:<span class="cov8" title="1">
                 substr, err := parseText(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov8" title="1">return strings.HasPrefix(data, substr), data, nil</span>
+                <span class="cov8" title="1">return strings.HasPrefix(dataLower, strings.ToLower(substr)), data, nil</span>
         case ModeEndsWith:<span class="cov8" title="1">
                 substr, err := parseText(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, data, err
                 }</span>
-                <span class="cov8" title="1">return strings.HasSuffix(data, substr), data, nil</span>
+                <span class="cov8" title="1">return strings.HasSuffix(dataLower, strings.ToLower(substr)), data, nil</span>
         case ModeIsEmpty:<span class="cov0" title="0">
                 return data == "", data, nil</span>
         case ModeIsNotEmpty:<span class="cov0" title="0">
