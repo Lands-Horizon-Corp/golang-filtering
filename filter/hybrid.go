@@ -107,6 +107,7 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 	case "sqlite":
 		// SQLite: Query sqlite_stat1 if available, otherwise fall back to COUNT(*)
 		// First try sqlite_stat1 (if ANALYZE has been run)
+		// Note: Suppress error logging since sqlite_stat1 may not exist
 		query := fmt.Sprintf(`
 			SELECT stat AS rows
 			FROM sqlite_stat1
@@ -115,7 +116,9 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 		`, tableName)
 
 		var statRows string
-		err := freshDB.Raw(query).Scan(&statRows).Error
+		// Use a session with disabled logging for this query to avoid "no such table" warnings
+		silentDB := freshDB.Session(&gorm.Session{Logger: freshDB.Logger.LogMode(1)}) // Silent mode
+		err := silentDB.Raw(query).Scan(&statRows).Error
 
 		// If sqlite_stat1 exists and has data, parse it
 		if err == nil && statRows != "" {

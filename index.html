@@ -57,11 +57,11 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (66.2%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (66.7%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (83.5%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (84.1%)</option>
 				
-				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (44.2%)</option>
+				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (48.9%)</option>
 				
 				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (64.3%)</option>
 				
@@ -106,6 +106,13 @@ import (
 
 // DataGorm performs database-level filtering using GORM queries.
 // It generates SQL WHERE clauses based on the filter configuration and returns paginated results.
+// The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
+// and DataGorm will apply additional filters from filterRoot on top of those.
+//
+// Example with preset conditions:
+//
+//        presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//        result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
 func (f *Handler[T]) DataGorm(
         db *gorm.DB,
         filterRoot Root,
@@ -125,11 +132,18 @@ func (f *Handler[T]) DataGorm(
                 result.PageSize = 30
         }</span>
 
-        // Build the query
+        // Build the query - db may already have WHERE conditions, they will be preserved
         <span class="cov8" title="1">query := db.Model(new(T))
 
+        // Apply preloads (GORM only feature)
+        if len(filterRoot.Preload) &gt; 0 </span><span class="cov8" title="1">{
+                for _, preloadField := range filterRoot.Preload </span><span class="cov8" title="1">{
+                        query = query.Preload(preloadField)
+                }</span>
+        }
+
         // Apply filters
-        if len(filterRoot.FieldFilters) &gt; 0 </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if len(filterRoot.FieldFilters) &gt; 0 </span><span class="cov8" title="1">{
                 query = f.applysGorm(query, filterRoot)
         }</span>
 
@@ -536,7 +550,7 @@ func parseNumber(value any) (float64, error) <span class="cov8" title="1">{
                 num = float64(v)</span>
         case float32:<span class="cov0" title="0">
                 num = float64(v)</span>
-        case float64:<span class="cov0" title="0">
+        case float64:<span class="cov8" title="1">
                 num = v</span>
         default:<span class="cov8" title="1">
                 return 0, fmt.Errorf("invalid number type for field %s", value)</span>
@@ -823,7 +837,7 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
                 nestedIndex := i
                 nestedGetter := func(v *T) any </span><span class="cov8" title="1">{
                         val := reflect.ValueOf(v)
-                        if val.Kind() == reflect.Ptr </span><span class="cov8" title="1">{
+                        if val.Kind() == reflect.Pointer </span><span class="cov8" title="1">{
                                 val = val.Elem()
                         }</span>
                         <span class="cov8" title="1">parentVal := val.Field(parentIndex)
@@ -868,8 +882,18 @@ import (
 )
 
 // Hybrid intelligently chooses between in-memory (DataQuery) and database (DataGorm)
-// filtering based on estimated table size. If estimated rows &lt;= threshold, it fetches all data and
-// uses in-memory filtering for better performance. Otherwise, it uses database filtering.
+// filtering based on estimated table size.
+//
+// IMPORTANT: Respects pre-existing WHERE conditions on the db parameter.
+// - If DataQuery is chosen (small dataset): fetches data using existing conditions, then filters in-memory
+// - If DataGorm is chosen (large dataset): combines existing conditions with filterRoot filters in SQL
+//
+// Example with pre-existing conditions:
+//
+//        db := gormDB.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//        result, err := handler.Hybrid(db, 10000, filterRoot, pageIndex, pageSize)
+//        // DataQuery path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? (fetch all, filter in-memory)
+//        // DataGorm path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? AND [filterRoot conditions]
 func (f *Handler[T]) Hybrid(
         db *gorm.DB,
         threshold int,
@@ -885,6 +909,8 @@ func (f *Handler[T]) Hybrid(
         <span class="cov8" title="1">tableName := stmt.Table
 
         // Estimate row count based on database type
+        // NOTE: Estimation uses the full table, not filtered by existing WHERE conditions
+        // This is intentional - we want to estimate total table size for strategy selection
         estimatedRows, err := f.estimateTableRows(db, tableName)
         if err != nil </span><span class="cov0" title="0">{
                 // If estimation fails, fall back to database filtering
@@ -894,6 +920,8 @@ func (f *Handler[T]) Hybrid(
         // Decide which strategy to use
         <span class="cov8" title="1">if estimatedRows &lt;= int64(threshold) </span><span class="cov8" title="1">{
                 // Use in-memory filtering for better performance on small datasets
+                // IMPORTANT: This respects any pre-existing WHERE conditions on db
+                // Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
                 var allData []*T
                 if err := db.Find(&amp;allData).Error; err != nil </span><span class="cov0" title="0">{
                         return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
@@ -902,11 +930,13 @@ func (f *Handler[T]) Hybrid(
         }
 
         // Use database filtering for large datasets
+        // DataGorm will combine existing WHERE conditions with filterRoot filters
         <span class="cov8" title="1">return f.DataGorm(db, filterRoot, pageIndex, pageSize)</span>
 }
 
 // estimateTableRows returns an estimated row count for a table.
 // It uses database-specific methods for fast estimation without scanning the entire table.
+// NOTE: This estimates the FULL table size, ignoring any WHERE conditions on the db parameter.
 func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, error) <span class="cov8" title="1">{
         // Get the database driver name
         dialectName := db.Name()
@@ -915,6 +945,10 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
                 Rows int64
         }
         var est Estimate
+
+        // Create a fresh session without any WHERE conditions for estimation
+        // We want to estimate the full table size, not filtered results
+        freshDB := db.Session(&amp;gorm.Session{NewDB: true})
 
         switch dialectName </span>{
         case "postgres":<span class="cov0" title="0">
@@ -925,7 +959,7 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
                         WHERE relname = '%s'
                 `, tableName)
 
-                if err := db.Raw(query).Scan(&amp;est).Error; err != nil </span><span class="cov0" title="0">{
+                if err := freshDB.Raw(query).Scan(&amp;est).Error; err != nil </span><span class="cov0" title="0">{
                         return 0, fmt.Errorf("postgres estimation failed: %w", err)
                 }</span>
                 <span class="cov0" title="0">return est.Rows, nil</span>
@@ -939,7 +973,7 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
                           AND TABLE_NAME = ?
                 `
 
-                if err := db.Raw(query, tableName).Scan(&amp;est).Error; err != nil </span><span class="cov0" title="0">{
+                if err := freshDB.Raw(query, tableName).Scan(&amp;est).Error; err != nil </span><span class="cov0" title="0">{
                         return 0, fmt.Errorf("mysql estimation failed: %w", err)
                 }</span>
                 <span class="cov0" title="0">return est.Rows, nil</span>
@@ -947,6 +981,7 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
         case "sqlite":<span class="cov8" title="1">
                 // SQLite: Query sqlite_stat1 if available, otherwise fall back to COUNT(*)
                 // First try sqlite_stat1 (if ANALYZE has been run)
+                // Note: Suppress error logging since sqlite_stat1 may not exist
                 query := fmt.Sprintf(`
                         SELECT stat AS rows
                         FROM sqlite_stat1
@@ -955,22 +990,29 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
                 `, tableName)
 
                 var statRows string
-                if err := db.Raw(query).Scan(&amp;statRows).Error; err == nil &amp;&amp; statRows != "" </span><span class="cov0" title="0">{
+                // Use a session with disabled logging for this query to avoid "no such table" warnings
+                silentDB := freshDB.Session(&amp;gorm.Session{Logger: freshDB.Logger.LogMode(1)}) // Silent mode
+                err := silentDB.Raw(query).Scan(&amp;statRows).Error
+
+                // If sqlite_stat1 exists and has data, parse it
+                if err == nil &amp;&amp; statRows != "" </span><span class="cov0" title="0">{
                         // Parse the first number from the stat string
                         parts := strings.Split(statRows, " ")
                         if len(parts) &gt; 0 </span><span class="cov0" title="0">{
                                 var rowCount int64
-                                if _, err := fmt.Sscanf(parts[0], "%d", &amp;rowCount); err == nil </span><span class="cov0" title="0">{
+                                if _, scanErr := fmt.Sscanf(parts[0], "%d", &amp;rowCount); scanErr == nil </span><span class="cov0" title="0">{
                                         return rowCount, nil
                                 }</span>
                         }
                 }
 
-                // Fall back to COUNT(*) for SQLite (it's usually fast for small databases)
-                <span class="cov8" title="1">if err := db.Table(tableName).Count(&amp;est.Rows).Error; err != nil </span><span class="cov0" title="0">{
+                // Fall back to COUNT(*) for SQLite
+                // This works even if sqlite_stat1 doesn't exist
+                <span class="cov8" title="1">var countRows int64
+                if err := freshDB.Table(tableName).Count(&amp;countRows).Error; err != nil </span><span class="cov0" title="0">{
                         return 0, fmt.Errorf("sqlite count failed: %w", err)
                 }</span>
-                <span class="cov8" title="1">return est.Rows, nil</span>
+                <span class="cov8" title="1">return countRows, nil</span>
 
         case "sqlserver":<span class="cov0" title="0">
                 // SQL Server: Use system views
@@ -982,14 +1024,14 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
                           AND p.index_id IN (0, 1)
                 `, tableName)
 
-                if err := db.Raw(query).Scan(&amp;est).Error; err != nil </span><span class="cov0" title="0">{
+                if err := freshDB.Raw(query).Scan(&amp;est).Error; err != nil </span><span class="cov0" title="0">{
                         return 0, fmt.Errorf("sqlserver estimation failed: %w", err)
                 }</span>
                 <span class="cov0" title="0">return est.Rows, nil</span>
 
         default:<span class="cov0" title="0">
                 // Unsupported database: fall back to COUNT(*)
-                if err := db.Table(tableName).Count(&amp;est.Rows).Error; err != nil </span><span class="cov0" title="0">{
+                if err := freshDB.Table(tableName).Count(&amp;est.Rows).Error; err != nil </span><span class="cov0" title="0">{
                         return 0, fmt.Errorf("count fallback failed: %w", err)
                 }</span>
                 <span class="cov0" title="0">return est.Rows, nil</span>
