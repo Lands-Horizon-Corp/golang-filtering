@@ -19,7 +19,6 @@ func (f *Handler[T]) DataQuery(
 	pageSize int,
 ) (*PaginationResult[T], error) {
 	result := PaginationResult[T]{
-		Data:      data,
 		PageIndex: pageIndex,
 		PageSize:  pageSize,
 	}
@@ -78,40 +77,45 @@ func (f *Handler[T]) DataQuery(
 			localed := resultChunks[workerID] // Reuse pre-allocated slice
 
 			for _, item := range data[start:end] {
-				matches := filterRoot.Logic == LogicAnd
-				for _, fg := range valids {
-					value := fg.getter(item)
-					var match bool
-					var err error
-					switch fg.filter.DataType {
-					case DataTypeNumber:
-						match, _, err = f.applyNumber(value, fg.filter)
-					case DataTypeText:
-						match, _, err = f.applyText(value, fg.filter)
-					case DataTypeDate:
-						match, _, err = f.applyDate(value, fg.filter)
-					case DataTypeBool:
-						match, _, err = f.applyBool(value, fg.filter)
-					case DataTypeTime:
-						match, _, err = f.applyTime(value, fg.filter)
-					default:
-						err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)
-					}
-					if err != nil {
-						mu.Lock()
-						if filterErr == nil {
-							filterErr = err
+				// If no filters are provided, include all items
+				if len(valids) == 0 {
+					localed = append(localed, item)
+				} else {
+					matches := filterRoot.Logic == LogicAnd
+					for _, fg := range valids {
+						value := fg.getter(item)
+						var match bool
+						var err error
+						switch fg.filter.DataType {
+						case DataTypeNumber:
+							match, _, err = f.applyNumber(value, fg.filter)
+						case DataTypeText:
+							match, _, err = f.applyText(value, fg.filter)
+						case DataTypeDate:
+							match, _, err = f.applyDate(value, fg.filter)
+						case DataTypeBool:
+							match, _, err = f.applyBool(value, fg.filter)
+						case DataTypeTime:
+							match, _, err = f.applyTime(value, fg.filter)
+						default:
+							err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)
 						}
-						mu.Unlock()
-						return
+						if err != nil {
+							mu.Lock()
+							if filterErr == nil {
+								filterErr = err
+							}
+							mu.Unlock()
+							return
+						}
+						if match != (filterRoot.Logic == LogicAnd) {
+							matches = match
+							break
+						}
 					}
-					if match != (filterRoot.Logic == LogicAnd) {
-						matches = match
-						break
+					if matches {
+						localed = append(localed, item) // Only append pointers, no data cloning
 					}
-				}
-				if matches {
-					localed = append(localed, item) // Only append pointers, no data cloning
 				}
 				atomic.AddInt64(&processedCount, 1)
 			}
