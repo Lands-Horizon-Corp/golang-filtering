@@ -46,7 +46,7 @@ type Task struct {
 
 // TestNestedDepthLimit verifies that nesting is limited to 3 levels
 func TestNestedDepthLimit(t *testing.T) {
-	handler := filter.NewFilter[Employee]()
+	handler := filter.NewFilter[Employee](filter.GolangFilteringConfig{})
 
 	company := &Company{ID: 1, Name: "TechCorp"}
 	department := &Department{ID: 1, Name: "Engineering", CompanyID: 1, Company: company}
@@ -145,7 +145,7 @@ func TestNestedDepthLimit(t *testing.T) {
 
 // TestNestedDepthLimitTask verifies that level 4+ is blocked
 func TestNestedDepthLimitTask(t *testing.T) {
-	handler := filter.NewFilter[Task]()
+	handler := filter.NewFilter[Task](filter.GolangFilteringConfig{})
 
 	company := &Company{ID: 1, Name: "TechCorp"}
 	department := &Department{ID: 1, Name: "Engineering", CompanyID: 1, Company: company}
@@ -274,7 +274,7 @@ func TestNestedDepthLimitTask(t *testing.T) {
 
 // TestSortingWithNestedDepth tests sorting at various nesting levels
 func TestSortingWithNestedDepth(t *testing.T) {
-	handler := filter.NewFilter[Employee]()
+	handler := filter.NewFilter[Employee](filter.GolangFilteringConfig{})
 
 	company := &Company{ID: 1, Name: "TechCorp"}
 	department := &Department{ID: 1, Name: "Engineering", CompanyID: 1, Company: company}

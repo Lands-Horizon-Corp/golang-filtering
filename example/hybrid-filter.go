@@ -27,7 +27,7 @@ func HybridSample(db *gorm.DB) {
 	fmt.Println()
 
 	// Create filter handler
-	filterHandler := filter.NewFilter[Order]()
+	filterHandler := filter.NewFilter[Order](filter.GolangFilteringConfig{})
 
 	// Example 1: Small dataset (threshold = 10000)
 	// If table has <= 10k rows, uses in-memory filtering for speed

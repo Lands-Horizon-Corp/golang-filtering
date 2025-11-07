@@ -37,7 +37,7 @@ func generateTestUsers() []*TestUser {
 
 // TestFilterHandler_NewFilter tests filter handler creation
 func TestFilterHandler_NewFilter(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	if handler == nil {
 		t.Fatal("Expected handler to be created, got nil")
 	}
@@ -45,7 +45,7 @@ func TestFilterHandler_NewFilter(t *testing.T) {
 
 // TestFilterHandler_DataQuery_EmptyData tests filtering empty data
 func TestFilterHandler_DataQuery_EmptyData(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 	}
@@ -64,7 +64,7 @@ func TestFilterHandler_DataQuery_EmptyData(t *testing.T) {
 
 // TestFilterHandler_DataQuery_NoFilters tests with no filters applied
 func TestFilterHandler_DataQuery_NoFilters(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -84,7 +84,7 @@ func TestFilterHandler_DataQuery_NoFilters(t *testing.T) {
 
 // TestFilterHandler_ModeEqual tests equal filter mode
 func TestFilterHandler_ModeEqual(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -118,7 +118,7 @@ func TestFilterHandler_ModeEqual(t *testing.T) {
 
 // TestFilterHandler_ModeNotEqual tests not equal filter mode
 func TestFilterHandler_ModeNotEqual(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -148,7 +148,7 @@ func TestFilterHandler_ModeNotEqual(t *testing.T) {
 
 // TestFilterHandler_ModeContains tests contains filter mode
 func TestFilterHandler_ModeContains(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -182,7 +182,7 @@ func TestFilterHandler_ModeContains(t *testing.T) {
 
 // TestFilterHandler_ModeStartsWith tests starts with filter mode
 func TestFilterHandler_ModeStartsWith(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -210,7 +210,7 @@ func TestFilterHandler_ModeStartsWith(t *testing.T) {
 
 // TestFilterHandler_ModeEndsWith tests ends with filter mode
 func TestFilterHandler_ModeEndsWith(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -238,7 +238,7 @@ func TestFilterHandler_ModeEndsWith(t *testing.T) {
 
 // TestFilterHandler_ModeGT tests greater than filter mode
 func TestFilterHandler_ModeGT(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -268,7 +268,7 @@ func TestFilterHandler_ModeGT(t *testing.T) {
 
 // TestFilterHandler_ModeGTE tests greater than or equal filter mode
 func TestFilterHandler_ModeGTE(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -298,7 +298,7 @@ func TestFilterHandler_ModeGTE(t *testing.T) {
 
 // TestFilterHandler_ModeLT tests less than filter mode
 func TestFilterHandler_ModeLT(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -328,7 +328,7 @@ func TestFilterHandler_ModeLT(t *testing.T) {
 
 // TestFilterHandler_ModeLTE tests less than or equal filter mode
 func TestFilterHandler_ModeLTE(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -358,7 +358,7 @@ func TestFilterHandler_ModeLTE(t *testing.T) {
 
 // TestFilterHandler_ModeRange tests range filter mode
 func TestFilterHandler_ModeRange(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -388,7 +388,7 @@ func TestFilterHandler_ModeRange(t *testing.T) {
 
 // TestFilterHandler_BoolFilter tests boolean filter
 func TestFilterHandler_BoolFilter(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -418,7 +418,7 @@ func TestFilterHandler_BoolFilter(t *testing.T) {
 
 // TestFilterHandler_LogicAnd tests AND logic
 func TestFilterHandler_LogicAnd(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -454,7 +454,7 @@ func TestFilterHandler_LogicAnd(t *testing.T) {
 
 // TestFilterHandler_LogicOr tests OR logic
 func TestFilterHandler_LogicOr(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -490,7 +490,7 @@ func TestFilterHandler_LogicOr(t *testing.T) {
 
 // TestFilterHandler_Pagination tests pagination
 func TestFilterHandler_Pagination(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -523,7 +523,7 @@ func TestFilterHandler_Pagination(t *testing.T) {
 
 // TestFilterHandler_Sorting tests sorting functionality
 func TestFilterHandler_Sorting(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -548,7 +548,7 @@ func TestFilterHandler_Sorting(t *testing.T) {
 
 // TestFilterHandler_MultipleSorts tests multiple sort fields
 func TestFilterHandler_MultipleSorts(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{

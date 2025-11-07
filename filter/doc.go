@@ -6,9 +6,17 @@ type Handler[T any] struct {
 	getters map[string]func(*T) any
 }
 
+type GolangFilteringConfig struct {
+	MaxDepth *int
+}
+
 // New creates a new filter handler that automatically generates getters using reflection
-func NewFilter[T any]() *Handler[T] {
-	getters := generateGetters[T]()
+func NewFilter[T any](config GolangFilteringConfig) *Handler[T] {
+	depth := 1
+	if config.MaxDepth != nil {
+		depth = *config.MaxDepth
+	}
+	getters := generateGetters[T](depth)
 	return &Handler[T]{
 		getters: getters,
 	}

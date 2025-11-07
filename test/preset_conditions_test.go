@@ -49,7 +49,7 @@ func TestDataGorm_PresetConditions(t *testing.T) {
 		t.Fatalf("Failed to create test records: %v", err)
 	}
 
-	handler := filter.NewFilter[BillAndCoin]()
+	handler := filter.NewFilter[BillAndCoin](filter.GolangFilteringConfig{})
 
 	// Test 1: Preset conditions only (no filterRoot filters)
 	t.Run("PresetConditionsOnly", func(t *testing.T) {
@@ -297,7 +297,7 @@ func TestDataGorm_ComplexPresetConditions(t *testing.T) {
 		t.Fatalf("Failed to create test records: %v", err)
 	}
 
-	handler := filter.NewFilter[BillAndCoin]()
+	handler := filter.NewFilter[BillAndCoin](filter.GolangFilteringConfig{})
 
 	t.Run("ComplexPresetWithIN", func(t *testing.T) {
 		// Preset: organization_id=1 AND branch_id IN (1,2)
@@ -395,7 +395,7 @@ func TestHybrid_PresetConditions(t *testing.T) {
 		t.Fatalf("Failed to create test records: %v", err)
 	}
 
-	handler := filter.NewFilter[BillAndCoin]()
+	handler := filter.NewFilter[BillAndCoin](filter.GolangFilteringConfig{})
 
 	t.Run("Hybrid with preset - DataQuery path (small dataset)", func(t *testing.T) {
 		// Small threshold ensures DataQuery path is chosen

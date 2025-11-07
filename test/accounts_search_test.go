@@ -126,7 +126,7 @@ func setupAccountDB(t *testing.T) *gorm.DB {
 // TestAccountSearchEqual tests exact name match
 func TestAccountSearchEqual(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -155,7 +155,7 @@ func TestAccountSearchEqual(t *testing.T) {
 } // TestAccountSearchNotEqual tests not equal
 func TestAccountSearchNotEqual(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -183,7 +183,7 @@ func TestAccountSearchNotEqual(t *testing.T) {
 // TestAccountSearchContains tests contains substring
 func TestAccountSearchContains(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -211,7 +211,7 @@ func TestAccountSearchContains(t *testing.T) {
 // TestAccountSearchNotContains tests not contains
 func TestAccountSearchNotContains(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -239,7 +239,7 @@ func TestAccountSearchNotContains(t *testing.T) {
 // TestAccountSearchStartsWith tests starts with prefix
 func TestAccountSearchStartsWith(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -273,7 +273,7 @@ func TestAccountSearchStartsWith(t *testing.T) {
 // TestAccountSearchEndsWith tests ends with suffix
 func TestAccountSearchEndsWith(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -312,7 +312,7 @@ func TestAccountSearchIsEmpty(t *testing.T) {
 		Status: "active", IsActive: true,
 	})
 
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -340,7 +340,7 @@ func TestAccountSearchIsEmpty(t *testing.T) {
 func TestAccountSearchIsNotEmpty(t *testing.T) {
 	db := setupAccountDB(t)
 
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -368,7 +368,7 @@ func TestAccountSearchIsNotEmpty(t *testing.T) {
 // TestAccountSearchCaseInsensitive tests case insensitive search
 func TestAccountSearchCaseInsensitive(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	testCases := []struct {
 		name     string
@@ -416,7 +416,7 @@ func TestAccountSearchCaseInsensitive(t *testing.T) {
 // TestAccountSearchWithPagination tests name search with pagination
 func TestAccountSearchWithPagination(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -458,7 +458,7 @@ func TestAccountSearchWithPagination(t *testing.T) {
 // TestAccountSearchWithSorting tests name search with sorting
 func TestAccountSearchWithSorting(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -492,7 +492,7 @@ func TestAccountSearchWithSorting(t *testing.T) {
 // TestAccountSearchMultipleConditions tests multiple search conditions
 func TestAccountSearchMultipleConditions(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	// Search for accounts with name containing "John" AND status = "active"
 	filterRoot := filter.Root{
@@ -529,7 +529,7 @@ func TestAccountSearchMultipleConditions(t *testing.T) {
 // TestAccountSearchORLogic tests OR logic between conditions
 func TestAccountSearchORLogic(t *testing.T) {
 	db := setupAccountDB(t)
-	handler := filter.NewFilter[Account]()
+	handler := filter.NewFilter[Account](filter.GolangFilteringConfig{})
 
 	// Search for accounts with name starting with "John" OR "Alice"
 	filterRoot := filter.Root{

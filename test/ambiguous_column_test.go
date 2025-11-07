@@ -37,7 +37,7 @@ func TestAmbiguousColumnWithORLogic(t *testing.T) {
 	db.Create(&bills)
 
 	// Test the problematic scenario: OR logic with both direct and nested fields
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicOr,
 		FieldFilters: []filter.FieldFilter{
@@ -105,7 +105,7 @@ func TestAmbiguousColumnWithANDLogic(t *testing.T) {
 	}
 	db.Create(&bills)
 
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{
@@ -163,7 +163,7 @@ func TestAmbiguousColumnSorting(t *testing.T) {
 	}
 	db.Create(&bills)
 
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{

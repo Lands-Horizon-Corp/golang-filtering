@@ -36,10 +36,8 @@ func QuerySample() {
 		{ID: 10, Name: "Emma Brown", Age: 27, Email: "emma@example.com", IsActive: true, CreatedAt: time.Now().AddDate(0, -4, 0), Role: "moderator"},
 	}
 
-	// Create filter handler
-	filterHandler := filter.NewFilter[User1]()
-
-	// Example 1: Simple text contains filter
+	// Create filter handler for User1 type
+	filterHandler := filter.NewFilter[User1](filter.GolangFilteringConfig{}) // Example 1: Simple text contains filter
 	fmt.Println("Example 1: Find all users with 'John' in their name")
 	queryExample1(filterHandler, users)
 

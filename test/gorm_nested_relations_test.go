@@ -72,7 +72,7 @@ func setupNestedRelationsDB(t *testing.T) *gorm.DB {
 // TestGormNestedRelationFilterEqual tests filtering on related table field (exact match)
 func TestGormNestedRelationFilterEqual(t *testing.T) {
 	db := setupNestedRelationsDB(t)
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -111,7 +111,7 @@ func TestGormNestedRelationFilterEqual(t *testing.T) {
 // TestGormNestedRelationFilterContains tests filtering with LIKE on related table
 func TestGormNestedRelationFilterContains(t *testing.T) {
 	db := setupNestedRelationsDB(t)
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -147,7 +147,7 @@ func TestGormNestedRelationFilterContains(t *testing.T) {
 // TestGormNestedRelationFilterCurrencyCode tests filtering by currency code
 func TestGormNestedRelationFilterCurrencyCode(t *testing.T) {
 	db := setupNestedRelationsDB(t)
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -185,7 +185,7 @@ func TestGormNestedRelationFilterCurrencyCode(t *testing.T) {
 // TestGormNestedRelationMultipleFilters tests combining main table and related table filters
 func TestGormNestedRelationMultipleFilters(t *testing.T) {
 	db := setupNestedRelationsDB(t)
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -229,7 +229,7 @@ func TestGormNestedRelationMultipleFilters(t *testing.T) {
 // TestGormNestedRelationOrLogic tests OR logic with nested relations
 func TestGormNestedRelationOrLogic(t *testing.T) {
 	db := setupNestedRelationsDB(t)
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicOr,
@@ -273,7 +273,7 @@ func TestGormNestedRelationOrLogic(t *testing.T) {
 // TestGormNestedRelationSorting tests sorting by related table field
 func TestGormNestedRelationSorting(t *testing.T) {
 	db := setupNestedRelationsDB(t)
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -309,7 +309,7 @@ func TestGormNestedRelationSorting(t *testing.T) {
 // TestGormNestedRelationWithoutPreload tests that join works even without Preload
 func TestGormNestedRelationWithoutPreload(t *testing.T) {
 	db := setupNestedRelationsDB(t)
-	handler := filter.NewFilter[TestBillAndCoin]()
+	handler := filter.NewFilter[TestBillAndCoin](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,

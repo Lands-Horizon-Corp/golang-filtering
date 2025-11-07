@@ -41,7 +41,7 @@ func setupProductDB(t *testing.T) *gorm.DB {
 // TestCaseInsensitiveGORM tests case-insensitive text filtering with GORM
 func TestCaseInsensitiveGORM(t *testing.T) {
 	db := setupProductDB(t)
-	handler := filter.NewFilter[Product]()
+	handler := filter.NewFilter[Product](filter.GolangFilteringConfig{})
 
 	tests := []struct {
 		name          string
@@ -178,7 +178,7 @@ func TestCaseInsensitiveDataQuery(t *testing.T) {
 		{ID: 5, Name: "iPad Air", Category: "Tablets", Description: "Versatile tablet", Brand: "Apple"},
 	}
 
-	handler := filter.NewFilter[Product]()
+	handler := filter.NewFilter[Product](filter.GolangFilteringConfig{})
 
 	tests := []struct {
 		name          string
@@ -267,7 +267,7 @@ func TestCaseInsensitiveDataQuery(t *testing.T) {
 // TestCaseInsensitiveConsistency ensures GORM and DataQuery return the same results
 func TestCaseInsensitiveConsistency(t *testing.T) {
 	db := setupProductDB(t)
-	handler := filter.NewFilter[Product]()
+	handler := filter.NewFilter[Product](filter.GolangFilteringConfig{})
 
 	// Fetch all data for in-memory comparison
 	var allProducts []*Product

@@ -62,7 +62,7 @@ func TestSanitize_SQLInjectionPrevention(t *testing.T) {
 
 // TestFilterHandler_SQLInjectionProtection tests filter with SQL injection attempts
 func TestFilterHandler_SQLInjectionProtection(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	maliciousInputs := []string{
@@ -102,7 +102,7 @@ func TestFilterHandler_SQLInjectionProtection(t *testing.T) {
 // TestFilterHandler_DataGorm_SQLInjectionProtection tests database filter with SQL injection
 func TestFilterHandler_DataGorm_SQLInjectionProtection(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	maliciousInputs := []string{
 		"admin'--",
@@ -205,7 +205,7 @@ func TestSanitize_PreservesLegitimateInput(t *testing.T) {
 
 // TestFilterHandler_XSSPrevention tests XSS attack prevention
 func TestFilterHandler_XSSPrevention(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	xssAttempts := []string{

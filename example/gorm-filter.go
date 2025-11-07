@@ -26,7 +26,7 @@ func GormSample(db *gorm.DB) {
 	fmt.Println("=== GORM Database  Example ===")
 
 	// Create filter handler
-	filterHandler := filter.NewFilter[Product]()
+	filterHandler := filter.NewFilter[Product](filter.GolangFilteringConfig{})
 
 	// Example 1: Find products with "Pro" in name
 	fmt.Println("Example 1: Find products with 'Pro' in their name")

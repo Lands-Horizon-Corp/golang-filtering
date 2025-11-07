@@ -22,7 +22,7 @@ func TestParseTime(t *testing.T) {
 		{ID: 4, Name: "Evening", EventTime: time.Date(2024, 1, 1, 18, 45, 0, 0, time.UTC)},
 	}
 
-	handler := filter.NewFilter[TimeEvent]()
+	handler := filter.NewFilter[TimeEvent](filter.GolangFilteringConfig{})
 
 	// Test time equal
 	filterRoot := filter.Root{
@@ -103,7 +103,7 @@ func TestParseTimeRange(t *testing.T) {
 		{ID: 4, Name: "Evening", EventTime: time.Date(2024, 1, 1, 18, 30, 0, 0, time.UTC)},
 	}
 
-	handler := filter.NewFilter[TimeEvent]()
+	handler := filter.NewFilter[TimeEvent](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -131,7 +131,7 @@ func TestParseTimeRange(t *testing.T) {
 
 // TestParseDateTimeString tests various datetime string formats
 func TestParseDateTimeString(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	dateFormats := []string{
@@ -166,7 +166,7 @@ func TestParseDateTimeString(t *testing.T) {
 
 // TestParseDateTimeRange tests datetime range parsing
 func TestParseDateTimeRange(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	filterRoot := filter.Root{
@@ -206,7 +206,7 @@ func TestApplyDateFilters(t *testing.T) {
 		{ID: 3, Title: "Doc3", PublishAt: time.Date(2024, 3, 10, 9, 0, 0, 0, time.UTC)},
 	}
 
-	handler := filter.NewFilter[Document]()
+	handler := filter.NewFilter[Document](filter.GolangFilteringConfig{})
 
 	// Test date equal
 	filterRoot := filter.Root{
@@ -315,7 +315,7 @@ func TestApplyDateFilters(t *testing.T) {
 
 // TestApplyBoolFilters tests boolean filtering operations
 func TestApplyBoolFilters(t *testing.T) {
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	users := generateTestUsers()
 
 	// Test bool equal true

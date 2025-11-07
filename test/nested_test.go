@@ -27,7 +27,7 @@ func TestNestedStructFiltering(t *testing.T) {
 		{ID: 4, Name: "Diana", Address: Address{Street: "321 Elm St", City: "Chicago", ZipCode: "60601"}},
 	}
 
-	handler := filter.NewFilter[Person]()
+	handler := filter.NewFilter[Person](filter.GolangFilteringConfig{})
 
 	// Test nested field filtering
 	filterRoot := filter.Root{
@@ -76,7 +76,7 @@ func TestNestedFieldSorting(t *testing.T) {
 		{ID: 3, Name: "Charlie", Address: Address{City: "Chicago"}},
 	}
 
-	handler := filter.NewFilter[Person]()
+	handler := filter.NewFilter[Person](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -140,7 +140,7 @@ func TestDeeplyNestedFields(t *testing.T) {
 		},
 	}
 
-	handler := filter.NewFilter[Person]()
+	handler := filter.NewFilter[Person](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,

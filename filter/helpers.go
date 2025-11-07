@@ -315,7 +315,7 @@ func compareValues(a, b any) int {
 }
 
 // generateGetters automatically generates field getters using reflection
-func generateGetters[T any]() map[string]func(*T) any {
+func generateGetters[T any](maxDepth int) map[string]func(*T) any {
 	var zero T
 	t := reflect.TypeOf(zero)
 	if t.Kind() == reflect.Pointer {
@@ -354,13 +354,13 @@ func generateGetters[T any]() map[string]func(*T) any {
 		}
 
 		// Handle nested structs (both direct and pointer types)
-		// Limit nesting to 3 levels to avoid circular references
+		// Use configurable depth limit to avoid circular references
 		fieldType := field.Type
 		if fieldType.Kind() == reflect.Pointer {
 			fieldType = fieldType.Elem()
 		}
-		if fieldType.Kind() == reflect.Struct {
-			generateNestedGetters(getters, field, fieldIndex, key, field.Type.Kind() == reflect.Pointer, 1)
+		if fieldType.Kind() == reflect.Struct && maxDepth > 1 {
+			generateNestedGetters(getters, field, fieldIndex, key, field.Type.Kind() == reflect.Pointer, 1, maxDepth)
 		}
 	}
 
@@ -368,9 +368,15 @@ func generateGetters[T any]() map[string]func(*T) any {
 }
 
 // generateNestedGetters generates getters for nested struct fields with depth limit
-// maxDepth is set to 3 to prevent circular references and excessive nesting
-func generateNestedGetters[T any](getters map[string]func(*T) any, parentField reflect.StructField, parentIndex int, parentKey string, isPointer bool, depth int) {
-	const maxDepth = 3
+func generateNestedGetters[T any](
+	getters map[string]func(*T) any,
+	parentField reflect.StructField,
+	parentIndex int,
+	parentKey string,
+	isPointer bool,
+	depth int,
+	maxDepth int,
+) {
 	if depth > maxDepth {
 		return // Stop at maximum depth to avoid circular references
 	}
@@ -435,14 +441,13 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
 			isNestedPointer = true
 		}
 		if nestedFieldType.Kind() == reflect.Struct && depth < maxDepth {
-			generateNestedGettersRecursive(getters, nestedField, parentIndex, nestedIndex, compositeKey, isPointer, isNestedPointer, depth+1)
+			generateNestedGettersRecursive(getters, nestedField, parentIndex, nestedIndex, compositeKey, isPointer, isNestedPointer, depth+1, maxDepth)
 		}
 	}
 }
 
 // generateNestedGettersRecursive handles deeply nested struct fields with depth limit
-func generateNestedGettersRecursive[T any](getters map[string]func(*T) any, parentField reflect.StructField, rootIndex, parentIndex int, parentKey string, rootIsPointer, parentIsPointer bool, depth int) {
-	const maxDepth = 3
+func generateNestedGettersRecursive[T any](getters map[string]func(*T) any, parentField reflect.StructField, rootIndex, parentIndex int, parentKey string, rootIsPointer, parentIsPointer bool, depth int, maxDepth int) {
 	if depth > maxDepth {
 		return // Stop at maximum depth
 	}

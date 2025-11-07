@@ -24,7 +24,7 @@ func TestGormTextModes(t *testing.T) {
 		t.Fatalf("Failed to create users: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	tests := []struct {
 		name    string
@@ -120,7 +120,7 @@ func TestGormEmptyChecks(t *testing.T) {
 		t.Fatalf("Failed to create documents: %v", err)
 	}
 
-	handler := filter.NewFilter[Document]()
+	handler := filter.NewFilter[Document](filter.GolangFilteringConfig{})
 
 	// Test IsEmpty
 	filterRoot := filter.Root{
@@ -183,7 +183,7 @@ func TestGormDateTimeFiltering(t *testing.T) {
 		t.Fatalf("Failed to create users: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	// Test date range
 	filterRoot := filter.Root{
@@ -225,7 +225,7 @@ func TestGormNumberRanges(t *testing.T) {
 		t.Fatalf("Failed to create users: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -270,7 +270,7 @@ func TestGormComplexConditions(t *testing.T) {
 		t.Fatalf("Failed to create users: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicOr,

@@ -19,7 +19,7 @@ func TestFilterHandler_Hybrid_EmptyTable(t *testing.T) {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 	}
@@ -36,7 +36,7 @@ func TestFilterHandler_Hybrid_EmptyTable(t *testing.T) {
 // TestFilterHandler_Hybrid_SmallDataset tests hybrid with small dataset (should use in-memory)
 func TestFilterHandler_Hybrid_SmallDataset(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -65,7 +65,7 @@ func TestFilterHandler_Hybrid_SmallDataset(t *testing.T) {
 // TestFilterHandler_Hybrid_LargeThreshold tests hybrid with threshold forcing database query
 func TestFilterHandler_Hybrid_LargeThreshold(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -96,7 +96,7 @@ func TestFilterHandler_Hybrid_LargeThreshold(t *testing.T) {
 // TestFilterHandler_Hybrid_ComplexFilter tests hybrid with complex filters
 func TestFilterHandler_Hybrid_ComplexFilter(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -145,7 +145,7 @@ func TestFilterHandler_Hybrid_ComplexFilter(t *testing.T) {
 // TestFilterHandler_Hybrid_OrLogic tests hybrid with OR logic
 func TestFilterHandler_Hybrid_OrLogic(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicOr,
@@ -181,7 +181,7 @@ func TestFilterHandler_Hybrid_OrLogic(t *testing.T) {
 // TestFilterHandler_Hybrid_Pagination tests hybrid pagination
 func TestFilterHandler_Hybrid_Pagination(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -220,7 +220,7 @@ func TestFilterHandler_Hybrid_Pagination(t *testing.T) {
 // TestFilterHandler_Hybrid_ConsistencyCheck tests consistency between methods
 func TestFilterHandler_Hybrid_ConsistencyCheck(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -279,7 +279,7 @@ func TestFilterHandler_Hybrid_ConsistencyCheck(t *testing.T) {
 // TestFilterHandler_Hybrid_MultipleFilters tests hybrid with multiple filters
 func TestFilterHandler_Hybrid_MultipleFilters(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,

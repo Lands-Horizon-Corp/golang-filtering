@@ -37,7 +37,7 @@ func TestGormTimeConditions(t *testing.T) {
 		t.Fatalf("Failed to create events: %v", err)
 	}
 
-	handler := filter.NewFilter[TimeEvent]()
+	handler := filter.NewFilter[TimeEvent](filter.GolangFilteringConfig{})
 
 	tests := []struct {
 		name string
@@ -126,7 +126,7 @@ func TestGormDateConditions(t *testing.T) {
 		t.Fatalf("Failed to create documents: %v", err)
 	}
 
-	handler := filter.NewFilter[Document]()
+	handler := filter.NewFilter[Document](filter.GolangFilteringConfig{})
 
 	tests := []struct {
 		name string
@@ -204,7 +204,7 @@ func TestGormNumberConditionsEdgeCases(t *testing.T) {
 		t.Fatalf("Failed to create users: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	tests := []struct {
 		name  string
@@ -284,7 +284,7 @@ func TestHybridEstimation(t *testing.T) {
 		t.Fatalf("Failed to create users: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	// Test with different thresholds and data sizes
 	filterRoot := filter.Root{
@@ -338,7 +338,7 @@ func TestDateTimeWithDateTime(t *testing.T) {
 		{ID: 3, Name: "Event3", EventTime: time.Date(2024, 3, 10, 9, 15, 0, 0, time.UTC)},
 	}
 
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	// Test DateTime filtering with string value
 	filterRoot := filter.Root{

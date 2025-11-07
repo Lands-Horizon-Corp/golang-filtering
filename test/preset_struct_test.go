@@ -60,7 +60,7 @@ func setupTransactionDB(t *testing.T) *gorm.DB {
 // TestApplyPresetConditionsHelper tests the helper function
 func TestApplyPresetConditionsHelper(t *testing.T) {
 	db := setupTransactionDB(t)
-	handler := filter.NewFilter[Transaction]()
+	handler := filter.NewFilter[Transaction](filter.GolangFilteringConfig{})
 
 	// Create preset conditions struct
 	tag := &AccountTag{
@@ -105,7 +105,7 @@ func TestApplyPresetConditionsHelper(t *testing.T) {
 // TestDataGormWithPreset tests the convenience method
 func TestDataGormWithPreset(t *testing.T) {
 	db := setupTransactionDB(t)
-	handler := filter.NewFilter[Transaction]()
+	handler := filter.NewFilter[Transaction](filter.GolangFilteringConfig{})
 
 	// Create preset conditions struct
 	tag := &AccountTag{
@@ -148,7 +148,7 @@ func TestDataGormWithPreset(t *testing.T) {
 // TestDataGormWithPresetNil tests nil preset conditions
 func TestDataGormWithPresetNil(t *testing.T) {
 	db := setupTransactionDB(t)
-	handler := filter.NewFilter[Transaction]()
+	handler := filter.NewFilter[Transaction](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -177,7 +177,7 @@ func TestDataGormWithPresetNil(t *testing.T) {
 // TestMultiplePresetFields tests struct with multiple conditions
 func TestMultiplePresetFields(t *testing.T) {
 	db := setupTransactionDB(t)
-	handler := filter.NewFilter[Transaction]()
+	handler := filter.NewFilter[Transaction](filter.GolangFilteringConfig{})
 
 	// Test with different org/branch combinations
 	testCases := []struct {
@@ -230,7 +230,7 @@ func TestMultiplePresetFields(t *testing.T) {
 // TestPresetWithRangeFilter tests preset struct with range filters
 func TestPresetWithRangeFilter(t *testing.T) {
 	db := setupTransactionDB(t)
-	handler := filter.NewFilter[Transaction]()
+	handler := filter.NewFilter[Transaction](filter.GolangFilteringConfig{})
 
 	tag := &AccountTag{
 		OrganizationID: 1,
@@ -274,7 +274,7 @@ func TestPresetWithRangeFilter(t *testing.T) {
 // TestPresetWithSortingAndPagination tests preset with sorting and pagination
 func TestPresetWithSortingAndPagination(t *testing.T) {
 	db := setupTransactionDB(t)
-	handler := filter.NewFilter[Transaction]()
+	handler := filter.NewFilter[Transaction](filter.GolangFilteringConfig{})
 
 	tag := &AccountTag{
 		OrganizationID: 1,

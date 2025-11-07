@@ -45,7 +45,7 @@ func TestGormDateTimeEqual(t *testing.T) {
 
 	db.Create(&appointments)
 
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{
@@ -90,7 +90,7 @@ func TestGormDateTimeNotEqual(t *testing.T) {
 
 	db.Create(&appointments)
 
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{
@@ -135,7 +135,7 @@ func TestGormTimeNotEqual(t *testing.T) {
 
 	db.Create(&appointments)
 
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{
@@ -178,7 +178,7 @@ func TestGormTimeGT(t *testing.T) {
 
 	db.Create(&appointments)
 
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{
@@ -203,7 +203,7 @@ func TestGormTimeGT(t *testing.T) {
 
 // TestDateTimeRangeOverlap tests finding appointments within a date range
 func TestDateTimeRangeOverlap(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{
@@ -260,7 +260,7 @@ func TestDateTimeRangeOverlap(t *testing.T) {
 
 // TestTimeRangeWithSeconds tests time filtering with second precision
 func TestTimeRangeWithSeconds(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{ID: 1, Title: "App1", StartTime: time.Date(0, 1, 1, 14, 29, 55, 0, time.UTC)},
@@ -298,7 +298,7 @@ func TestTimeRangeWithSeconds(t *testing.T) {
 
 // TestMultipleDateFiltersWithOR tests combining date filters with OR logic
 func TestMultipleDateFiltersWithOR(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{ID: 1, Title: "Jan1", StartDate: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
@@ -339,7 +339,7 @@ func TestMultipleDateFiltersWithOR(t *testing.T) {
 
 // TestDateAndTimeFiltersWithAND tests combining date and time filters
 func TestDateAndTimeFiltersWithAND(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{
@@ -399,7 +399,7 @@ func TestDateAndTimeFiltersWithAND(t *testing.T) {
 
 // TestDateSortingDescending tests sorting dates in descending order
 func TestDateSortingDescending(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{ID: 1, Title: "Middle", StartDate: time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)},
@@ -433,7 +433,7 @@ func TestDateSortingDescending(t *testing.T) {
 
 // TestTimeSortingAscending tests sorting times in ascending order
 func TestTimeSortingAscending(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{ID: 1, Title: "Afternoon", StartTime: time.Date(0, 1, 1, 14, 0, 0, 0, time.UTC)},
@@ -467,7 +467,7 @@ func TestTimeSortingAscending(t *testing.T) {
 
 // TestDateRangeWithPagination tests date filtering with pagination
 func TestDateRangeWithPagination(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	// Create 30 appointments throughout November
 	appointments := make([]*Appointment, 30)
@@ -529,7 +529,7 @@ func TestDateRangeWithPagination(t *testing.T) {
 
 // TestDateBeforeAndAfter tests combining before and after filters
 func TestDateBeforeAndAfter(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{ID: 1, Title: "Jan", StartDate: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
@@ -572,7 +572,7 @@ func TestDateBeforeAndAfter(t *testing.T) {
 
 // TestLeapYearDate tests filtering on February 29th
 func TestLeapYearDate(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{ID: 1, Title: "Feb28-2024", StartDate: time.Date(2024, 2, 28, 0, 0, 0, 0, time.UTC)},
@@ -609,7 +609,7 @@ func TestLeapYearDate(t *testing.T) {
 
 // TestDateTimeComplexCombination tests complex datetime filter combinations
 func TestDateTimeComplexCombination(t *testing.T) {
-	handler := filter.NewFilter[Appointment]()
+	handler := filter.NewFilter[Appointment](filter.GolangFilteringConfig{})
 
 	appointments := []*Appointment{
 		{

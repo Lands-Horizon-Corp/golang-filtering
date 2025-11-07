@@ -47,7 +47,7 @@ func main() {
 	fmt.Printf("Actual users in database: %d\n\n", actualCount)
 
 	// Create filter handler
-	filterHandler := filter.NewFilter[User]()
+	filterHandler := filter.NewFilter[User](filter.GolangFilteringConfig{})
 
 	// Define filters
 	filterRoot := filter.Root{

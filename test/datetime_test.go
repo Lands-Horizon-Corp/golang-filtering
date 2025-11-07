@@ -19,7 +19,7 @@ type Event struct {
 
 // TestDateTimeFormats tests various datetime format parsing
 func TestDateTimeFormats(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	now := time.Date(2025, 11, 3, 14, 30, 45, 0, time.UTC)
 	yesterday := now.AddDate(0, 0, -1)
@@ -69,7 +69,7 @@ func TestDateTimeFormats(t *testing.T) {
 
 // TestTimeFormats tests various time format parsing
 func TestTimeFormats(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	morning := time.Date(0, 1, 1, 9, 30, 0, 0, time.UTC)
 	afternoon := time.Date(0, 1, 1, 14, 30, 0, 0, time.UTC)
@@ -117,7 +117,7 @@ func TestTimeFormats(t *testing.T) {
 
 // TestDateModeEqual tests date equality filtering
 func TestDateModeEqual(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	targetDate := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)
 	events := []*Event{
@@ -151,7 +151,7 @@ func TestDateModeEqual(t *testing.T) {
 
 // TestDateModeBefore tests date before filtering
 func TestDateModeBefore(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	baseDate := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)
 	events := []*Event{
@@ -185,7 +185,7 @@ func TestDateModeBefore(t *testing.T) {
 
 // TestDateModeAfter tests date after filtering
 func TestDateModeAfter(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	baseDate := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)
 	events := []*Event{
@@ -219,7 +219,7 @@ func TestDateModeAfter(t *testing.T) {
 
 // TestDateModeGTE tests date greater than or equal
 func TestDateModeGTE(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	baseDate := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)
 	events := []*Event{
@@ -253,7 +253,7 @@ func TestDateModeGTE(t *testing.T) {
 
 // TestDateModeLTE tests date less than or equal
 func TestDateModeLTE(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	baseDate := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)
 	events := []*Event{
@@ -287,7 +287,7 @@ func TestDateModeLTE(t *testing.T) {
 
 // TestDateModeRange tests date range filtering
 func TestDateModeRange(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Oct", EventDate: time.Date(2025, 10, 15, 0, 0, 0, 0, time.UTC)},
@@ -325,7 +325,7 @@ func TestDateModeRange(t *testing.T) {
 
 // TestTimeModeEqual tests time equality
 func TestTimeModeEqual(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	targetTime := time.Date(0, 1, 1, 14, 30, 0, 0, time.UTC)
 	events := []*Event{
@@ -359,7 +359,7 @@ func TestTimeModeEqual(t *testing.T) {
 
 // TestTimeModeBefore tests time before filtering
 func TestTimeModeBefore(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Early", EventTime: time.Date(0, 1, 1, 8, 0, 0, 0, time.UTC)},
@@ -392,7 +392,7 @@ func TestTimeModeBefore(t *testing.T) {
 
 // TestTimeModeAfter tests time after filtering
 func TestTimeModeAfter(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Morning", EventTime: time.Date(0, 1, 1, 9, 0, 0, 0, time.UTC)},
@@ -423,7 +423,7 @@ func TestTimeModeAfter(t *testing.T) {
 	}
 } // TestTimeModeRange tests time range filtering
 func TestTimeModeRange(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Early", EventTime: time.Date(0, 1, 1, 8, 0, 0, 0, time.UTC)},
@@ -461,7 +461,7 @@ func TestTimeModeRange(t *testing.T) {
 
 // TestDateTimeEdgeCases tests edge cases
 func TestDateTimeEdgeCases(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	midnight := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)
 	morning := time.Date(2025, 11, 4, 10, 30, 0, 0, time.UTC)
@@ -514,7 +514,7 @@ func TestDateTimeEdgeCases(t *testing.T) {
 
 // TestMultipleDateTimeFilters tests combining multiple filters
 func TestMultipleDateTimeFilters(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{
@@ -567,7 +567,7 @@ func TestMultipleDateTimeFilters(t *testing.T) {
 
 // TestDateTimeSorting tests datetime sorting
 func TestDateTimeSorting(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Event1", CreatedAt: time.Date(2025, 11, 10, 0, 0, 0, 0, time.UTC)},
@@ -599,7 +599,7 @@ func TestDateTimeSorting(t *testing.T) {
 
 // TestTimeWithNanoseconds tests nanosecond precision
 func TestTimeWithNanoseconds(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	baseTime := time.Date(0, 1, 1, 14, 30, 45, 123456789, time.UTC)
 	events := []*Event{
@@ -631,7 +631,7 @@ func TestTimeWithNanoseconds(t *testing.T) {
 
 // TestInvalidDateTimeFormats tests error handling
 func TestInvalidDateTimeFormats(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Event1", CreatedAt: time.Now()},
@@ -672,7 +672,7 @@ func TestInvalidDateTimeFormats(t *testing.T) {
 
 // TestDateRangeComprehensive tests various date range scenarios
 func TestDateRangeComprehensive(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	// Create events spanning across months
 	events := []*Event{
@@ -738,7 +738,7 @@ func TestDateRangeComprehensive(t *testing.T) {
 
 // TestTimeRangeComprehensive tests various time range scenarios
 func TestTimeRangeComprehensive(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	// Create events throughout a day
 	events := []*Event{
@@ -805,7 +805,7 @@ func TestTimeRangeComprehensive(t *testing.T) {
 
 // TestDateRangeWithTimezone tests date ranges with different timezones
 func TestDateRangeWithTimezone(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	// Create events in different timezones
 	utc := time.UTC
@@ -847,7 +847,7 @@ func TestDateRangeWithTimezone(t *testing.T) {
 
 // TestTimeRangeWithMinutesSeconds tests precise time ranges
 func TestTimeRangeWithMinutesSeconds(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "14:29:00", EventTime: time.Date(0, 1, 1, 14, 29, 0, 0, time.UTC)},
@@ -884,7 +884,7 @@ func TestTimeRangeWithMinutesSeconds(t *testing.T) {
 
 // TestDateRangeYearBoundary tests date ranges crossing year boundary
 func TestDateRangeYearBoundary(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Dec20", EventDate: time.Date(2024, 12, 20, 0, 0, 0, 0, time.UTC)},
@@ -922,7 +922,7 @@ func TestDateRangeYearBoundary(t *testing.T) {
 
 // TestTimeRangeMidnightCrossing tests time ranges around midnight
 func TestTimeRangeMidnightCrossing(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "22:00", EventTime: time.Date(0, 1, 1, 22, 0, 0, 0, time.UTC)},
@@ -988,7 +988,7 @@ func TestTimeRangeMidnightCrossing(t *testing.T) {
 
 // TestDateRangeInvalidRange tests error handling for invalid date ranges
 func TestDateRangeInvalidRange(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Event", EventDate: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
@@ -1018,7 +1018,7 @@ func TestDateRangeInvalidRange(t *testing.T) {
 
 // TestTimeRangeInvalidRange tests error handling for invalid time ranges
 func TestTimeRangeInvalidRange(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Event", EventTime: time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC)},
@@ -1048,7 +1048,7 @@ func TestTimeRangeInvalidRange(t *testing.T) {
 
 // TestDateRangeWithSorting tests date range with sorting
 func TestDateRangeWithSorting(t *testing.T) {
-	handler := filter.NewFilter[Event]()
+	handler := filter.NewFilter[Event](filter.GolangFilteringConfig{})
 
 	events := []*Event{
 		{ID: 1, Name: "Event3", EventDate: time.Date(2025, 3, 15, 0, 0, 0, 0, time.UTC)},

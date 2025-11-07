@@ -57,7 +57,7 @@ func TestPreloadSingleRelation(t *testing.T) {
 	db.Create(&posts)
 
 	// Test without preload - Author should be empty
-	handler := filter.NewFilter[Post]()
+	handler := filter.NewFilter[Post](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic:        filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{},
@@ -130,7 +130,7 @@ func TestPreloadMultipleRelations(t *testing.T) {
 	db.Create(&comments)
 
 	// Test with multiple preloads
-	handler := filter.NewFilter[Post]()
+	handler := filter.NewFilter[Post](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic:        filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{},
@@ -188,7 +188,7 @@ func TestPreloadWithFiltering(t *testing.T) {
 	db.Create(&posts)
 
 	// Filter for posts containing "Go" with author preloaded
-	handler := filter.NewFilter[Post]()
+	handler := filter.NewFilter[Post](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{
@@ -239,7 +239,7 @@ func TestPreloadEmptyArray(t *testing.T) {
 	db.Create(&post)
 
 	// Test with empty preload array
-	handler := filter.NewFilter[Post]()
+	handler := filter.NewFilter[Post](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic:        filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{},
@@ -285,7 +285,7 @@ func TestPreloadWithSorting(t *testing.T) {
 	db.Create(&posts)
 
 	// Sort by title with author preload
-	handler := filter.NewFilter[Post]()
+	handler := filter.NewFilter[Post](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic:        filter.LogicAnd,
 		FieldFilters: []filter.FieldFilter{},

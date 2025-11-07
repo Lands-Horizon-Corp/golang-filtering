@@ -43,7 +43,7 @@ func TestFilterHandler_DataGorm_EmptyTable(t *testing.T) {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 	}
@@ -63,7 +63,7 @@ func TestFilterHandler_DataGorm_EmptyTable(t *testing.T) {
 // TestFilterHandler_DataGorm_NoFilters tests with no filters applied
 func TestFilterHandler_DataGorm_NoFilters(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
 	}
@@ -80,7 +80,7 @@ func TestFilterHandler_DataGorm_NoFilters(t *testing.T) {
 // TestFilterHandler_DataGorm_ModeEqual tests equal filter mode
 func TestFilterHandler_DataGorm_ModeEqual(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -114,7 +114,7 @@ func TestFilterHandler_DataGorm_ModeEqual(t *testing.T) {
 // TestFilterHandler_DataGorm_ModeContains tests contains filter mode
 func TestFilterHandler_DataGorm_ModeContains(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -142,7 +142,7 @@ func TestFilterHandler_DataGorm_ModeContains(t *testing.T) {
 // TestFilterHandler_DataGorm_ModeGTE tests greater than or equal filter
 func TestFilterHandler_DataGorm_ModeGTE(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -172,7 +172,7 @@ func TestFilterHandler_DataGorm_ModeGTE(t *testing.T) {
 // TestFilterHandler_DataGorm_ModeRange tests range filter
 func TestFilterHandler_DataGorm_ModeRange(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -202,7 +202,7 @@ func TestFilterHandler_DataGorm_ModeRange(t *testing.T) {
 // TestFilterHandler_DataGorm_BoolFilter tests boolean filter
 func TestFilterHandler_DataGorm_BoolFilter(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -232,7 +232,7 @@ func TestFilterHandler_DataGorm_BoolFilter(t *testing.T) {
 // TestFilterHandler_DataGorm_LogicAnd tests AND logic
 func TestFilterHandler_DataGorm_LogicAnd(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -268,7 +268,7 @@ func TestFilterHandler_DataGorm_LogicAnd(t *testing.T) {
 // TestFilterHandler_DataGorm_LogicOr tests OR logic
 func TestFilterHandler_DataGorm_LogicOr(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicOr,
@@ -304,7 +304,7 @@ func TestFilterHandler_DataGorm_LogicOr(t *testing.T) {
 // TestFilterHandler_DataGorm_Pagination tests pagination
 func TestFilterHandler_DataGorm_Pagination(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -333,7 +333,7 @@ func TestFilterHandler_DataGorm_Pagination(t *testing.T) {
 // TestFilterHandler_DataGorm_Sorting tests sorting
 func TestFilterHandler_DataGorm_Sorting(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -358,7 +358,7 @@ func TestFilterHandler_DataGorm_Sorting(t *testing.T) {
 // TestFilterHandler_DataGorm_DateFilter tests date filtering
 func TestFilterHandler_DataGorm_DateFilter(t *testing.T) {
 	db := setupTestDB(t)
-	handler := filter.NewFilter[TestUser]()
+	handler := filter.NewFilter[TestUser](filter.GolangFilteringConfig{})
 
 	dateThreshold := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
 

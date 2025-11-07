@@ -68,7 +68,7 @@ func setupSnakeCaseDB(t *testing.T) *gorm.DB {
 // TestSnakeCaseNestedFilter tests filtering with snake_case relation names
 func TestSnakeCaseNestedFilter(t *testing.T) {
 	db := setupSnakeCaseDB(t)
-	handler := filter.NewFilter[AccountTransaction]()
+	handler := filter.NewFilter[AccountTransaction](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -107,7 +107,7 @@ func TestSnakeCaseNestedFilter(t *testing.T) {
 // TestSnakeCaseNestedFilterEmail tests filtering by email field
 func TestSnakeCaseNestedFilterEmail(t *testing.T) {
 	db := setupSnakeCaseDB(t)
-	handler := filter.NewFilter[AccountTransaction]()
+	handler := filter.NewFilter[AccountTransaction](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -142,7 +142,7 @@ func TestSnakeCaseNestedFilterEmail(t *testing.T) {
 // TestSnakeCaseNestedFilterContains tests contains mode with snake_case
 func TestSnakeCaseNestedFilterContains(t *testing.T) {
 	db := setupSnakeCaseDB(t)
-	handler := filter.NewFilter[AccountTransaction]()
+	handler := filter.NewFilter[AccountTransaction](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -177,7 +177,7 @@ func TestSnakeCaseNestedFilterContains(t *testing.T) {
 // TestSnakeCaseNestedSorting tests sorting by snake_case relation field
 func TestSnakeCaseNestedSorting(t *testing.T) {
 	db := setupSnakeCaseDB(t)
-	handler := filter.NewFilter[AccountTransaction]()
+	handler := filter.NewFilter[AccountTransaction](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -213,7 +213,7 @@ func TestSnakeCaseNestedSorting(t *testing.T) {
 // TestSnakeCaseMultipleFilters tests combining main table and snake_case relation filters
 func TestSnakeCaseMultipleFilters(t *testing.T) {
 	db := setupSnakeCaseDB(t)
-	handler := filter.NewFilter[AccountTransaction]()
+	handler := filter.NewFilter[AccountTransaction](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -257,7 +257,7 @@ func TestSnakeCaseMultipleFilters(t *testing.T) {
 // TestSnakeCaseOrLogic tests OR logic with snake_case relations
 func TestSnakeCaseOrLogic(t *testing.T) {
 	db := setupSnakeCaseDB(t)
-	handler := filter.NewFilter[AccountTransaction]()
+	handler := filter.NewFilter[AccountTransaction](filter.GolangFilteringConfig{})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicOr,
