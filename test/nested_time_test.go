@@ -174,7 +174,7 @@ func setupNestedTimeDB(t *testing.T) *gorm.DB {
 // TestGormNestedTimeEqual tests filtering by exact time on nested relation
 func TestGormNestedTimeEqual(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -210,7 +210,7 @@ func TestGormNestedTimeEqual(t *testing.T) {
 // TestGormNestedTimeAfter tests filtering by time after on nested relation
 func TestGormNestedTimeAfter(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -245,7 +245,7 @@ func TestGormNestedTimeAfter(t *testing.T) {
 // TestGormNestedTimeBefore tests filtering by time before on nested relation
 func TestGormNestedTimeBefore(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -280,7 +280,7 @@ func TestGormNestedTimeBefore(t *testing.T) {
 // TestGormNestedTimeRange tests time range filtering on nested relation
 func TestGormNestedTimeRange(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -312,7 +312,7 @@ func TestGormNestedTimeRange(t *testing.T) {
 // TestGormNestedTimeSorting tests sorting by nested time field
 func TestGormNestedTimeSorting(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -348,7 +348,7 @@ func TestGormNestedTimeSorting(t *testing.T) {
 // TestGormNestedTimeMultipleFilters tests combining nested time with other filters
 func TestGormNestedTimeMultipleFilters(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -474,7 +474,7 @@ func setupNestedTimeDataQuery(_ *testing.T) []*EmployeeAttendance {
 // TestDataQueryNestedTimeEqual tests in-memory filtering by exact time on nested relation
 func TestDataQueryNestedTimeEqual(t *testing.T) {
 	data := setupNestedTimeDataQuery(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -508,7 +508,7 @@ func TestDataQueryNestedTimeEqual(t *testing.T) {
 // TestDataQueryNestedTimeAfter tests in-memory filtering by time after
 func TestDataQueryNestedTimeAfter(t *testing.T) {
 	data := setupNestedTimeDataQuery(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -541,7 +541,7 @@ func TestDataQueryNestedTimeAfter(t *testing.T) {
 // TestDataQueryNestedTimeBefore tests in-memory filtering by time before
 func TestDataQueryNestedTimeBefore(t *testing.T) {
 	data := setupNestedTimeDataQuery(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -568,7 +568,7 @@ func TestDataQueryNestedTimeBefore(t *testing.T) {
 // TestDataQueryNestedTimeRange tests in-memory time range filtering
 func TestDataQueryNestedTimeRange(t *testing.T) {
 	data := setupNestedTimeDataQuery(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -598,7 +598,7 @@ func TestDataQueryNestedTimeRange(t *testing.T) {
 // TestDataQueryNestedTimeSorting tests in-memory sorting by nested time
 func TestDataQueryNestedTimeSorting(t *testing.T) {
 	data := setupNestedTimeDataQuery(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -625,7 +625,7 @@ func TestDataQueryNestedTimeSorting(t *testing.T) {
 // TestHybridNestedTimeSmallDataset tests hybrid filtering with small dataset (uses DataQuery)
 func TestHybridNestedTimeSmallDataset(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -662,7 +662,7 @@ func TestHybridNestedTimeSmallDataset(t *testing.T) {
 // TestHybridNestedTimeLargeThreshold tests hybrid with large threshold (uses DataGorm)
 func TestHybridNestedTimeLargeThreshold(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	filterRoot := filter.Root{
 		Logic: filter.LogicAnd,
@@ -698,7 +698,7 @@ func TestHybridNestedTimeLargeThreshold(t *testing.T) {
 // TestHybridNestedTimeConsistency tests that hybrid returns same results as GORM and DataQuery
 func TestHybridNestedTimeConsistency(t *testing.T) {
 	db := setupNestedTimeDB(t)
-	handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{})
+	maxDepth := 3; handler := filter.NewFilter[EmployeeAttendance](filter.GolangFilteringConfig{MaxDepth: &maxDepth})
 
 	testCases := []struct {
 		name      string
