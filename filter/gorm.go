@@ -121,9 +121,9 @@ func (f *Handler[T]) DataGorm(
 	// Apply sorting
 	if len(filterRoot.SortFields) > 0 {
 		for _, sortField := range filterRoot.SortFields {
-			// Check if field exists before applying sort
-			if !f.fieldExists(sortField.Field) {
-				// Silently ignore non-existent sort fields
+			// For simple fields, check if they exist. For nested fields, let GORM handle them.
+			if !strings.Contains(sortField.Field, ".") && !f.fieldExists(sortField.Field) {
+				// Silently ignore non-existent simple sort fields
 				continue
 			}
 
@@ -222,19 +222,19 @@ func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
 
 	if filterRoot.Logic == LogicAnd {
 		for _, filter := range filterRoot.FieldFilters {
-			// Check if field exists before applying filter
-			if f.fieldExists(filter.Field) {
+			// For simple fields, check if they exist. For nested fields, let GORM handle them.
+			if strings.Contains(filter.Field, ".") || f.fieldExists(filter.Field) {
 				db = f.applyGormWithTableName(db, filter, mainTableName)
 			}
-			// Silently ignore non-existent fields
+			// Silently ignore non-existent simple fields
 		}
 	} else {
 		var orConditions []string
 		var orValues []any
 
 		for _, filter := range filterRoot.FieldFilters {
-			// Check if field exists before building condition
-			if f.fieldExists(filter.Field) {
+			// For simple fields, check if they exist. For nested fields, let GORM handle them.
+			if strings.Contains(filter.Field, ".") || f.fieldExists(filter.Field) {
 				condition, values := f.buildConditionWithTableName(filter, mainTableName)
 				if condition != "" {
 					orConditions = append(orConditions, condition)
@@ -248,25 +248,6 @@ func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
 		}
 	}
 	return db
-}
-
-// fieldExists checks if a field (including nested fields) exists in the getters map
-func (f *Handler[T]) fieldExists(field string) bool {
-	if f.getters == nil {
-		return false
-	}
-
-	// Check direct field access
-	if _, exists := f.getters[field]; exists {
-		return true
-	}
-
-	// Check lowercase version
-	if _, exists := f.getters[strings.ToLower(field)]; exists {
-		return true
-	}
-
-	return false
 }
 
 // toPascalCase converts snake_case or lowercase to PascalCase
@@ -635,11 +616,8 @@ func (f *Handler[T]) autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, s
 
 	// Check filters for nested fields
 	for _, filter := range filters {
-		// Only process fields that exist
-		if !f.fieldExists(filter.Field) {
-			continue
-		}
-
+		// For GORM operations, allow nested fields even if they're not in getters map
+		// GORM can handle nested relations through auto-joins
 		if strings.Contains(filter.Field, ".") {
 			parts := strings.Split(filter.Field, ".")
 			if len(parts) >= 2 {
@@ -656,11 +634,8 @@ func (f *Handler[T]) autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, s
 
 	// Check sort fields for nested fields
 	for _, sortField := range sortFields {
-		// Only process fields that exist
-		if !f.fieldExists(sortField.Field) {
-			continue
-		}
-
+		// For GORM operations, allow nested fields even if they're not in getters map
+		// GORM can handle nested relations through auto-joins
 		if strings.Contains(sortField.Field, ".") {
 			parts := strings.Split(sortField.Field, ".")
 			if len(parts) >= 2 {

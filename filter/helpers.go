@@ -531,3 +531,22 @@ func Sanitize(input string) string {
 
 	return strings.TrimSpace(sanitized)
 }
+
+// fieldExists checks if a field (including nested fields) exists in the getters map
+func (f *Handler[T]) fieldExists(field string) bool {
+	if f.getters == nil {
+		return false
+	}
+
+	// Check direct field access
+	if _, exists := f.getters[field]; exists {
+		return true
+	}
+
+	// Check lowercase version
+	if _, exists := f.getters[strings.ToLower(field)]; exists {
+		return true
+	}
+
+	return false
+}
