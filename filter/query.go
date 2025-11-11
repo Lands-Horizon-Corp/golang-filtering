@@ -297,6 +297,65 @@ func (f *Handler[T]) DataQueryNoPage(
 	return filteredData, nil
 }
 
+// DataQueryNoPageCSV performs in-memory filtering with parallel processing and returns results as CSV bytes.
+// It filters the provided data slice based on the filter configuration and exports all matching results as CSV format.
+// Field names are automatically used as CSV headers.
+func (f *Handler[T]) DataQueryNoPageCSV(
+	data []*T,
+	filterRoot Root,
+) ([]byte, error) {
+	// Use DataQueryNoPage to get filtered results
+	filteredData, err := f.DataQueryNoPage(data, filterRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to filter data: %w", err)
+	}
+
+	// Build CSV content
+	var csvBuilder strings.Builder
+
+	// Write headers using field names from the getters map
+	fieldNames := make([]string, 0, len(f.getters))
+	for fieldName := range f.getters {
+		fieldNames = append(fieldNames, fieldName)
+	}
+
+	// Write headers
+	for i, fieldName := range fieldNames {
+		if i > 0 {
+			csvBuilder.WriteString(",")
+		}
+		csvBuilder.WriteString(escapeCSVField(fieldName))
+	}
+	csvBuilder.WriteString("\n")
+
+	// Write data rows
+	for _, item := range filteredData {
+		for i, fieldName := range fieldNames {
+			if i > 0 {
+				csvBuilder.WriteString(",")
+			}
+			// Get the value using the getter for this field
+			getter := f.getters[fieldName]
+			value := getter(item)
+			csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+		}
+		csvBuilder.WriteString("\n")
+	}
+
+	return []byte(csvBuilder.String()), nil
+}
+
+// escapeCSVField properly escapes a field value for CSV format
+func escapeCSVField(field string) string {
+	// If field contains comma, newline, or quote, it needs to be quoted
+	if strings.Contains(field, ",") || strings.Contains(field, "\n") || strings.Contains(field, "\"") {
+		// Escape existing quotes by doubling them
+		escaped := strings.ReplaceAll(field, "\"", "\"\"")
+		return "\"" + escaped + "\""
+	}
+	return field
+}
+
 func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int {
 	for _, sortField := range sortFields {
 		getter, exists := f.getters[sortField.Field]

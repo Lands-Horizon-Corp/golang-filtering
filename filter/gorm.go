@@ -274,6 +274,71 @@ func (f *Handler[T]) DataGormNoPage(
 	return data, nil
 }
 
+// GormNoPaginationCSV performs database-level filtering using GORM queries and returns results as CSV bytes.
+// It generates SQL WHERE clauses based on the filter configuration and exports all matching results as CSV format.
+// Field names are automatically used as CSV headers.
+// The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
+// and GormNoPaginationCSV will apply additional filters from filterRoot on top of those.
+//
+// Example with preset conditions using struct:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint
+//	    BranchID       uint
+//	}
+//	tag := &AccountTag{OrganizationID: user.OrganizationID, BranchID: *user.BranchID}
+//	db = filter.ApplyPresetConditions(db, tag)
+//	csvData, err := handler.GormNoPaginationCSV(db, filterRoot)
+//
+// Example with preset conditions using Where:
+//
+//	presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//	csvData, err := handler.GormNoPaginationCSV(presetDB, filterRoot)
+func (f *Handler[T]) GormNoPaginationCSV(
+	db *gorm.DB,
+	filterRoot Root,
+) ([]byte, error) {
+	// Use DataGormNoPage to get filtered results
+	filteredData, err := f.DataGormNoPage(db, filterRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to filter data: %w", err)
+	}
+
+	// Build CSV content
+	var csvBuilder strings.Builder
+
+	// Write headers using field names from the getters map
+	fieldNames := make([]string, 0, len(f.getters))
+	for fieldName := range f.getters {
+		fieldNames = append(fieldNames, fieldName)
+	}
+
+	// Write headers
+	for i, fieldName := range fieldNames {
+		if i > 0 {
+			csvBuilder.WriteString(",")
+		}
+		csvBuilder.WriteString(escapeCSVField(fieldName))
+	}
+	csvBuilder.WriteString("\n")
+
+	// Write data rows
+	for _, item := range filteredData {
+		for i, fieldName := range fieldNames {
+			if i > 0 {
+				csvBuilder.WriteString(",")
+			}
+			// Get the value using the getter for this field
+			getter := f.getters[fieldName]
+			value := getter(item)
+			csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+		}
+		csvBuilder.WriteString("\n")
+	}
+
+	return []byte(csvBuilder.String()), nil
+}
+
 // DataGormWithPreset is a convenience method that combines ApplyPresetConditions and DataGorm.
 // It accepts preset conditions as a struct and applies them before filtering.
 //
@@ -332,6 +397,35 @@ func (f *Handler[T]) DataGormNoPageWithPreset(
 
 	// Call DataGormNoPage with the modified db
 	return f.DataGormNoPage(db, filterRoot)
+}
+
+// GormNoPaginationCSVWithPreset is a convenience method that combines ApplyPresetConditions and GormNoPaginationCSV.
+// It accepts preset conditions as a struct and applies them before filtering, returning results as CSV without pagination.
+//
+// Example usage:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint `gorm:"column:organization_id"`
+//	    BranchID       uint `gorm:"column:branch_id"`
+//	}
+//
+//	tag := &AccountTag{
+//	    OrganizationID: user.OrganizationID,
+//	    BranchID:       *user.BranchID,
+//	}
+//	csvData, err := handler.GormNoPaginationCSVWithPreset(db, tag, filterRoot)
+func (f *Handler[T]) GormNoPaginationCSVWithPreset(
+	db *gorm.DB,
+	presetConditions any,
+	filterRoot Root,
+) ([]byte, error) {
+	// Apply preset conditions to db
+	if presetConditions != nil {
+		db = db.Where(presetConditions)
+	}
+
+	// Call GormNoPaginationCSV with the modified db
+	return f.GormNoPaginationCSV(db, filterRoot)
 }
 
 func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {

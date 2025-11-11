@@ -125,6 +125,94 @@ func (f *Handler[T]) DataHybridNoPage(
 	return f.DataGormNoPage(db, filterRoot)
 }
 
+// HybridCSV intelligently chooses between in-memory (DataQueryNoPageCSV) and database (GormNoPaginationCSV)
+// filtering based on estimated table size, returning results as CSV bytes.
+//
+// IMPORTANT: Respects pre-existing WHERE conditions on the db parameter.
+// - If DataQueryNoPageCSV is chosen (small dataset): fetches data using existing conditions, then filters in-memory and exports to CSV
+// - If GormNoPaginationCSV is chosen (large dataset): combines existing conditions with filterRoot filters in SQL and exports to CSV
+//
+// Example with pre-existing conditions:
+//
+//	db := gormDB.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//	csvData, err := handler.HybridCSV(db, 10000, filterRoot)
+//	// DataQueryNoPageCSV path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? (fetch all, filter in-memory, export CSV)
+//	// GormNoPaginationCSV path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? AND [filterRoot conditions] (export CSV)
+func (f *Handler[T]) HybridCSV(
+	db *gorm.DB,
+	threshold int,
+	filterRoot Root,
+) ([]byte, error) {
+	// Get table name from the model
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(new(T)); err != nil {
+		return nil, fmt.Errorf("failed to parse model: %w", err)
+	}
+	tableName := stmt.Table
+
+	// Estimate row count based on database type
+	// NOTE: Estimation uses the full table, not filtered by existing WHERE conditions
+	// This is intentional - we want to estimate total table size for strategy selection
+	estimatedRows, err := f.estimateTableRows(db, tableName)
+	if err != nil {
+		// If estimation fails, fall back to database filtering with CSV export
+		return f.GormNoPaginationCSV(db, filterRoot)
+	}
+
+	// Decide which strategy to use
+	if estimatedRows <= int64(threshold) {
+		// Use in-memory filtering for better performance on small datasets
+		// IMPORTANT: This respects any pre-existing WHERE conditions on db
+		// Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
+		var allData []*T
+
+		// Apply preload relationships before fetching data
+		queryDB := db
+		for _, relation := range filterRoot.Preload {
+			queryDB = queryDB.Preload(relation)
+		}
+
+		if err := queryDB.Find(&allData).Error; err != nil {
+			return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
+		}
+		return f.DataQueryNoPageCSV(allData, filterRoot)
+	}
+
+	// Use database filtering for large datasets with CSV export
+	// GormNoPaginationCSV will combine existing WHERE conditions with filterRoot filters
+	return f.GormNoPaginationCSV(db, filterRoot)
+}
+
+// HybridCSVWithPreset is a convenience method that combines preset conditions with HybridCSV.
+// It accepts preset conditions as a struct and applies them before filtering, returning CSV results using hybrid strategy.
+//
+// Example usage:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint `gorm:"column:organization_id"`
+//	    BranchID       uint `gorm:"column:branch_id"`
+//	}
+//
+//	tag := &AccountTag{
+//	    OrganizationID: user.OrganizationID,
+//	    BranchID:       *user.BranchID,
+//	}
+//	csvData, err := handler.HybridCSVWithPreset(db, tag, 10000, filterRoot)
+func (f *Handler[T]) HybridCSVWithPreset(
+	db *gorm.DB,
+	presetConditions any,
+	threshold int,
+	filterRoot Root,
+) ([]byte, error) {
+	// Apply preset conditions to db
+	if presetConditions != nil {
+		db = db.Where(presetConditions)
+	}
+
+	// Call HybridCSV with the modified db
+	return f.HybridCSV(db, threshold, filterRoot)
+}
+
 // estimateTableRows returns an estimated row count for a table.
 // It uses database-specific methods for fast estimation without scanning the entire table.
 // NOTE: This estimates the FULL table size, ignoring any WHERE conditions on the db parameter.
