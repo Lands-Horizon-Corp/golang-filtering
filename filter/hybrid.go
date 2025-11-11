@@ -67,6 +67,64 @@ func (f *Handler[T]) Hybrid(
 	return f.DataGorm(db, filterRoot, pageIndex, pageSize)
 }
 
+// DataHybridNoPage intelligently chooses between in-memory (DataQueryNoPage) and database (DataGormNoPage)
+// filtering based on estimated table size, returning results without pagination.
+//
+// IMPORTANT: Respects pre-existing WHERE conditions on the db parameter.
+// - If DataQueryNoPage is chosen (small dataset): fetches data using existing conditions, then filters in-memory
+// - If DataGormNoPage is chosen (large dataset): combines existing conditions with filterRoot filters in SQL
+//
+// Example with pre-existing conditions:
+//
+//	db := gormDB.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//	results, err := handler.DataHybridNoPage(db, 10000, filterRoot)
+//	// DataQueryNoPage path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? (fetch all, filter in-memory)
+//	// DataGormNoPage path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? AND [filterRoot conditions]
+func (f *Handler[T]) DataHybridNoPage(
+	db *gorm.DB,
+	threshold int,
+	filterRoot Root,
+) ([]*T, error) {
+	// Get table name from the model
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(new(T)); err != nil {
+		return nil, fmt.Errorf("failed to parse model: %w", err)
+	}
+	tableName := stmt.Table
+
+	// Estimate row count based on database type
+	// NOTE: Estimation uses the full table, not filtered by existing WHERE conditions
+	// This is intentional - we want to estimate total table size for strategy selection
+	estimatedRows, err := f.estimateTableRows(db, tableName)
+	if err != nil {
+		// If estimation fails, fall back to database filtering
+		return f.DataGormNoPage(db, filterRoot)
+	}
+
+	// Decide which strategy to use
+	if estimatedRows <= int64(threshold) {
+		// Use in-memory filtering for better performance on small datasets
+		// IMPORTANT: This respects any pre-existing WHERE conditions on db
+		// Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
+		var allData []*T
+
+		// Apply preload relationships before fetching data
+		queryDB := db
+		for _, relation := range filterRoot.Preload {
+			queryDB = queryDB.Preload(relation)
+		}
+
+		if err := queryDB.Find(&allData).Error; err != nil {
+			return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
+		}
+		return f.DataQueryNoPage(allData, filterRoot)
+	}
+
+	// Use database filtering for large datasets
+	// DataGormNoPage will combine existing WHERE conditions with filterRoot filters
+	return f.DataGormNoPage(db, filterRoot)
+}
+
 // estimateTableRows returns an estimated row count for a table.
 // It uses database-specific methods for fast estimation without scanning the entire table.
 // NOTE: This estimates the FULL table size, ignoring any WHERE conditions on the db parameter.

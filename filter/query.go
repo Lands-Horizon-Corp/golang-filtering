@@ -172,6 +172,131 @@ func (f *Handler[T]) DataQuery(
 	return &result, nil
 }
 
+// DataQueryNoPage performs in-memory filtering with parallel processing without pagination.
+// It filters the provided data slice based on the filter configuration and returns all matching results as a simple array.
+func (f *Handler[T]) DataQueryNoPage(
+	data []*T,
+	filterRoot Root,
+) ([]*T, error) {
+	if len(data) == 0 {
+		return data, nil // Return the empty slice directly
+	}
+
+	type filterGetter struct {
+		filter FieldFilter
+		getter func(*T) any
+	}
+	valids := make([]filterGetter, 0, len(filterRoot.FieldFilters))
+	for _, filter := range filterRoot.FieldFilters {
+		if getter, exists := f.getters[filter.Field]; exists {
+			valids = append(valids, filterGetter{filter: filter, getter: getter})
+		}
+	}
+
+	numCPU := runtime.NumCPU()
+	chunkSize := (len(data) + numCPU - 1) / numCPU
+
+	// Pre-allocate result slices with exact capacity to avoid reallocations
+	resultChunks := make([][]*T, numCPU)
+	for i := range numCPU {
+		resultChunks[i] = make([]*T, 0, chunkSize)
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var filterErr error
+
+	// Atomic counter for progress tracking
+	var processedCount int64
+
+	for i := range numCPU {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+
+			start := workerID * chunkSize
+			end := min(start+chunkSize, len(data))
+			if start >= len(data) {
+				return
+			}
+
+			localed := resultChunks[workerID] // Reuse pre-allocated slice
+
+			for _, item := range data[start:end] {
+				// If no filters are provided, include all items
+				if len(valids) == 0 {
+					localed = append(localed, item)
+				} else {
+					matches := filterRoot.Logic == LogicAnd
+					for _, fg := range valids {
+						value := fg.getter(item)
+						var match bool
+						var err error
+						switch fg.filter.DataType {
+						case DataTypeNumber:
+							match, _, err = f.applyNumber(value, fg.filter)
+						case DataTypeText:
+							match, _, err = f.applyText(value, fg.filter)
+						case DataTypeDate:
+							match, _, err = f.applyDate(value, fg.filter)
+						case DataTypeBool:
+							match, _, err = f.applyBool(value, fg.filter)
+						case DataTypeTime:
+							match, _, err = f.applyTime(value, fg.filter)
+						default:
+							err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)
+						}
+						if err != nil {
+							mu.Lock()
+							if filterErr == nil {
+								filterErr = err
+							}
+							mu.Unlock()
+							return
+						}
+						if match != (filterRoot.Logic == LogicAnd) {
+							matches = match
+							break
+						}
+					}
+					if matches {
+						localed = append(localed, item) // Only append pointers, no data cloning
+					}
+				}
+				atomic.AddInt64(&processedCount, 1)
+			}
+			resultChunks[workerID] = localed
+		}(i)
+	}
+
+	wg.Wait()
+
+	if filterErr != nil {
+		return nil, filterErr
+	}
+
+	// Calculate total size first
+	totalSize := 0
+	for _, chunk := range resultChunks {
+		totalSize += len(chunk)
+	}
+
+	// Pre-allocate exactly the size needed - no reallocation
+	filteredData := make([]*T, 0, totalSize)
+	for _, chunk := range resultChunks {
+		filteredData = append(filteredData, chunk...) // Only copying pointers, not data
+	}
+
+	// Sort after filtering
+	if len(filterRoot.SortFields) > 0 {
+		sort.Slice(filteredData, func(i, j int) bool {
+			return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
+		})
+	}
+
+	return filteredData, nil
+}
+
 func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int {
 	for _, sortField := range sortFields {
 		getter, exists := f.getters[sortField.Field]

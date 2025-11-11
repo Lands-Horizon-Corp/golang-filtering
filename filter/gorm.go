@@ -165,6 +165,115 @@ func (f *Handler[T]) DataGorm(
 	return &result, nil
 }
 
+// DataGormNoPage performs database-level filtering using GORM queries without pagination.
+// It generates SQL WHERE clauses based on the filter configuration and returns all matching results as a simple array.
+// The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
+// and DataGormNoPage will apply additional filters from filterRoot on top of those.
+//
+// Example with preset conditions using struct:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint
+//	    BranchID       uint
+//	}
+//	tag := &AccountTag{OrganizationID: user.OrganizationID, BranchID: *user.BranchID}
+//	db = filter.ApplyPresetConditions(db, tag)
+//	results, err := handler.DataGormNoPage(db, filterRoot)
+//
+// Example with preset conditions using Where:
+//
+//	presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//	results, err := handler.DataGormNoPage(presetDB, filterRoot)
+func (f *Handler[T]) DataGormNoPage(
+	db *gorm.DB,
+	filterRoot Root,
+) ([]*T, error) {
+	// Build the query - db may already have WHERE conditions, they will be preserved
+	query := db.Model(new(T))
+
+	// Auto-join related tables based on field filters and sort fields
+	query = f.autoJoinRelatedTables(query, filterRoot.FieldFilters, filterRoot.SortFields)
+
+	// Apply preloads (GORM only feature)
+	if len(filterRoot.Preload) > 0 {
+		for _, preloadField := range filterRoot.Preload {
+			query = query.Preload(preloadField)
+		}
+	}
+
+	// Apply filters
+	if len(filterRoot.FieldFilters) > 0 {
+		query = f.applysGorm(query, filterRoot)
+	}
+
+	// Check if any filters or sorts use nested fields (for table name disambiguation)
+	hasNestedFields := false
+	for _, filter := range filterRoot.FieldFilters {
+		if strings.Contains(filter.Field, ".") {
+			hasNestedFields = true
+			break
+		}
+	}
+	if !hasNestedFields {
+		for _, sortField := range filterRoot.SortFields {
+			if strings.Contains(sortField.Field, ".") {
+				hasNestedFields = true
+				break
+			}
+		}
+	}
+
+	// Get the main table name for disambiguation
+	var mainTableName string
+	if hasNestedFields {
+		stmt := &gorm.Statement{DB: db}
+		if err := stmt.Parse(new(T)); err == nil {
+			mainTableName = stmt.Schema.Table
+		}
+	}
+
+	// Apply sorting
+	if len(filterRoot.SortFields) > 0 {
+		for _, sortField := range filterRoot.SortFields {
+			// For simple fields, check if they exist. For nested fields, let GORM handle them.
+			if !strings.Contains(sortField.Field, ".") && !f.fieldExists(sortField.Field) {
+				// Silently ignore non-existent simple sort fields
+				continue
+			}
+
+			order := "ASC"
+			if sortField.Order == SortOrderDesc {
+				order = "DESC"
+			}
+			// Normalize nested field names: "member_profile.name" -> "MemberProfile.name"
+			field := sortField.Field
+			if strings.Contains(field, ".") {
+				parts := strings.Split(field, ".")
+				if len(parts) >= 2 {
+					parts[0] = f.toPascalCase(parts[0])
+					// Quote identifiers to preserve case
+					field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
+					for i := 2; i < len(parts); i++ {
+						field = fmt.Sprintf(`%s."%s"`, field, parts[i])
+					}
+				}
+			} else if mainTableName != "" {
+				// For non-nested fields, prefix with main table name to avoid ambiguity
+				field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
+			}
+			query = query.Order(fmt.Sprintf("%s %s", field, order))
+		}
+	}
+
+	// Execute query without pagination
+	var data []*T
+	if err := query.Find(&data).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch records: %w", err)
+	}
+
+	return data, nil
+}
+
 // DataGormWithPreset is a convenience method that combines ApplyPresetConditions and DataGorm.
 // It accepts preset conditions as a struct and applies them before filtering.
 //
@@ -194,6 +303,35 @@ func (f *Handler[T]) DataGormWithPreset(
 
 	// Call regular DataGorm with the modified db
 	return f.DataGorm(db, filterRoot, pageIndex, pageSize)
+}
+
+// DataGormNoPageWithPreset is a convenience method that combines ApplyPresetConditions and DataGormNoPage.
+// It accepts preset conditions as a struct and applies them before filtering, returning results without pagination.
+//
+// Example usage:
+//
+//	type AccountTag struct {
+//	    OrganizationID uint `gorm:"column:organization_id"`
+//	    BranchID       uint `gorm:"column:branch_id"`
+//	}
+//
+//	tag := &AccountTag{
+//	    OrganizationID: user.OrganizationID,
+//	    BranchID:       *user.BranchID,
+//	}
+//	results, err := handler.DataGormNoPageWithPreset(db, tag, filterRoot)
+func (f *Handler[T]) DataGormNoPageWithPreset(
+	db *gorm.DB,
+	presetConditions any,
+	filterRoot Root,
+) ([]*T, error) {
+	// Apply preset conditions to db
+	if presetConditions != nil {
+		db = db.Where(presetConditions)
+	}
+
+	// Call DataGormNoPage with the modified db
+	return f.DataGormNoPage(db, filterRoot)
 }
 
 func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
