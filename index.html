@@ -57,13 +57,13 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (68.2%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (67.6%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (79.9%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (74.1%)</option>
 				
 				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (53.5%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (71.9%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (70.7%)</option>
 				
 				</select>
 			</div>
@@ -105,6 +105,8 @@ func NewFilter[T any](config GolangFilteringConfig) *Handler[T] <span class="cov
 		<pre class="file" id="file1" style="display: none">package filter
 
 import (
+        "bytes"
+        "encoding/csv"
         "fmt"
         "sort"
         "strings"
@@ -165,7 +167,7 @@ func (f *Handler[T]) DataGorm(
 
         // Set defaults if not provided
         if result.PageIndex &lt;= 0 </span><span class="cov0" title="0">{
-                result.PageIndex = 1
+                result.PageIndex = 0
         }</span>
         <span class="cov8" title="1">if result.PageSize &lt;= 0 </span><span class="cov0" title="0">{
                 result.PageSize = 30
@@ -409,40 +411,43 @@ func (f *Handler[T]) GormNoPaginationCSV(
                 return nil, fmt.Errorf("failed to filter data: %w", err)
         }</span>
 
-        // Build CSV content
-        <span class="cov8" title="1">var csvBuilder strings.Builder
-
         // Write headers using field names from the getters map
-        fieldNames := make([]string, 0, len(f.getters))
+        <span class="cov8" title="1">fieldNames := make([]string, 0, len(f.getters))
         for fieldName := range f.getters </span><span class="cov8" title="1">{
                 fieldNames = append(fieldNames, fieldName)
         }</span>
         <span class="cov8" title="1">sort.Strings(fieldNames) // Ensure deterministic column ordering
 
+        // Build CSV content using encoding/csv
+        var buf bytes.Buffer
+        csvWriter := csv.NewWriter(&amp;buf)
+
         // Write headers
-        for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
-                if i &gt; 0 </span><span class="cov8" title="1">{
-                        csvBuilder.WriteString(",")
-                }</span>
-                <span class="cov8" title="1">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
-        }
-        <span class="cov8" title="1">csvBuilder.WriteString("\n")
+        if err := csvWriter.Write(fieldNames); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to write CSV headers: %w", err)
+        }</span>
 
         // Write data rows
-        for _, item := range filteredData </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">for _, item := range filteredData </span><span class="cov8" title="1">{
+                record := make([]string, len(fieldNames))
                 for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
-                        if i &gt; 0 </span><span class="cov8" title="1">{
-                                csvBuilder.WriteString(",")
-                        }</span>
                         // Get the value using the getter for this field
-                        <span class="cov8" title="1">getter := f.getters[fieldName]
+                        getter := f.getters[fieldName]
                         value := getter(item)
-                        csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))</span>
-                }
-                <span class="cov8" title="1">csvBuilder.WriteString("\n")</span>
+                        record[i] = fmt.Sprintf("%v", value)
+                }</span>
+
+                <span class="cov8" title="1">if err := csvWriter.Write(record); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to write CSV record: %w", err)
+                }</span>
         }
 
-        <span class="cov8" title="1">return []byte(csvBuilder.String()), nil</span>
+        <span class="cov8" title="1">csvWriter.Flush()
+        if err := csvWriter.Error(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("CSV writer error: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return buf.Bytes(), nil</span>
 }
 
 // DataGormWithPreset is a convenience method that combines ApplyPresetConditions and DataGorm.
@@ -602,38 +607,41 @@ func (f *Handler[T]) GormNoPaginationCSVCustom(
         }</span>
         <span class="cov0" title="0">sort.Strings(fieldNames)
 
-        // Build CSV content
-        var csvBuilder strings.Builder
+        // Build CSV content using encoding/csv
+        var buf bytes.Buffer
+        csvWriter := csv.NewWriter(&amp;buf)
 
         // Write headers
-        for i, fieldName := range fieldNames </span><span class="cov0" title="0">{
-                if i &gt; 0 </span><span class="cov0" title="0">{
-                        csvBuilder.WriteString(",")
-                }</span>
-                <span class="cov0" title="0">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
-        }
-        <span class="cov0" title="0">csvBuilder.WriteString("\n")
+        if err := csvWriter.Write(fieldNames); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to write CSV headers: %w", err)
+        }</span>
 
         // Write data rows
-        for _, item := range results </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">for _, item := range results </span><span class="cov0" title="0">{
                 itemFields := customGetter(item)
+                record := make([]string, len(fieldNames))
+
                 for i, fieldName := range fieldNames </span><span class="cov0" title="0">{
-                        if i &gt; 0 </span><span class="cov0" title="0">{
-                                csvBuilder.WriteString(",")
-                        }</span>
                         // Get the value for this field from the custom getter result
-                        <span class="cov0" title="0">value, exists := itemFields[fieldName]
-                        if !exists </span><span class="cov0" title="0">{
-                                // If field doesn't exist in this item's result, use empty string
-                                csvBuilder.WriteString("")
+                        if value, exists := itemFields[fieldName]; exists </span><span class="cov0" title="0">{
+                                record[i] = fmt.Sprintf("%v", value)
                         }</span> else<span class="cov0" title="0"> {
-                                csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+                                // If field doesn't exist in this item's result, use empty string
+                                record[i] = ""
                         }</span>
                 }
-                <span class="cov0" title="0">csvBuilder.WriteString("\n")</span>
+
+                <span class="cov0" title="0">if err := csvWriter.Write(record); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to write CSV record: %w", err)
+                }</span>
         }
 
-        <span class="cov0" title="0">return []byte(csvBuilder.String()), nil</span>
+        <span class="cov0" title="0">csvWriter.Flush()
+        if err := csvWriter.Error(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("CSV writer error: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return buf.Bytes(), nil</span>
 }
 
 // GormNoPaginationCSVCustomWithPreset is a convenience method that combines preset conditions with GormNoPaginationCSVCustom.
@@ -1024,11 +1032,13 @@ func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (str
                 hasTimeTo := hasTimeComponent(rangeVal.To)
 
                 if hasTimeFrom &amp;&amp; hasTimeTo </span><span class="cov0" title="0">{
-                        return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
+                        // Both dates have time components, use exact timestamps
+                        return fmt.Sprintf("%s &gt;= ? AND %s &lt;= ?", field, field), []any{rangeVal.From, rangeVal.To}
                 }</span> else<span class="cov8" title="1"> {
-                        startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
-                        endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
-                        return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
+                        // Date-only range: include entire days from start of From day to end of To day
+                        startOfFromDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
+                        endOfToDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
+                        return fmt.Sprintf("%s &gt;= ? AND %s &lt;= ?", field, field), []any{startOfFromDay, endOfToDay}
                 }</span>
         }
         <span class="cov0" title="0">return "", nil</span>
@@ -1310,9 +1320,21 @@ func parseDateTime(value any) (time.Time, error) <span class="cov8" title="1">{
 }
 
 func parseRangeNumber(value any) (RangeNumber, error) <span class="cov8" title="1">{
-        rng, ok := value.(Range)
-        if !ok </span><span class="cov0" title="0">{
-                return RangeNumber{}, fmt.Errorf("invalid range type for field %s", value)
+        var rng Range
+
+        // Handle struct type (when used directly in Go code)
+        if r, ok := value.(Range); ok </span><span class="cov8" title="1">{
+                rng = r
+        }</span> else<span class="cov0" title="0"> if m, ok := value.(map[string]interface{}); ok </span><span class="cov0" title="0">{
+                // Handle map type (when parsed from JSON)
+                fromVal, hasFrom := m["from"]
+                toVal, hasTo := m["to"]
+                if !hasFrom || !hasTo </span><span class="cov0" title="0">{
+                        return RangeNumber{}, fmt.Errorf("range must have both 'from' and 'to' fields")
+                }</span>
+                <span class="cov0" title="0">rng = Range{From: fromVal, To: toVal}</span>
+        } else<span class="cov0" title="0"> {
+                return RangeNumber{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
         }</span>
         <span class="cov8" title="1">from, err := parseNumber(rng.From)
         if err != nil </span><span class="cov0" title="0">{
@@ -1329,9 +1351,21 @@ func parseRangeNumber(value any) (RangeNumber, error) <span class="cov8" title="
 }
 
 func parseRangeDateTime(value any) (RangeDate, error) <span class="cov8" title="1">{
-        rng, ok := value.(Range)
-        if !ok </span><span class="cov0" title="0">{
-                return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
+        var rng Range
+
+        // Handle struct type (when used directly in Go code)
+        if r, ok := value.(Range); ok </span><span class="cov8" title="1">{
+                rng = r
+        }</span> else<span class="cov8" title="1"> if m, ok := value.(map[string]interface{}); ok </span><span class="cov8" title="1">{
+                // Handle map type (when parsed from JSON)
+                fromVal, hasFrom := m["from"]
+                toVal, hasTo := m["to"]
+                if !hasFrom || !hasTo </span><span class="cov0" title="0">{
+                        return RangeDate{}, fmt.Errorf("range must have both 'from' and 'to' fields")
+                }</span>
+                <span class="cov8" title="1">rng = Range{From: fromVal, To: toVal}</span>
+        } else<span class="cov0" title="0"> {
+                return RangeDate{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
         }</span>
         <span class="cov8" title="1">from, err := parseDateTime(rng.From)
         if err != nil </span><span class="cov0" title="0">{
@@ -1351,9 +1385,21 @@ func parseRangeDateTime(value any) (RangeDate, error) <span class="cov8" title="
 }
 
 func parseRangeTime(value any) (RangeDate, error) <span class="cov8" title="1">{
-        rng, ok := value.(Range)
-        if !ok </span><span class="cov0" title="0">{
-                return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
+        var rng Range
+
+        // Handle struct type (when used directly in Go code)
+        if r, ok := value.(Range); ok </span><span class="cov8" title="1">{
+                rng = r
+        }</span> else<span class="cov0" title="0"> if m, ok := value.(map[string]interface{}); ok </span><span class="cov0" title="0">{
+                // Handle map type (when parsed from JSON)
+                fromVal, hasFrom := m["from"]
+                toVal, hasTo := m["to"]
+                if !hasFrom || !hasTo </span><span class="cov0" title="0">{
+                        return RangeDate{}, fmt.Errorf("range must have both 'from' and 'to' fields")
+                }</span>
+                <span class="cov0" title="0">rng = Range{From: fromVal, To: toVal}</span>
+        } else<span class="cov0" title="0"> {
+                return RangeDate{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
         }</span>
         <span class="cov8" title="1">from, err := parseTime(rng.From)
         if err != nil </span><span class="cov0" title="0">{
@@ -1712,7 +1758,7 @@ func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int <span cla
 
 // escapeCSVField properly escapes a field value for CSV format
 // This implementation follows RFC 4180 standard but replaces newlines with spaces for better compatibility
-func escapeCSVField(field string) string <span class="cov8" title="1">{
+func escapeCSVField(field string) string <span class="cov0" title="0">{
         // Replace newlines with spaces for better single-line CSV readability
         field = strings.ReplaceAll(field, "\n", " ")
         field = strings.ReplaceAll(field, "\r", " ")
@@ -1720,18 +1766,18 @@ func escapeCSVField(field string) string <span class="cov8" title="1">{
         for strings.Contains(field, "  ") </span><span class="cov0" title="0">{
                 field = strings.ReplaceAll(field, "  ", " ")
         }</span>
-        <span class="cov8" title="1">field = strings.TrimSpace(field)
+        <span class="cov0" title="0">field = strings.TrimSpace(field)
 
         // Check if field contains special characters that require quoting
         needsQuoting := strings.Contains(field, ",") ||
                 strings.Contains(field, "\"")
 
-        if needsQuoting </span><span class="cov8" title="1">{
+        if needsQuoting </span><span class="cov0" title="0">{
                 // Escape existing quotes by doubling them (RFC 4180 standard)
                 escaped := strings.ReplaceAll(field, "\"", "\"\"")
                 return "\"" + escaped + "\""
         }</span>
-        <span class="cov8" title="1">return field</span>
+        <span class="cov0" title="0">return field</span>
 }
 
 // escapeCSVFieldWithOptions provides additional control over CSV field escaping
@@ -2185,6 +2231,8 @@ func (f *Handler[T]) estimateTableRows(db *gorm.DB, tableName string) (int64, er
 		<pre class="file" id="file4" style="display: none">package filter
 
 import (
+        "bytes"
+        "encoding/csv"
         "fmt"
         "runtime"
         "sort"
@@ -2209,7 +2257,7 @@ func (f *Handler[T]) DataQuery(
 
         // Set defaults if not provided
         if result.PageIndex &lt;= 0 </span><span class="cov0" title="0">{
-                result.PageIndex = 1
+                result.PageIndex = 0
         }</span>
         <span class="cov8" title="1">if result.PageSize &lt;= 0 </span><span class="cov0" title="0">{
                 result.PageSize = 30
@@ -2494,10 +2542,10 @@ func (f *Handler[T]) DataQueryNoPageCSV(
                 return nil, fmt.Errorf("failed to filter data: %w", err)
         }</span>
 
-        // Build CSV content
-        <span class="cov8" title="1">var csvBuilder strings.Builder
+        // Build CSV content using encoding/csv
+        <span class="cov8" title="1">var csvBuffer strings.Builder
+        csvWriter := csv.NewWriter(&amp;csvBuffer)
 
-        // Write headers using field names from the getters map
         // Sort field names for deterministic column ordering
         fieldNames := make([]string, 0, len(f.getters))
         for fieldName := range f.getters </span><span class="cov8" title="1">{
@@ -2506,29 +2554,32 @@ func (f *Handler[T]) DataQueryNoPageCSV(
         <span class="cov8" title="1">sort.Strings(fieldNames)
 
         // Write headers
-        for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
-                if i &gt; 0 </span><span class="cov8" title="1">{
-                        csvBuilder.WriteString(",")
-                }</span>
-                <span class="cov8" title="1">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
-        }
-        <span class="cov8" title="1">csvBuilder.WriteString("\n")
+        if err := csvWriter.Write(fieldNames); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to write CSV headers: %w", err)
+        }</span>
 
         // Write data rows
-        for _, item := range filteredData </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">for _, item := range filteredData </span><span class="cov8" title="1">{
+                record := make([]string, len(fieldNames))
                 for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
-                        if i &gt; 0 </span><span class="cov8" title="1">{
-                                csvBuilder.WriteString(",")
-                        }</span>
                         // Get the value using the getter for this field
-                        <span class="cov8" title="1">getter := f.getters[fieldName]
+                        getter := f.getters[fieldName]
                         value := getter(item)
-                        csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))</span>
-                }
-                <span class="cov8" title="1">csvBuilder.WriteString("\n")</span>
+                        record[i] = fmt.Sprintf("%v", value)
+                }</span>
+
+                <span class="cov8" title="1">if err := csvWriter.Write(record); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to write CSV record: %w", err)
+                }</span>
         }
 
-        <span class="cov8" title="1">return []byte(csvBuilder.String()), nil</span>
+        // Flush the writer to ensure all data is written
+        <span class="cov8" title="1">csvWriter.Flush()
+        if err := csvWriter.Error(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("CSV writer error: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return []byte(csvBuffer.String()), nil</span>
 }
 
 // DataQueryNoPageCSVCustom performs in-memory filtering with parallel processing and returns results as CSV bytes.
@@ -2579,38 +2630,41 @@ func (f *Handler[T]) DataQueryNoPageCSVCustom(
         }</span>
         <span class="cov8" title="1">sort.Strings(fieldNames)
 
-        // Build CSV content
-        var csvBuilder strings.Builder
+        // Build CSV content using encoding/csv
+        var buf bytes.Buffer
+        csvWriter := csv.NewWriter(&amp;buf)
 
         // Write headers
-        for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
-                if i &gt; 0 </span><span class="cov8" title="1">{
-                        csvBuilder.WriteString(",")
-                }</span>
-                <span class="cov8" title="1">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
-        }
-        <span class="cov8" title="1">csvBuilder.WriteString("\n")
+        if err := csvWriter.Write(fieldNames); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to write CSV headers: %w", err)
+        }</span>
 
         // Write data rows
-        for _, item := range filteredData </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">for _, item := range filteredData </span><span class="cov8" title="1">{
                 itemFields := customGetter(item)
+                record := make([]string, len(fieldNames))
+
                 for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
-                        if i &gt; 0 </span><span class="cov8" title="1">{
-                                csvBuilder.WriteString(",")
-                        }</span>
                         // Get the value for this field from the custom getter result
-                        <span class="cov8" title="1">value, exists := itemFields[fieldName]
-                        if !exists </span><span class="cov0" title="0">{
+                        if value, exists := itemFields[fieldName]; exists </span><span class="cov8" title="1">{
+                                record[i] = fmt.Sprintf("%v", value)
+                        }</span> else<span class="cov0" title="0"> {
                                 // If field doesn't exist in this item's result, use empty string
-                                csvBuilder.WriteString("")
-                        }</span> else<span class="cov8" title="1"> {
-                                csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+                                record[i] = ""
                         }</span>
                 }
-                <span class="cov8" title="1">csvBuilder.WriteString("\n")</span>
+
+                <span class="cov8" title="1">if err := csvWriter.Write(record); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to write CSV record: %w", err)
+                }</span>
         }
 
-        <span class="cov8" title="1">return []byte(csvBuilder.String()), nil</span>
+        <span class="cov8" title="1">csvWriter.Flush()
+        if err := csvWriter.Error(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("CSV writer error: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return buf.Bytes(), nil</span>
 }
 
 // applyNumber applies a number filter and returns whether the value matches the filter
@@ -2886,12 +2940,19 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
                 if err != nil </span><span class="cov8" title="1">{
                         return false, data, err
                 }</span>
-                <span class="cov8" title="1">if hasTime </span><span class="cov8" title="1">{
+
+                // Check if filter range values have time components
+                <span class="cov8" title="1">hasTimeFrom := hasTimeComponent(rangeVal.From)
+                hasTimeTo := hasTimeComponent(rangeVal.To)
+
+                if hasTimeFrom &amp;&amp; hasTimeTo </span><span class="cov8" title="1">{
+                        // Both range boundaries have time - do exact timestamp comparison
                         return !data.Before(rangeVal.From) &amp;&amp; !data.After(rangeVal.To), data, nil
                 }</span> else<span class="cov8" title="1"> {
-                        startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
-                        endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
-                        return !data.Before(startOfDay) &amp;&amp; !data.After(endOfDay), data, nil
+                        // Date-only range - compare against full day boundaries
+                        startOfFromDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
+                        endOfToDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
+                        return !data.Before(startOfFromDay) &amp;&amp; !data.After(endOfToDay), data, nil
                 }</span>
         case ModeBefore:<span class="cov8" title="1">
                 filterVal, err := parseDateTime(filter.Value)
