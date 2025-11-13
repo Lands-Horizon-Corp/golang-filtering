@@ -25,8 +25,8 @@ func (f *Handler[T]) DataQuery(
 		PageSize:  pageSize,
 	}
 
-	// Set defaults if not provided
-	if result.PageIndex <= 0 {
+	// Set defaults if not provided - use 0-based indexing
+	if result.PageIndex < 0 {
 		result.PageIndex = 0
 	}
 	if result.PageSize <= 0 {
@@ -154,8 +154,8 @@ func (f *Handler[T]) DataQuery(
 	result.TotalSize = len(filteredData)
 	result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
 
-	// Calculate start and end indices for the requested page
-	startIdx := (result.PageIndex - 1) * result.PageSize
+	// Calculate start and end indices for the requested page (0-based indexing)
+	startIdx := result.PageIndex * result.PageSize
 	endIdx := startIdx + result.PageSize
 
 	// Handle out of bounds

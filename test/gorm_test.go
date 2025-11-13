@@ -310,14 +310,14 @@ func TestFilterHandler_DataGorm_Pagination(t *testing.T) {
 		Logic: filter.LogicAnd,
 	}
 
-	// Page 1, size 3
+	// Page 1 (second page in 0-based indexing), size 3
 	result, err := handler.DataGorm(db, filterRoot, 1, 3)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
 	if result.PageIndex != 1 {
-		t.Errorf("Expected page index 1, got %d", result.PageIndex)
+		t.Errorf("Expected page index 1 (0-based), got %d", result.PageIndex)
 	}
 	if result.PageSize != 3 {
 		t.Errorf("Expected page size 3, got %d", result.PageSize)

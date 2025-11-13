@@ -31,7 +31,7 @@ func TestUserScenarioBugFix(t *testing.T) {
 			t.Fatalf("Failed to parse user's filter JSON: %v", err)
 		}
 
-		result, err := handler.DataQuery(users, filterRoot, 1, 100)
+		result, err := handler.DataQuery(users, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Error applying filter: %v", err)
 		}
@@ -63,7 +63,7 @@ func TestUserScenarioBugFix(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(users, filterRoot, 1, 100)
+		result, err := handler.DataQuery(users, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Error filtering: %v", err)
 		}

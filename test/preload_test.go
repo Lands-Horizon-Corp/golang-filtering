@@ -63,7 +63,7 @@ func TestPreloadSingleRelation(t *testing.T) {
 		FieldFilters: []filter.FieldFilter{},
 	}
 
-	pageIndex := 1
+	pageIndex := 0
 	pageSize := 10
 	result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
 	if err != nil {
@@ -137,7 +137,7 @@ func TestPreloadMultipleRelations(t *testing.T) {
 		Preload:      []string{"Author", "Comments"},
 	}
 
-	pageIndex := 1
+	pageIndex := 0
 	pageSize := 10
 	result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
 	if err != nil {
@@ -202,7 +202,7 @@ func TestPreloadWithFiltering(t *testing.T) {
 		Preload: []string{"Author"},
 	}
 
-	pageIndex := 1
+	pageIndex := 0
 	pageSize := 10
 	result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
 	if err != nil {
@@ -246,7 +246,7 @@ func TestPreloadEmptyArray(t *testing.T) {
 		Preload:      []string{}, // Empty array
 	}
 
-	pageIndex := 1
+	pageIndex := 0
 	pageSize := 10
 	result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
 	if err != nil {
@@ -295,7 +295,7 @@ func TestPreloadWithSorting(t *testing.T) {
 		Preload: []string{"Author"},
 	}
 
-	pageIndex := 1
+	pageIndex := 0
 	pageSize := 10
 	result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
 	if err != nil {

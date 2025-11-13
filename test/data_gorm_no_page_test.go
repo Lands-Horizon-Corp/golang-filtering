@@ -238,7 +238,7 @@ func TestDataGormNoPageComparison(t *testing.T) {
 	}
 
 	// Get results with pagination (large page size to get all results)
-	paginatedResult, err := handler.DataGorm(db, filterRoot, 1, 100)
+	paginatedResult, err := handler.DataGorm(db, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("Failed to execute DataGorm: %v", err)
 	}

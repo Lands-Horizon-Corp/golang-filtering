@@ -84,7 +84,7 @@ func TestApplyPresetConditionsHelper(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestDataGormWithPreset(t *testing.T) {
 	}
 
 	// Use convenience method
-	result, err := handler.DataGormWithPreset(db, tag, filterRoot, 1, 10)
+	result, err := handler.DataGormWithPreset(db, tag, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestDataGormWithPresetNil(t *testing.T) {
 	}
 
 	// Pass nil preset - should work like regular DataGorm
-	result, err := handler.DataGormWithPreset(db, nil, filterRoot, 1, 10)
+	result, err := handler.DataGormWithPreset(db, nil, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestMultiplePresetFields(t *testing.T) {
 				FieldFilters: []filter.FieldFilter{},
 			}
 
-			result, err := handler.DataGormWithPreset(db, tc.tag, filterRoot, 1, 10)
+			result, err := handler.DataGormWithPreset(db, tc.tag, filterRoot, 0, 10)
 			if err != nil {
 				t.Fatalf("Error filtering: %v", err)
 			}
@@ -253,7 +253,7 @@ func TestPresetWithRangeFilter(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGormWithPreset(db, tag, filterRoot, 1, 10)
+	result, err := handler.DataGormWithPreset(db, tag, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestPresetWithSortingAndPagination(t *testing.T) {
 	}
 
 	// Get first page with 2 items
-	result, err := handler.DataGormWithPreset(db, tag, filterRoot, 1, 2)
+	result, err := handler.DataGormWithPreset(db, tag, filterRoot, 0, 2)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}

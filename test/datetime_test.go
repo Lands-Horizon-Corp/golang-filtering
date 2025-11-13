@@ -59,7 +59,7 @@ func TestDateTimeFormats(t *testing.T) {
 				},
 			}
 
-			_, err := handler.DataQuery(events, filterRoot, 1, 10)
+			_, err := handler.DataQuery(events, filterRoot, 0, 10)
 			if tc.shouldParse && err != nil {
 				t.Errorf("Expected format %s to parse, got error: %v", tc.name, err)
 			}
@@ -107,7 +107,7 @@ func TestTimeFormats(t *testing.T) {
 				},
 			}
 
-			_, err := handler.DataQuery(events, filterRoot, 1, 10)
+			_, err := handler.DataQuery(events, filterRoot, 0, 10)
 			if tc.shouldParse && err != nil {
 				t.Errorf("Expected time format %s to parse, got error: %v", tc.name, err)
 			}
@@ -139,7 +139,7 @@ func TestDateModeEqual(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestDateModeBefore(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestDateModeAfter(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestDateModeGTE(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -275,7 +275,7 @@ func TestDateModeLTE(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -313,7 +313,7 @@ func TestDateModeRange(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -347,7 +347,7 @@ func TestTimeModeEqual(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -380,7 +380,7 @@ func TestTimeModeBefore(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -413,7 +413,7 @@ func TestTimeModeAfter(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -449,7 +449,7 @@ func TestTimeModeRange(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -500,7 +500,7 @@ func TestDateTimeEdgeCases(t *testing.T) {
 				},
 			}
 
-			result, err := handler.DataQuery(events, filterRoot, 1, 10)
+			result, err := handler.DataQuery(events, filterRoot, 0, 10)
 			if err != nil {
 				t.Fatalf("Error filtering %s: %v", tc.name, err)
 			}
@@ -555,7 +555,7 @@ func TestMultipleDateTimeFilters(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -583,7 +583,7 @@ func TestDateTimeSorting(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error sorting: %v", err)
 	}
@@ -619,7 +619,7 @@ func TestTimeWithNanoseconds(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -662,7 +662,7 @@ func TestInvalidDateTimeFormats(t *testing.T) {
 				},
 			}
 
-			_, err := handler.DataQuery(events, filterRoot, 1, 10)
+			_, err := handler.DataQuery(events, filterRoot, 0, 10)
 			if err == nil {
 				t.Errorf("Expected error for %s, got none", tc.name)
 			}
@@ -723,7 +723,7 @@ func TestDateRangeComprehensive(t *testing.T) {
 				},
 			}
 
-			result, err := handler.DataQuery(events, filterRoot, 1, 20)
+			result, err := handler.DataQuery(events, filterRoot, 0, 20)
 			if err != nil {
 				t.Fatalf("Error filtering %s: %v", tc.name, err)
 			}
@@ -790,7 +790,7 @@ func TestTimeRangeComprehensive(t *testing.T) {
 				},
 			}
 
-			result, err := handler.DataQuery(events, filterRoot, 1, 20)
+			result, err := handler.DataQuery(events, filterRoot, 0, 20)
 			if err != nil {
 				t.Fatalf("Error filtering %s: %v", tc.name, err)
 			}
@@ -834,7 +834,7 @@ func TestDateRangeWithTimezone(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -872,7 +872,7 @@ func TestTimeRangeWithMinutesSeconds(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -910,7 +910,7 @@ func TestDateRangeYearBoundary(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -949,7 +949,7 @@ func TestTimeRangeMidnightCrossing(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -975,7 +975,7 @@ func TestTimeRangeMidnightCrossing(t *testing.T) {
 		},
 	}
 
-	result2, err := handler.DataQuery(events, filterRoot2, 1, 10)
+	result2, err := handler.DataQuery(events, filterRoot2, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering early morning: %v", err)
 	}
@@ -1010,7 +1010,7 @@ func TestDateRangeInvalidRange(t *testing.T) {
 		},
 	}
 
-	_, err := handler.DataQuery(events, filterRoot, 1, 10)
+	_, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err == nil {
 		t.Error("Expected error for invalid date range (from > to), got none")
 	}
@@ -1040,7 +1040,7 @@ func TestTimeRangeInvalidRange(t *testing.T) {
 		},
 	}
 
-	_, err := handler.DataQuery(events, filterRoot, 1, 10)
+	_, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err == nil {
 		t.Error("Expected error for invalid time range (from > to), got none")
 	}
@@ -1075,7 +1075,7 @@ func TestDateRangeWithSorting(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(events, filterRoot, 1, 10)
+	result, err := handler.DataQuery(events, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}

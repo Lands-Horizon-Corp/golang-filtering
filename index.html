@@ -59,11 +59,11 @@
 				
 				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (67.6%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (74.1%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (74.4%)</option>
 				
 				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (53.5%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (70.7%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (71.1%)</option>
 				
 				</select>
 			</div>
@@ -165,8 +165,8 @@ func (f *Handler[T]) DataGorm(
                 PageSize:  pageSize,
         }
 
-        // Set defaults if not provided
-        if result.PageIndex &lt;= 0 </span><span class="cov0" title="0">{
+        // Set defaults if not provided - use 0-based indexing
+        if result.PageIndex &lt; 0 </span><span class="cov0" title="0">{
                 result.PageIndex = 0
         }</span>
         <span class="cov8" title="1">if result.PageSize &lt;= 0 </span><span class="cov0" title="0">{
@@ -258,8 +258,8 @@ func (f *Handler[T]) DataGorm(
                 }
         }
 
-        // Apply pagination
-        <span class="cov8" title="1">offset := (result.PageIndex - 1) * result.PageSize
+        // Apply pagination (0-based indexing)
+        <span class="cov8" title="1">offset := result.PageIndex * result.PageSize
         query = query.Offset(int(offset)).Limit(int(result.PageSize))
 
         // Execute query
@@ -1209,7 +1209,7 @@ func parseNumber(value any) (float64, error) <span class="cov8" title="1">{
         switch v := value.(type) </span>{
         case int:<span class="cov8" title="1">
                 num = float64(v)</span>
-        case uint:<span class="cov0" title="0">
+        case uint:<span class="cov8" title="1">
                 num = float64(v)</span>
         case int8:<span class="cov0" title="0">
                 num = float64(v)</span>
@@ -2255,11 +2255,11 @@ func (f *Handler[T]) DataQuery(
                 PageSize:  pageSize,
         }
 
-        // Set defaults if not provided
-        if result.PageIndex &lt;= 0 </span><span class="cov0" title="0">{
+        // Set defaults if not provided - use 0-based indexing
+        if result.PageIndex &lt; 0 </span><span class="cov8" title="1">{
                 result.PageIndex = 0
         }</span>
-        <span class="cov8" title="1">if result.PageSize &lt;= 0 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if result.PageSize &lt;= 0 </span><span class="cov8" title="1">{
                 result.PageSize = 30
         }</span>
 
@@ -2384,8 +2384,8 @@ func (f *Handler[T]) DataQuery(
         <span class="cov8" title="1">result.TotalSize = len(filteredData)
         result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
 
-        // Calculate start and end indices for the requested page
-        startIdx := (result.PageIndex - 1) * result.PageSize
+        // Calculate start and end indices for the requested page (0-based indexing)
+        startIdx := result.PageIndex * result.PageSize
         endIdx := startIdx + result.PageSize
 
         // Handle out of bounds

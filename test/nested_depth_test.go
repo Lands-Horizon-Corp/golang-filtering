@@ -81,7 +81,7 @@ func TestNestedDepthLimit(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(employees, filterRoot, 1, 100)
+		result, err := handler.DataQuery(employees, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Level 1 filtering failed: %v", err)
 		}
@@ -106,7 +106,7 @@ func TestNestedDepthLimit(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(employees, filterRoot, 1, 100)
+		result, err := handler.DataQuery(employees, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Level 2 filtering failed: %v", err)
 		}
@@ -131,7 +131,7 @@ func TestNestedDepthLimit(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(employees, filterRoot, 1, 100)
+		result, err := handler.DataQuery(employees, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Level 3 filtering failed: %v", err)
 		}
@@ -181,7 +181,7 @@ func TestNestedDepthLimitTask(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(tasks, filterRoot, 1, 100)
+		result, err := handler.DataQuery(tasks, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Level 1 filtering failed: %v", err)
 		}
@@ -206,7 +206,7 @@ func TestNestedDepthLimitTask(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(tasks, filterRoot, 1, 100)
+		result, err := handler.DataQuery(tasks, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Level 2 filtering failed: %v", err)
 		}
@@ -231,7 +231,7 @@ func TestNestedDepthLimitTask(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(tasks, filterRoot, 1, 100)
+		result, err := handler.DataQuery(tasks, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Level 3 filtering failed: %v", err)
 		}
@@ -258,7 +258,7 @@ func TestNestedDepthLimitTask(t *testing.T) {
 
 		// This filter should be ignored (no getter registered for depth 4)
 		// So all tasks should be returned
-		result, err := handler.DataQuery(tasks, filterRoot, 1, 100)
+		result, err := handler.DataQuery(tasks, filterRoot, 0, 100)
 		if err != nil {
 			t.Fatalf("Query failed: %v", err)
 		}
@@ -296,7 +296,7 @@ func TestSortingWithNestedDepth(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(employees, filterRoot, 1, 100)
+	result, err := handler.DataQuery(employees, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("Sorting failed: %v", err)
 	}

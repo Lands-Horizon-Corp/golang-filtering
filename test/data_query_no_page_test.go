@@ -191,7 +191,7 @@ func TestDataQueryNoPageComparison(t *testing.T) {
 	}
 
 	// Get results with pagination (large page size to get all results)
-	paginatedResult, err := handler.DataQuery(users, filterRoot, 1, 100)
+	paginatedResult, err := handler.DataQuery(users, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("Failed to execute DataQuery: %v", err)
 	}

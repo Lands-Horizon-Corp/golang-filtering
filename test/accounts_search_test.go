@@ -434,17 +434,17 @@ func TestAccountSearchWithPagination(t *testing.T) {
 	}
 
 	// Get first page with 3 items
-	result, err := handler.DataGorm(db, filterRoot, 1, 3)
+	result, err := handler.DataGorm(db, filterRoot, 0, 3)
 	if err != nil {
 		t.Fatalf("Error searching: %v", err)
 	}
 
 	if len(result.Data) != 3 {
-		t.Errorf("Expected 3 accounts on page 1, got %d", len(result.Data))
+		t.Errorf("Expected 3 accounts on page 0, got %d", len(result.Data))
 	}
 
 	// Get second page
-	result2, err := handler.DataGorm(db, filterRoot, 2, 3)
+	result2, err := handler.DataGorm(db, filterRoot, 1, 3)
 	if err != nil {
 		t.Fatalf("Error searching page 2: %v", err)
 	}

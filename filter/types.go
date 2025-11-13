@@ -87,7 +87,7 @@ type PaginationResult[T any] struct {
 	Data      []*T `json:"data"`      // Current page data
 	TotalSize int  `json:"totalSize"` // Total matching records
 	TotalPage int  `json:"totalPage"` // Total number of pages
-	PageIndex int  `json:"pageIndex"` // Current page index (1-based)
+	PageIndex int  `json:"pageIndex"` // Current page index (0-based)
 	PageSize  int  `json:"pageSize"`  // Records per page
 }
 

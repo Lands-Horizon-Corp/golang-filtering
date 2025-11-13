@@ -61,7 +61,7 @@ func TestDataGorm_PresetConditions(t *testing.T) {
 			FieldFilters: []filter.FieldFilter{}, // No additional filters
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -106,7 +106,7 @@ func TestDataGorm_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -150,7 +150,7 @@ func TestDataGorm_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -185,7 +185,7 @@ func TestDataGorm_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -223,7 +223,7 @@ func TestDataGorm_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(db, filterRoot, pageIndex, pageSize)
@@ -259,7 +259,7 @@ func TestDataGorm_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -315,7 +315,7 @@ func TestDataGorm_ComplexPresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -345,7 +345,7 @@ func TestDataGorm_ComplexPresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 
 		result, err := handler.DataGorm(presetDB, filterRoot, pageIndex, pageSize)
@@ -414,7 +414,7 @@ func TestHybrid_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 		threshold := 10000 // High threshold - chooses DataQuery
 
@@ -458,7 +458,7 @@ func TestHybrid_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 		threshold := 1 // Low threshold - chooses DataGorm
 
@@ -498,7 +498,7 @@ func TestHybrid_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 		threshold := 10000
 
@@ -530,7 +530,7 @@ func TestHybrid_PresetConditions(t *testing.T) {
 			},
 		}
 
-		pageIndex := 1
+		pageIndex := 0
 		pageSize := 10
 		threshold := 10000
 

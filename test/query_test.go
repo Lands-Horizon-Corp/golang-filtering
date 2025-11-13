@@ -50,7 +50,7 @@ func TestFilterHandler_DataQuery_EmptyData(t *testing.T) {
 		Logic: filter.LogicAnd,
 	}
 
-	result, err := handler.DataQuery([]*TestUser{}, filterRoot, 1, 10)
+	result, err := handler.DataQuery([]*TestUser{}, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -70,7 +70,7 @@ func TestFilterHandler_DataQuery_NoFilters(t *testing.T) {
 		Logic: filter.LogicAnd,
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -99,7 +99,7 @@ func TestFilterHandler_ModeEqual(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -133,7 +133,7 @@ func TestFilterHandler_ModeNotEqual(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -163,7 +163,7 @@ func TestFilterHandler_ModeContains(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -197,7 +197,7 @@ func TestFilterHandler_ModeStartsWith(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -225,7 +225,7 @@ func TestFilterHandler_ModeEndsWith(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -253,7 +253,7 @@ func TestFilterHandler_ModeGT(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -283,7 +283,7 @@ func TestFilterHandler_ModeGTE(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -313,7 +313,7 @@ func TestFilterHandler_ModeLT(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -343,7 +343,7 @@ func TestFilterHandler_ModeLTE(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -373,7 +373,7 @@ func TestFilterHandler_ModeRange(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -403,7 +403,7 @@ func TestFilterHandler_BoolFilter(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -439,7 +439,7 @@ func TestFilterHandler_LogicAnd(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -475,7 +475,7 @@ func TestFilterHandler_LogicOr(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -497,20 +497,20 @@ func TestFilterHandler_Pagination(t *testing.T) {
 		Logic: filter.LogicAnd,
 	}
 
-	// Page 1, size 3
-	result, err := handler.DataQuery(users, filterRoot, 1, 3)
+	// Page 0 (first page in 0-based indexing), size 3
+	result, err := handler.DataQuery(users, filterRoot, 0, 3)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if result.PageIndex != 1 {
-		t.Errorf("Expected page index 1, got %d", result.PageIndex)
+	if result.PageIndex != 0 {
+		t.Errorf("Expected page index 0 (0-based), got %d", result.PageIndex)
 	}
 	if result.PageSize != 3 {
 		t.Errorf("Expected page size 3, got %d", result.PageSize)
 	}
 	if len(result.Data) != 3 {
-		t.Errorf("Expected 3 items on page 1, got %d", len(result.Data))
+		t.Errorf("Expected 3 items on page 0, got %d", len(result.Data))
 	}
 	if result.TotalSize != len(users) {
 		t.Errorf("Expected total size %d, got %d", len(users), result.TotalSize)
@@ -533,7 +533,7 @@ func TestFilterHandler_Sorting(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -559,7 +559,7 @@ func TestFilterHandler_MultipleSorts(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 10)
+	result, err := handler.DataQuery(users, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

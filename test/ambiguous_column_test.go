@@ -56,7 +56,7 @@ func TestAmbiguousColumnWithORLogic(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering with OR logic (direct + nested): %v", err)
 	}
@@ -124,7 +124,7 @@ func TestAmbiguousColumnWithANDLogic(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering with AND logic (direct + nested): %v", err)
 	}
@@ -179,7 +179,7 @@ func TestAmbiguousColumnSorting(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error sorting with nested filter: %v", err)
 	}

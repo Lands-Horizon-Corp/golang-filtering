@@ -61,8 +61,8 @@ func (f *Handler[T]) DataGorm(
 		PageSize:  pageSize,
 	}
 
-	// Set defaults if not provided
-	if result.PageIndex <= 0 {
+	// Set defaults if not provided - use 0-based indexing
+	if result.PageIndex < 0 {
 		result.PageIndex = 0
 	}
 	if result.PageSize <= 0 {
@@ -154,8 +154,8 @@ func (f *Handler[T]) DataGorm(
 		}
 	}
 
-	// Apply pagination
-	offset := (result.PageIndex - 1) * result.PageSize
+	// Apply pagination (0-based indexing)
+	offset := result.PageIndex * result.PageSize
 	query = query.Offset(int(offset)).Limit(int(result.PageSize))
 
 	// Execute query

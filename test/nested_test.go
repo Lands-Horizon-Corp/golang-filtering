@@ -45,7 +45,7 @@ func TestNestedStructFiltering(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(people, filterRoot, 1, 100)
+	result, err := handler.DataQuery(people, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("Nested field filter failed: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestNestedFieldSorting(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(people, filterRoot, 1, 100)
+	result, err := handler.DataQuery(people, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("Nested field sort failed: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestDeeplyNestedFields(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(people, filterRoot, 1, 100)
+	result, err := handler.DataQuery(people, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("Deeply nested field filter failed: %v", err)
 	}

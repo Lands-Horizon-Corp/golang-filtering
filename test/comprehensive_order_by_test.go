@@ -90,7 +90,7 @@ func TestOrderByBoolean(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY boolean ASC: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestOrderByBoolean(t *testing.T) {
 	// Test boolean DESC (true first, then false)
 	filterRoot.SortFields[0].Order = filter.SortOrderDesc
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 10)
+	result, err = handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY boolean DESC: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestOrderByStrings(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY string ASC: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestOrderByStrings(t *testing.T) {
 	// Test string DESC
 	filterRoot.SortFields[0].Order = filter.SortOrderDesc
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 10)
+	result, err = handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY string DESC: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestOrderByDateTime(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY date ASC: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestOrderByDateTime(t *testing.T) {
 	// Test date field DESC
 	filterRoot.SortFields[0].Order = filter.SortOrderDesc
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 10)
+	result, err = handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY date DESC: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestOrderByDateTime(t *testing.T) {
 	filterRoot.SortFields[0].Field = "updated_at"
 	filterRoot.SortFields[0].Order = filter.SortOrderAsc
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 10)
+	result, err = handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY updated_at: %v", err)
 	}
@@ -295,7 +295,7 @@ func TestOrderByTime(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY time: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestOrderByMixedDataTypes(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to execute mixed data types ORDER BY: %v", err)
 	}
@@ -386,7 +386,7 @@ func TestOrderByNumericFields(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY age: %v", err)
 	}
@@ -402,7 +402,7 @@ func TestOrderByNumericFields(t *testing.T) {
 	filterRoot.SortFields[0].Field = "salary"
 	filterRoot.SortFields[0].Order = filter.SortOrderDesc
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 10)
+	result, err = handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to ORDER BY salary DESC: %v", err)
 	}
@@ -434,7 +434,7 @@ func TestOrderByNestedFields(t *testing.T) {
 		Preload: []string{"Department"},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Failed to execute nested ORDER BY: %v", err)
 	}
@@ -471,23 +471,23 @@ func TestOrderByWithPagination(t *testing.T) {
 	}
 
 	// Get first page
-	result1, err := handler.DataGorm(db, filterRoot, 1, 3)
+	result1, err := handler.DataGorm(db, filterRoot, 0, 3)
 	if err != nil {
-		t.Fatalf("Failed to execute ORDER BY with pagination page 1: %v", err)
+		t.Fatalf("Failed to execute ORDER BY with pagination page 0: %v", err)
 	}
 
 	// Get second page
-	result2, err := handler.DataGorm(db, filterRoot, 2, 3)
+	result2, err := handler.DataGorm(db, filterRoot, 1, 3)
 	if err != nil {
 		t.Fatalf("Failed to execute ORDER BY with pagination page 2: %v", err)
 	}
 
 	if len(result1.Data) != 3 {
-		t.Errorf("Expected 3 users on page 1, got %d", len(result1.Data))
+		t.Errorf("Expected 3 users on page 0, got %d", len(result1.Data))
 	}
 
 	if len(result2.Data) != 3 {
-		t.Errorf("Expected 3 users on page 2, got %d", len(result2.Data))
+		t.Errorf("Expected 3 users on page 1, got %d", len(result2.Data))
 	}
 
 	// Verify correct order across pages
@@ -504,7 +504,7 @@ func TestOrderByWithPagination(t *testing.T) {
 		}
 	}
 
-	t.Logf("✅ ORDER BY with pagination - Page 1: %v, Page 2: %v", page1Names, page2Names)
+	t.Logf("✅ ORDER BY with pagination - Page 0: %v, Page 1: %v", page1Names, page2Names)
 }
 
 // TestMultipleOrderBy tests ORDER BY with multiple fields and mixed ASC/DESC directions
@@ -544,7 +544,7 @@ func TestMultipleOrderBy(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 20)
+	result, err := handler.DataGorm(db, filterRoot, 0, 20)
 	if err != nil {
 		t.Fatalf("Failed to execute multiple ORDER BY (name ASC, age DESC): %v", err)
 	}
@@ -581,7 +581,7 @@ func TestMultipleOrderBy(t *testing.T) {
 		{Field: "salary", Order: filter.SortOrderDesc}, // Secondary sort: Salary descending
 	}
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 20)
+	result, err = handler.DataGorm(db, filterRoot, 0, 20)
 	if err != nil {
 		t.Fatalf("Failed to execute multiple ORDER BY (age ASC, salary DESC): %v", err)
 	}
@@ -618,7 +618,7 @@ func TestMultipleOrderBy(t *testing.T) {
 		{Field: "age", Order: filter.SortOrderAsc},     // Tertiary: Age ascending
 	}
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 20)
+	result, err = handler.DataGorm(db, filterRoot, 0, 20)
 	if err != nil {
 		t.Fatalf("Failed to execute triple ORDER BY (active DESC, name ASC, age ASC): %v", err)
 	}
@@ -711,7 +711,7 @@ func TestComplexMultipleOrderBy(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 20)
+	result, err := handler.DataGorm(db, filterRoot, 0, 20)
 	if err != nil {
 		t.Fatalf("Failed to execute complex multiple ORDER BY: %v", err)
 	}
@@ -781,7 +781,7 @@ func TestComplexMultipleOrderBy(t *testing.T) {
 	filterRoot.Preload = []string{"Department"}
 	filterRoot.FieldFilters = nil // Remove the ID filter
 
-	result, err = handler.DataGorm(db, filterRoot, 1, 20)
+	result, err = handler.DataGorm(db, filterRoot, 0, 20)
 	if err != nil {
 		t.Fatalf("Failed to execute nested multiple ORDER BY: %v", err)
 	}

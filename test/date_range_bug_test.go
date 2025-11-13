@@ -45,7 +45,7 @@ func TestDateRangeBugFix(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(users, filterRoot, 1, 100)
+	result, err := handler.DataQuery(users, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestDateRangeBugFix(t *testing.T) {
 		},
 	}
 
-	result2, err := handler.DataQuery(users, filterRoot2, 1, 100)
+	result2, err := handler.DataQuery(users, filterRoot2, 0, 100)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestDateRangeBugFix(t *testing.T) {
 		},
 	}
 
-	result3, err := handler.DataQuery(users, filterRoot3, 1, 100)
+	result3, err := handler.DataQuery(users, filterRoot3, 0, 100)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}

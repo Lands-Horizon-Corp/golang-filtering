@@ -58,7 +58,7 @@ func TestGormDateTimeEqual(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestGormDateTimeNotEqual(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestGormTimeNotEqual(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestGormTimeGT(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataGorm(db, filterRoot, 1, 10)
+	result, err := handler.DataGorm(db, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestDateTimeRangeOverlap(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -286,7 +286,7 @@ func TestTimeRangeWithSeconds(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestMultipleDateFiltersWithOR(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -387,7 +387,7 @@ func TestDateAndTimeFiltersWithAND(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -416,7 +416,7 @@ func TestDateSortingDescending(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error sorting: %v", err)
 	}
@@ -450,7 +450,7 @@ func TestTimeSortingAscending(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error sorting: %v", err)
 	}
@@ -498,7 +498,7 @@ func TestDateRangeWithPagination(t *testing.T) {
 	}
 
 	// Test first page
-	result1, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result1, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error on page 1: %v", err)
 	}
@@ -512,7 +512,7 @@ func TestDateRangeWithPagination(t *testing.T) {
 	}
 
 	// Test second page
-	result2, err := handler.DataQuery(appointments, filterRoot, 2, 10)
+	result2, err := handler.DataQuery(appointments, filterRoot, 1, 10)
 	if err != nil {
 		t.Fatalf("Error on page 2: %v", err)
 	}
@@ -559,7 +559,7 @@ func TestDateBeforeAndAfter(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}
@@ -593,7 +593,7 @@ func TestLeapYearDate(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering leap day: %v", err)
 	}
@@ -664,7 +664,7 @@ func TestDateTimeComplexCombination(t *testing.T) {
 		},
 	}
 
-	result, err := handler.DataQuery(appointments, filterRoot, 1, 10)
+	result, err := handler.DataQuery(appointments, filterRoot, 0, 10)
 	if err != nil {
 		t.Fatalf("Error filtering: %v", err)
 	}

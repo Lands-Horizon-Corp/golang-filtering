@@ -125,7 +125,7 @@ func TestFilterHandler_DataGorm_SQLInjectionProtection(t *testing.T) {
 		}
 
 		// Should not panic or cause SQL errors
-		result, err := handler.DataGorm(db, filterRoot, 1, 10)
+		result, err := handler.DataGorm(db, filterRoot, 0, 10)
 		if err != nil {
 			t.Errorf("DataGorm with malicious input '%s' returned error: %v", malicious, err)
 		}
@@ -228,7 +228,7 @@ func TestFilterHandler_XSSPrevention(t *testing.T) {
 			},
 		}
 
-		result, err := handler.DataQuery(users, filterRoot, 1, 10)
+		result, err := handler.DataQuery(users, filterRoot, 0, 10)
 		if err != nil {
 			t.Errorf("DataQuery with XSS input '%s' returned error: %v", xss, err)
 		}

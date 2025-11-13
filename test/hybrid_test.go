@@ -241,13 +241,13 @@ func TestFilterHandler_Hybrid_ConsistencyCheck(t *testing.T) {
 	}
 
 	// Test DataQuery
-	resultQuery, err := handler.DataQuery(allUsers, filterRoot, 1, 100)
+	resultQuery, err := handler.DataQuery(allUsers, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("DataQuery failed: %v", err)
 	}
 
 	// Test DataGorm
-	resultGorm, err := handler.DataGorm(db, filterRoot, 1, 100)
+	resultGorm, err := handler.DataGorm(db, filterRoot, 0, 100)
 	if err != nil {
 		t.Fatalf("DataGorm failed: %v", err)
 	}
