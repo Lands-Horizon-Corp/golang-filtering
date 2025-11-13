@@ -347,6 +347,88 @@ func (f *Handler[T]) DataQueryNoPageCSV(
 	return []byte(csvBuilder.String()), nil
 }
 
+// DataQueryNoPageCSVCustom performs in-memory filtering with parallel processing and returns results as CSV bytes.
+// It uses a custom callback function to allow users to define exactly what fields and values to include in the CSV output.
+// This provides full control over CSV structure and field mapping on the user side.
+//
+// Parameters:
+//   - data: slice of pointers to the data type T to filter
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that takes a data item and returns a map[string]any
+//     where keys are column headers and values are the corresponding data
+//
+// Returns CSV bytes with headers from the customGetter map keys, sorted alphabetically for deterministic ordering.
+//
+// Example usage:
+//
+//	csvData, err := handler.DataQueryNoPageCSVCustom(users, filterRoot, func(user *User) map[string]any {
+//	    return map[string]any{
+//	        "Full Name": user.FirstName + " " + user.LastName,
+//	        "Email": user.Email,
+//	        "Status": user.IsActive,
+//	        "Department": user.Department.Name, // Access nested fields
+//	    }
+//	})
+func (f *Handler[T]) DataQueryNoPageCSVCustom(
+	data []*T,
+	filterRoot Root,
+	customGetter func(*T) map[string]any,
+) ([]byte, error) {
+	// Use DataQueryNoPage to get filtered results
+	filteredData, err := f.DataQueryNoPage(data, filterRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to filter data: %w", err)
+	}
+
+	if len(filteredData) == 0 {
+		// If no data, we can't determine headers, return empty CSV with no headers
+		return []byte(""), nil
+	}
+
+	// Get headers from the first item using the custom getter
+	firstItemFields := customGetter(filteredData[0])
+
+	// Sort field names for deterministic column ordering
+	fieldNames := make([]string, 0, len(firstItemFields))
+	for fieldName := range firstItemFields {
+		fieldNames = append(fieldNames, fieldName)
+	}
+	sort.Strings(fieldNames)
+
+	// Build CSV content
+	var csvBuilder strings.Builder
+
+	// Write headers
+	for i, fieldName := range fieldNames {
+		if i > 0 {
+			csvBuilder.WriteString(",")
+		}
+		csvBuilder.WriteString(escapeCSVField(fieldName))
+	}
+	csvBuilder.WriteString("\n")
+
+	// Write data rows
+	for _, item := range filteredData {
+		itemFields := customGetter(item)
+		for i, fieldName := range fieldNames {
+			if i > 0 {
+				csvBuilder.WriteString(",")
+			}
+			// Get the value for this field from the custom getter result
+			value, exists := itemFields[fieldName]
+			if !exists {
+				// If field doesn't exist in this item's result, use empty string
+				csvBuilder.WriteString("")
+			} else {
+				csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+			}
+		}
+		csvBuilder.WriteString("\n")
+	}
+
+	return []byte(csvBuilder.String()), nil
+}
+
 // applyNumber applies a number filter and returns whether the value matches the filter
 func (f *Handler[T]) applyNumber(value any, filter FieldFilter) (bool, float64, error) {
 	num, err := parseNumber(value)

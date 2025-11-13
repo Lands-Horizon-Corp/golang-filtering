@@ -430,6 +430,151 @@ func (f *Handler[T]) GormNoPaginationCSVWithPreset(
 	return f.GormNoPaginationCSV(db, filterRoot)
 }
 
+// GormNoPaginationCSVCustom performs database-level filtering and returns results as CSV bytes.
+// It uses a custom callback function to allow users to define exactly what fields and values to include in the CSV output.
+// This provides full control over CSV structure and field mapping on the user side.
+//
+// Parameters:
+//   - db: GORM database instance with any preset conditions
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that takes a data item and returns a map[string]any
+//     where keys are column headers and values are the corresponding data
+//
+// Returns CSV bytes with headers from the customGetter map keys, sorted alphabetically for deterministic ordering.
+//
+// Example usage:
+//
+//	csvData, err := handler.GormNoPaginationCSVCustom(db, filterRoot, func(user *User) map[string]any {
+//	    return map[string]any{
+//	        "Full Name": user.FirstName + " " + user.LastName,
+//	        "Email": user.Email,
+//	        "Status": user.IsActive,
+//	        "Department": user.Department.Name, // Access nested fields if preloaded
+//	    }
+//	})
+func (f *Handler[T]) GormNoPaginationCSVCustom(
+	db *gorm.DB,
+	filterRoot Root,
+	customGetter func(*T) map[string]any,
+) ([]byte, error) {
+	// Apply filters to database query
+	filteredDB := f.applysGorm(db, filterRoot)
+
+	// Apply sorting
+	if len(filterRoot.SortFields) > 0 {
+		for _, sortField := range filterRoot.SortFields {
+			// For simple fields, check if they exist. For nested fields, let GORM handle them.
+			if !strings.Contains(sortField.Field, ".") && !f.fieldExists(sortField.Field) {
+				// Silently ignore non-existent simple sort fields
+				continue
+			}
+
+			order := "ASC"
+			if sortField.Order == SortOrderDesc {
+				order = "DESC"
+			}
+			filteredDB = filteredDB.Order(fmt.Sprintf("%s %s", sortField.Field, order))
+		}
+	}
+
+	// Execute query to get all matching records
+	var results []*T
+	if err := filteredDB.Find(&results).Error; err != nil {
+		return nil, fmt.Errorf("failed to query database: %w", err)
+	}
+
+	if len(results) == 0 {
+		// If no data, return empty CSV
+		return []byte(""), nil
+	}
+
+	// Get headers from the first item using the custom getter
+	firstItemFields := customGetter(results[0])
+
+	// Sort field names for deterministic column ordering
+	fieldNames := make([]string, 0, len(firstItemFields))
+	for fieldName := range firstItemFields {
+		fieldNames = append(fieldNames, fieldName)
+	}
+	sort.Strings(fieldNames)
+
+	// Build CSV content
+	var csvBuilder strings.Builder
+
+	// Write headers
+	for i, fieldName := range fieldNames {
+		if i > 0 {
+			csvBuilder.WriteString(",")
+		}
+		csvBuilder.WriteString(escapeCSVField(fieldName))
+	}
+	csvBuilder.WriteString("\n")
+
+	// Write data rows
+	for _, item := range results {
+		itemFields := customGetter(item)
+		for i, fieldName := range fieldNames {
+			if i > 0 {
+				csvBuilder.WriteString(",")
+			}
+			// Get the value for this field from the custom getter result
+			value, exists := itemFields[fieldName]
+			if !exists {
+				// If field doesn't exist in this item's result, use empty string
+				csvBuilder.WriteString("")
+			} else {
+				csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+			}
+		}
+		csvBuilder.WriteString("\n")
+	}
+
+	return []byte(csvBuilder.String()), nil
+}
+
+// GormNoPaginationCSVCustomWithPreset is a convenience method that combines preset conditions with GormNoPaginationCSVCustom.
+// It applies preset conditions to the database query before filtering and CSV export using a custom getter function.
+//
+// Parameters:
+//   - db: GORM database instance
+//   - presetConditions: struct or map with preset WHERE conditions to apply before filtering
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that defines custom CSV field mapping
+//
+// Example usage:
+//
+//	type UserFilter struct {
+//	    OrganizationID uint
+//	    BranchID       uint
+//	}
+//
+//	presetConditions := &UserFilter{
+//	    OrganizationID: user.OrganizationID,
+//	    BranchID:       *user.BranchID,
+//	}
+//
+//	csvData, err := handler.GormNoPaginationCSVCustomWithPreset(db, presetConditions, filterRoot, func(user *User) map[string]any {
+//	    return map[string]any{
+//	        "Employee ID": user.ID,
+//	        "Full Name":   fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+//	        "Department":  user.Department.Name,
+//	    }
+//	})
+func (f *Handler[T]) GormNoPaginationCSVCustomWithPreset(
+	db *gorm.DB,
+	presetConditions any,
+	filterRoot Root,
+	customGetter func(*T) map[string]any,
+) ([]byte, error) {
+	// Apply preset conditions to db
+	if presetConditions != nil {
+		db = db.Where(presetConditions)
+	}
+
+	// Call GormNoPaginationCSVCustom with the modified db
+	return f.GormNoPaginationCSVCustom(db, filterRoot, customGetter)
+}
+
 func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB {
 	if len(filterRoot.FieldFilters) == 0 {
 		return db

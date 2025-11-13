@@ -213,6 +213,106 @@ func (f *Handler[T]) HybridCSVWithPreset(
 	return f.HybridCSV(db, threshold, filterRoot)
 }
 
+// HybridCSVCustom intelligently chooses between in-memory (DataQueryNoPageCSVCustom) and database (GormNoPaginationCSVCustom)
+// approaches for CSV export based on estimated table size, using a custom callback function for field mapping.
+// For small tables (below threshold), it uses in-memory filtering with full dataset retrieval.
+// For large tables (above threshold), it uses database-level filtering to minimize memory usage.
+//
+// Parameters:
+//   - db: GORM database instance with any preset conditions
+//   - threshold: row count threshold for switching between in-memory and database strategies
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that defines custom CSV field mapping
+//
+// Strategy Selection:
+//   - If estimated table rows <= threshold: DataQueryNoPageCSVCustom (in-memory processing)
+//   - If estimated table rows > threshold: GormNoPaginationCSVCustom (database processing)
+//   - If estimation fails: Falls back to GormNoPaginationCSVCustom (database processing)
+//
+// Example usage:
+//
+//	csvData, err := handler.HybridCSVCustom(db, 10000, filterRoot, func(user *User) map[string]any {
+//	    return map[string]any{
+//	        "Employee Name": fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+//	        "Contact Email": user.Email,
+//	        "Department": user.Department.Name,
+//	        "Join Date": user.CreatedAt.Format("2006-01-02"),
+//	    }
+//	})
+func (f *Handler[T]) HybridCSVCustom(
+	db *gorm.DB,
+	threshold int,
+	filterRoot Root,
+	customGetter func(*T) map[string]any,
+) ([]byte, error) {
+	// Get table name from the model
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(new(T)); err != nil {
+		return nil, fmt.Errorf("failed to parse model: %w", err)
+	}
+	tableName := stmt.Table
+
+	// Estimate row count based on database type
+	estimatedRows, err := f.estimateTableRows(db, tableName)
+	if err != nil {
+		// If estimation fails, fall back to database filtering with CSV export
+		return f.GormNoPaginationCSVCustom(db, filterRoot, customGetter)
+	}
+
+	if int(estimatedRows) <= threshold {
+		// Small table: use in-memory filtering with custom CSV export
+		var allData []*T
+		if err := db.Find(&allData).Error; err != nil {
+			return nil, fmt.Errorf("failed to retrieve data: %w", err)
+		}
+		return f.DataQueryNoPageCSVCustom(allData, filterRoot, customGetter)
+	} else {
+		// Large table: use database filtering with custom CSV export
+		return f.GormNoPaginationCSVCustom(db, filterRoot, customGetter)
+	}
+}
+
+// HybridCSVCustomWithPreset is a convenience method that combines preset conditions with HybridCSVCustom.
+// It applies preset conditions to the database query before intelligent strategy selection and CSV export.
+//
+// Parameters:
+//   - db: GORM database instance
+//   - presetConditions: struct or map with preset WHERE conditions to apply before filtering
+//   - threshold: row count threshold for strategy selection
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that defines custom CSV field mapping
+//
+// Example usage:
+//
+//	type OrganizationFilter struct {
+//	    OrganizationID uint
+//	}
+//
+//	presetConditions := &OrganizationFilter{OrganizationID: user.OrganizationID}
+//
+//	csvData, err := handler.HybridCSVCustomWithPreset(db, presetConditions, 10000, filterRoot, func(user *User) map[string]any {
+//	    return map[string]any{
+//	        "ID": user.ID,
+//	        "Name": user.Name,
+//	        "Email": user.Email,
+//	    }
+//	})
+func (f *Handler[T]) HybridCSVCustomWithPreset(
+	db *gorm.DB,
+	presetConditions any,
+	threshold int,
+	filterRoot Root,
+	customGetter func(*T) map[string]any,
+) ([]byte, error) {
+	// Apply preset conditions to db
+	if presetConditions != nil {
+		db = db.Where(presetConditions)
+	}
+
+	// Call HybridCSVCustom with the modified db
+	return f.HybridCSVCustom(db, threshold, filterRoot, customGetter)
+}
+
 // estimateTableRows returns an estimated row count for a table.
 // It uses database-specific methods for fast estimation without scanning the entire table.
 // NOTE: This estimates the FULL table size, ignoring any WHERE conditions on the db parameter.

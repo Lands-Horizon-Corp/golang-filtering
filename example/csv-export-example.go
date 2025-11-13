@@ -7,16 +7,6 @@ import (
 	"github.com/Lands-Horizon-Corp/golang-filtering/filter"
 )
 
-// User represents a sample user model for CSV export
-type User struct {
-	ID       uint   `json:"id"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Age      int    `json:"age"`
-	IsActive bool   `json:"is_active"`
-	Role     string `json:"role"`
-}
-
 // CSVExportExample demonstrates how to use DataQueryNoPageCSV for exporting filtered data
 // The function automatically uses all available fields from the struct as CSV columns
 func CSVExportExample() {
