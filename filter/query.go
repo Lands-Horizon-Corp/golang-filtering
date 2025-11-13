@@ -27,7 +27,7 @@ func (f *Handler[T]) DataQuery(
 
 	// Set defaults if not provided
 	if result.PageIndex <= 0 {
-		result.PageIndex = 1
+		result.PageIndex = 0
 	}
 	if result.PageSize <= 0 {
 		result.PageSize = 30
@@ -710,12 +710,19 @@ func (f *Handler[T]) applyDate(value any, filter FieldFilter) (bool, time.Time, 
 		if err != nil {
 			return false, data, err
 		}
-		if hasTime {
+
+		// Check if filter range values have time components
+		hasTimeFrom := hasTimeComponent(rangeVal.From)
+		hasTimeTo := hasTimeComponent(rangeVal.To)
+
+		if hasTimeFrom && hasTimeTo {
+			// Both range boundaries have time - do exact timestamp comparison
 			return !data.Before(rangeVal.From) && !data.After(rangeVal.To), data, nil
 		} else {
-			startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
-			endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
-			return !data.Before(startOfDay) && !data.After(endOfDay), data, nil
+			// Date-only range - compare against full day boundaries
+			startOfFromDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
+			endOfToDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
+			return !data.Before(startOfFromDay) && !data.After(endOfToDay), data, nil
 		}
 	case ModeBefore:
 		filterVal, err := parseDateTime(filter.Value)

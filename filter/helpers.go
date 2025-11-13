@@ -171,9 +171,21 @@ func parseDateTime(value any) (time.Time, error) {
 }
 
 func parseRangeNumber(value any) (RangeNumber, error) {
-	rng, ok := value.(Range)
-	if !ok {
-		return RangeNumber{}, fmt.Errorf("invalid range type for field %s", value)
+	var rng Range
+
+	// Handle struct type (when used directly in Go code)
+	if r, ok := value.(Range); ok {
+		rng = r
+	} else if m, ok := value.(map[string]interface{}); ok {
+		// Handle map type (when parsed from JSON)
+		fromVal, hasFrom := m["from"]
+		toVal, hasTo := m["to"]
+		if !hasFrom || !hasTo {
+			return RangeNumber{}, fmt.Errorf("range must have both 'from' and 'to' fields")
+		}
+		rng = Range{From: fromVal, To: toVal}
+	} else {
+		return RangeNumber{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
 	}
 	from, err := parseNumber(rng.From)
 	if err != nil {
@@ -190,9 +202,21 @@ func parseRangeNumber(value any) (RangeNumber, error) {
 }
 
 func parseRangeDateTime(value any) (RangeDate, error) {
-	rng, ok := value.(Range)
-	if !ok {
-		return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
+	var rng Range
+
+	// Handle struct type (when used directly in Go code)
+	if r, ok := value.(Range); ok {
+		rng = r
+	} else if m, ok := value.(map[string]interface{}); ok {
+		// Handle map type (when parsed from JSON)
+		fromVal, hasFrom := m["from"]
+		toVal, hasTo := m["to"]
+		if !hasFrom || !hasTo {
+			return RangeDate{}, fmt.Errorf("range must have both 'from' and 'to' fields")
+		}
+		rng = Range{From: fromVal, To: toVal}
+	} else {
+		return RangeDate{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
 	}
 	from, err := parseDateTime(rng.From)
 	if err != nil {
@@ -212,9 +236,21 @@ func parseRangeDateTime(value any) (RangeDate, error) {
 }
 
 func parseRangeTime(value any) (RangeDate, error) {
-	rng, ok := value.(Range)
-	if !ok {
-		return RangeDate{}, fmt.Errorf("invalid range type for field %s", value)
+	var rng Range
+
+	// Handle struct type (when used directly in Go code)
+	if r, ok := value.(Range); ok {
+		rng = r
+	} else if m, ok := value.(map[string]interface{}); ok {
+		// Handle map type (when parsed from JSON)
+		fromVal, hasFrom := m["from"]
+		toVal, hasTo := m["to"]
+		if !hasFrom || !hasTo {
+			return RangeDate{}, fmt.Errorf("range must have both 'from' and 'to' fields")
+		}
+		rng = Range{From: fromVal, To: toVal}
+	} else {
+		return RangeDate{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
 	}
 	from, err := parseTime(rng.From)
 	if err != nil {

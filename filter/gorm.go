@@ -63,7 +63,7 @@ func (f *Handler[T]) DataGorm(
 
 	// Set defaults if not provided
 	if result.PageIndex <= 0 {
-		result.PageIndex = 1
+		result.PageIndex = 0
 	}
 	if result.PageSize <= 0 {
 		result.PageSize = 30
@@ -928,11 +928,13 @@ func (f *Handler[T]) buildDateCondition(field string, mode Mode, value any) (str
 		hasTimeTo := hasTimeComponent(rangeVal.To)
 
 		if hasTimeFrom && hasTimeTo {
-			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
+			// Both dates have time components, use exact timestamps
+			return fmt.Sprintf("%s >= ? AND %s <= ?", field, field), []any{rangeVal.From, rangeVal.To}
 		} else {
-			startOfDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
-			endOfDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
-			return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{startOfDay, endOfDay}
+			// Date-only range: include entire days from start of From day to end of To day
+			startOfFromDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
+			endOfToDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
+			return fmt.Sprintf("%s >= ? AND %s <= ?", field, field), []any{startOfFromDay, endOfToDay}
 		}
 	}
 	return "", nil
