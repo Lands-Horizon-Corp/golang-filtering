@@ -32,7 +32,7 @@ type Department struct {
 	Code string `json:"code"`
 }
 
-func main() {
+func CSVExportExampleWithHeaders() {
 	// Setup database
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -65,7 +65,7 @@ func main() {
 	// Create handler with automatic field getters
 	handler := filter.NewFilter[User](filter.GolangFilteringConfig{})
 
-	fmt.Println("=== Custom CSV Export Examples ===\n")
+	fmt.Println("=== Custom CSV Export Examples ===")
 
 	// Example 1: In-Memory Custom CSV with Field Transformation
 	fmt.Println("1. In-Memory Custom CSV with Field Transformation:")
@@ -87,7 +87,7 @@ func main() {
 			"Full Name":     fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 			"Email Address": user.Email,
 			"Age":           user.Age,
-			"Position":      strings.ReplaceAll(strings.Title(user.Role), "_", " "),
+			"Position":      strings.ToTitle(strings.ReplaceAll(user.Role, "_", " ")),
 			"Annual Salary": fmt.Sprintf("$%.2f", user.Salary),
 			"Status":        map[bool]string{true: "Active", false: "Inactive"}[user.IsActive],
 			"Hire Date":     user.CreatedAt.Format("January 2, 2006"),
@@ -121,7 +121,7 @@ func main() {
 			"Email":      user.Email,
 			"Department": fmt.Sprintf("%s (%s)", departmentName, departmentCode),
 			"Role":       strings.ToUpper(strings.ReplaceAll(user.Role, "_", " ")),
-			"Salary":     fmt.Sprintf("$%,.0f", user.Salary),
+			"Salary":     fmt.Sprintf("$%.0f", user.Salary),
 		}
 	})
 
@@ -158,7 +158,7 @@ func main() {
 			"Engineer ID":      user.ID,
 			"Engineer Name":    fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 			"Contact Email":    user.Email,
-			"Technical Role":   strings.Title(strings.ReplaceAll(user.Role, "_", " ")),
+			"Technical Role":   strings.ToTitle(strings.ReplaceAll(user.Role, "_", " ")),
 			"Experience Level": experienceLevel,
 			"Years at Company": fmt.Sprintf("%.1f", yearsExperience),
 			"Current Status":   map[bool]string{true: "ACTIVE", false: "INACTIVE"}[user.IsActive],
@@ -198,9 +198,9 @@ func main() {
 		return map[string]any{
 			"Employee":         fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 			"Department ID":    user.DepartmentID,
-			"Current Salary":   fmt.Sprintf("$%,.2f", user.Salary),
+			"Current Salary":   fmt.Sprintf("$%.2f", user.Salary),
 			"Years Experience": fmt.Sprintf("%.1f", yearsExperience),
-			"Salary Per Year":  fmt.Sprintf("$%,.0f", salaryPerYear),
+			"Salary Per Year":  fmt.Sprintf("$%.0f", salaryPerYear),
 			"Performance":      performanceRating,
 			"Bonus Eligible":   map[bool]string{true: "YES", false: "NO"}[bonusEligible],
 			"Report Date":      time.Now().Format("2006-01-02 15:04:05"),

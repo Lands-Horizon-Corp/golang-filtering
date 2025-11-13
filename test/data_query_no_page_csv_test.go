@@ -232,9 +232,9 @@ func TestDataQueryNoPageCSVSpecialCharacters(t *testing.T) {
 		t.Error("Expected quote-containing field to be properly escaped")
 	}
 
-	// Check that fields with newlines are quoted
+	// Check that fields with newlines are preserved within quotes (standard CSV behavior)
 	if !strings.Contains(csvString, "\"Bob\nNewline\"") {
-		t.Error("Expected newline-containing field to be quoted")
+		t.Error("Expected newline-containing field to preserve newlines within quotes")
 	}
 
 	t.Logf("✅ CSV special character escaping working correctly")

@@ -572,12 +572,19 @@ func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int {
 }
 
 // escapeCSVField properly escapes a field value for CSV format
-// This implementation follows RFC 4180 standard for CSV formatting
+// This implementation follows RFC 4180 standard but replaces newlines with spaces for better compatibility
 func escapeCSVField(field string) string {
+	// Replace newlines with spaces for better single-line CSV readability
+	field = strings.ReplaceAll(field, "\n", " ")
+	field = strings.ReplaceAll(field, "\r", " ")
+	// Clean up multiple spaces
+	for strings.Contains(field, "  ") {
+		field = strings.ReplaceAll(field, "  ", " ")
+	}
+	field = strings.TrimSpace(field)
+
 	// Check if field contains special characters that require quoting
 	needsQuoting := strings.Contains(field, ",") ||
-		strings.Contains(field, "\n") ||
-		strings.Contains(field, "\r") ||
 		strings.Contains(field, "\"")
 
 	if needsQuoting {

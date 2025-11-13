@@ -57,13 +57,13 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (72.1%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (68.2%)</option>
 				
-				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (85.6%)</option>
+				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (79.9%)</option>
 				
-				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (52.0%)</option>
+				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (53.5%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (64.8%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (71.9%)</option>
 				
 				</select>
 			</div>
@@ -85,19 +85,28 @@ type Handler[T any] struct {
         getters map[string]func(*T) any
 }
 
+type GolangFilteringConfig struct {
+        MaxDepth *int
+}
+
 // New creates a new filter handler that automatically generates getters using reflection
-func NewFilter[T any]() *Handler[T] <span class="cov8" title="1">{
-        getters := generateGetters[T]()
+func NewFilter[T any](config GolangFilteringConfig) *Handler[T] <span class="cov8" title="1">{
+        depth := 1
+        if config.MaxDepth != nil </span><span class="cov8" title="1">{
+                depth = *config.MaxDepth
+        }</span>
+        <span class="cov8" title="1">getters := generateGetters[T](depth)
         return &amp;Handler[T]{
                 getters: getters,
-        }
-}</span>
+        }</span>
+}
 </pre>
 		
 		<pre class="file" id="file1" style="display: none">package filter
 
 import (
         "fmt"
+        "sort"
         "strings"
         "time"
 
@@ -217,7 +226,13 @@ func (f *Handler[T]) DataGorm(
         // Apply sorting
         <span class="cov8" title="1">if len(filterRoot.SortFields) &gt; 0 </span><span class="cov8" title="1">{
                 for _, sortField := range filterRoot.SortFields </span><span class="cov8" title="1">{
-                        order := "ASC"
+                        // For simple fields, check if they exist. For nested fields, let GORM handle them.
+                        if !strings.Contains(sortField.Field, ".") &amp;&amp; !f.fieldExists(sortField.Field) </span><span class="cov0" title="0">{
+                                // Silently ignore non-existent simple sort fields
+                                continue</span>
+                        }
+
+                        <span class="cov8" title="1">order := "ASC"
                         if sortField.Order == SortOrderDesc </span><span class="cov8" title="1">{
                                 order = "DESC"
                         }</span>
@@ -227,11 +242,15 @@ func (f *Handler[T]) DataGorm(
                                 parts := strings.Split(field, ".")
                                 if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
                                         parts[0] = f.toPascalCase(parts[0])
-                                        field = strings.Join(parts, ".")
-                                }</span>
+                                        // Quote identifiers to preserve case
+                                        field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
+                                        for i := 2; i &lt; len(parts); i++ </span><span class="cov0" title="0">{
+                                                field = fmt.Sprintf(`%s."%s"`, field, parts[i])
+                                        }</span>
+                                }
                         } else<span class="cov8" title="1"> if mainTableName != "" </span><span class="cov8" title="1">{
                                 // For non-nested fields, prefix with main table name to avoid ambiguity
-                                field = fmt.Sprintf("%s.%s", mainTableName, field)
+                                field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
                         }</span>
                         <span class="cov8" title="1">query = query.Order(fmt.Sprintf("%s %s", field, order))</span>
                 }
@@ -249,6 +268,181 @@ func (f *Handler[T]) DataGorm(
 
         <span class="cov8" title="1">result.Data = data
         return &amp;result, nil</span>
+}
+
+// DataGormNoPage performs database-level filtering using GORM queries without pagination.
+// It generates SQL WHERE clauses based on the filter configuration and returns all matching results as a simple array.
+// The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
+// and DataGormNoPage will apply additional filters from filterRoot on top of those.
+//
+// Example with preset conditions using struct:
+//
+//        type AccountTag struct {
+//            OrganizationID uint
+//            BranchID       uint
+//        }
+//        tag := &amp;AccountTag{OrganizationID: user.OrganizationID, BranchID: *user.BranchID}
+//        db = filter.ApplyPresetConditions(db, tag)
+//        results, err := handler.DataGormNoPage(db, filterRoot)
+//
+// Example with preset conditions using Where:
+//
+//        presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//        results, err := handler.DataGormNoPage(presetDB, filterRoot)
+func (f *Handler[T]) DataGormNoPage(
+        db *gorm.DB,
+        filterRoot Root,
+) ([]*T, error) <span class="cov8" title="1">{
+        // Build the query - db may already have WHERE conditions, they will be preserved
+        query := db.Model(new(T))
+
+        // Auto-join related tables based on field filters and sort fields
+        query = f.autoJoinRelatedTables(query, filterRoot.FieldFilters, filterRoot.SortFields)
+
+        // Apply preloads (GORM only feature)
+        if len(filterRoot.Preload) &gt; 0 </span><span class="cov8" title="1">{
+                for _, preloadField := range filterRoot.Preload </span><span class="cov8" title="1">{
+                        query = query.Preload(preloadField)
+                }</span>
+        }
+
+        // Apply filters
+        <span class="cov8" title="1">if len(filterRoot.FieldFilters) &gt; 0 </span><span class="cov8" title="1">{
+                query = f.applysGorm(query, filterRoot)
+        }</span>
+
+        // Check if any filters or sorts use nested fields (for table name disambiguation)
+        <span class="cov8" title="1">hasNestedFields := false
+        for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
+                if strings.Contains(filter.Field, ".") </span><span class="cov8" title="1">{
+                        hasNestedFields = true
+                        break</span>
+                }
+        }
+        <span class="cov8" title="1">if !hasNestedFields </span><span class="cov8" title="1">{
+                for _, sortField := range filterRoot.SortFields </span><span class="cov8" title="1">{
+                        if strings.Contains(sortField.Field, ".") </span><span class="cov0" title="0">{
+                                hasNestedFields = true
+                                break</span>
+                        }
+                }
+        }
+
+        // Get the main table name for disambiguation
+        <span class="cov8" title="1">var mainTableName string
+        if hasNestedFields </span><span class="cov8" title="1">{
+                stmt := &amp;gorm.Statement{DB: db}
+                if err := stmt.Parse(new(T)); err == nil </span><span class="cov8" title="1">{
+                        mainTableName = stmt.Schema.Table
+                }</span>
+        }
+
+        // Apply sorting
+        <span class="cov8" title="1">if len(filterRoot.SortFields) &gt; 0 </span><span class="cov8" title="1">{
+                for _, sortField := range filterRoot.SortFields </span><span class="cov8" title="1">{
+                        // For simple fields, check if they exist. For nested fields, let GORM handle them.
+                        if !strings.Contains(sortField.Field, ".") &amp;&amp; !f.fieldExists(sortField.Field) </span><span class="cov0" title="0">{
+                                // Silently ignore non-existent simple sort fields
+                                continue</span>
+                        }
+
+                        <span class="cov8" title="1">order := "ASC"
+                        if sortField.Order == SortOrderDesc </span><span class="cov8" title="1">{
+                                order = "DESC"
+                        }</span>
+                        // Normalize nested field names: "member_profile.name" -&gt; "MemberProfile.name"
+                        <span class="cov8" title="1">field := sortField.Field
+                        if strings.Contains(field, ".") </span><span class="cov0" title="0">{
+                                parts := strings.Split(field, ".")
+                                if len(parts) &gt;= 2 </span><span class="cov0" title="0">{
+                                        parts[0] = f.toPascalCase(parts[0])
+                                        // Quote identifiers to preserve case
+                                        field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
+                                        for i := 2; i &lt; len(parts); i++ </span><span class="cov0" title="0">{
+                                                field = fmt.Sprintf(`%s."%s"`, field, parts[i])
+                                        }</span>
+                                }
+                        } else<span class="cov8" title="1"> if mainTableName != "" </span><span class="cov8" title="1">{
+                                // For non-nested fields, prefix with main table name to avoid ambiguity
+                                field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
+                        }</span>
+                        <span class="cov8" title="1">query = query.Order(fmt.Sprintf("%s %s", field, order))</span>
+                }
+        }
+
+        // Execute query without pagination
+        <span class="cov8" title="1">var data []*T
+        if err := query.Find(&amp;data).Error; err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to fetch records: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return data, nil</span>
+}
+
+// GormNoPaginationCSV performs database-level filtering using GORM queries and returns results as CSV bytes.
+// It generates SQL WHERE clauses based on the filter configuration and exports all matching results as CSV format.
+// Field names are automatically used as CSV headers.
+// The db parameter can have existing WHERE conditions (e.g., organization_id, branch_id),
+// and GormNoPaginationCSV will apply additional filters from filterRoot on top of those.
+//
+// Example with preset conditions using struct:
+//
+//        type AccountTag struct {
+//            OrganizationID uint
+//            BranchID       uint
+//        }
+//        tag := &amp;AccountTag{OrganizationID: user.OrganizationID, BranchID: *user.BranchID}
+//        db = filter.ApplyPresetConditions(db, tag)
+//        csvData, err := handler.GormNoPaginationCSV(db, filterRoot)
+//
+// Example with preset conditions using Where:
+//
+//        presetDB := db.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//        csvData, err := handler.GormNoPaginationCSV(presetDB, filterRoot)
+func (f *Handler[T]) GormNoPaginationCSV(
+        db *gorm.DB,
+        filterRoot Root,
+) ([]byte, error) <span class="cov8" title="1">{
+        // Use DataGormNoPage to get filtered results
+        filteredData, err := f.DataGormNoPage(db, filterRoot)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to filter data: %w", err)
+        }</span>
+
+        // Build CSV content
+        <span class="cov8" title="1">var csvBuilder strings.Builder
+
+        // Write headers using field names from the getters map
+        fieldNames := make([]string, 0, len(f.getters))
+        for fieldName := range f.getters </span><span class="cov8" title="1">{
+                fieldNames = append(fieldNames, fieldName)
+        }</span>
+        <span class="cov8" title="1">sort.Strings(fieldNames) // Ensure deterministic column ordering
+
+        // Write headers
+        for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
+                if i &gt; 0 </span><span class="cov8" title="1">{
+                        csvBuilder.WriteString(",")
+                }</span>
+                <span class="cov8" title="1">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
+        }
+        <span class="cov8" title="1">csvBuilder.WriteString("\n")
+
+        // Write data rows
+        for _, item := range filteredData </span><span class="cov8" title="1">{
+                for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
+                        if i &gt; 0 </span><span class="cov8" title="1">{
+                                csvBuilder.WriteString(",")
+                        }</span>
+                        // Get the value using the getter for this field
+                        <span class="cov8" title="1">getter := f.getters[fieldName]
+                        value := getter(item)
+                        csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))</span>
+                }
+                <span class="cov8" title="1">csvBuilder.WriteString("\n")</span>
+        }
+
+        <span class="cov8" title="1">return []byte(csvBuilder.String()), nil</span>
 }
 
 // DataGormWithPreset is a convenience method that combines ApplyPresetConditions and DataGorm.
@@ -282,6 +476,209 @@ func (f *Handler[T]) DataGormWithPreset(
         <span class="cov8" title="1">return f.DataGorm(db, filterRoot, pageIndex, pageSize)</span>
 }
 
+// DataGormNoPageWithPreset is a convenience method that combines ApplyPresetConditions and DataGormNoPage.
+// It accepts preset conditions as a struct and applies them before filtering, returning results without pagination.
+//
+// Example usage:
+//
+//        type AccountTag struct {
+//            OrganizationID uint `gorm:"column:organization_id"`
+//            BranchID       uint `gorm:"column:branch_id"`
+//        }
+//
+//        tag := &amp;AccountTag{
+//            OrganizationID: user.OrganizationID,
+//            BranchID:       *user.BranchID,
+//        }
+//        results, err := handler.DataGormNoPageWithPreset(db, tag, filterRoot)
+func (f *Handler[T]) DataGormNoPageWithPreset(
+        db *gorm.DB,
+        presetConditions any,
+        filterRoot Root,
+) ([]*T, error) <span class="cov8" title="1">{
+        // Apply preset conditions to db
+        if presetConditions != nil </span><span class="cov8" title="1">{
+                db = db.Where(presetConditions)
+        }</span>
+
+        // Call DataGormNoPage with the modified db
+        <span class="cov8" title="1">return f.DataGormNoPage(db, filterRoot)</span>
+}
+
+// GormNoPaginationCSVWithPreset is a convenience method that combines ApplyPresetConditions and GormNoPaginationCSV.
+// It accepts preset conditions as a struct and applies them before filtering, returning results as CSV without pagination.
+//
+// Example usage:
+//
+//        type AccountTag struct {
+//            OrganizationID uint `gorm:"column:organization_id"`
+//            BranchID       uint `gorm:"column:branch_id"`
+//        }
+//
+//        tag := &amp;AccountTag{
+//            OrganizationID: user.OrganizationID,
+//            BranchID:       *user.BranchID,
+//        }
+//        csvData, err := handler.GormNoPaginationCSVWithPreset(db, tag, filterRoot)
+func (f *Handler[T]) GormNoPaginationCSVWithPreset(
+        db *gorm.DB,
+        presetConditions any,
+        filterRoot Root,
+) ([]byte, error) <span class="cov8" title="1">{
+        // Apply preset conditions to db
+        if presetConditions != nil </span><span class="cov8" title="1">{
+                db = db.Where(presetConditions)
+        }</span>
+
+        // Call GormNoPaginationCSV with the modified db
+        <span class="cov8" title="1">return f.GormNoPaginationCSV(db, filterRoot)</span>
+}
+
+// GormNoPaginationCSVCustom performs database-level filtering and returns results as CSV bytes.
+// It uses a custom callback function to allow users to define exactly what fields and values to include in the CSV output.
+// This provides full control over CSV structure and field mapping on the user side.
+//
+// Parameters:
+//   - db: GORM database instance with any preset conditions
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that takes a data item and returns a map[string]any
+//     where keys are column headers and values are the corresponding data
+//
+// Returns CSV bytes with headers from the customGetter map keys, sorted alphabetically for deterministic ordering.
+//
+// Example usage:
+//
+//        csvData, err := handler.GormNoPaginationCSVCustom(db, filterRoot, func(user *User) map[string]any {
+//            return map[string]any{
+//                "Full Name": user.FirstName + " " + user.LastName,
+//                "Email": user.Email,
+//                "Status": user.IsActive,
+//                "Department": user.Department.Name, // Access nested fields if preloaded
+//            }
+//        })
+func (f *Handler[T]) GormNoPaginationCSVCustom(
+        db *gorm.DB,
+        filterRoot Root,
+        customGetter func(*T) map[string]any,
+) ([]byte, error) <span class="cov0" title="0">{
+        // Apply filters to database query
+        filteredDB := f.applysGorm(db, filterRoot)
+
+        // Apply sorting
+        if len(filterRoot.SortFields) &gt; 0 </span><span class="cov0" title="0">{
+                for _, sortField := range filterRoot.SortFields </span><span class="cov0" title="0">{
+                        // For simple fields, check if they exist. For nested fields, let GORM handle them.
+                        if !strings.Contains(sortField.Field, ".") &amp;&amp; !f.fieldExists(sortField.Field) </span><span class="cov0" title="0">{
+                                // Silently ignore non-existent simple sort fields
+                                continue</span>
+                        }
+
+                        <span class="cov0" title="0">order := "ASC"
+                        if sortField.Order == SortOrderDesc </span><span class="cov0" title="0">{
+                                order = "DESC"
+                        }</span>
+                        <span class="cov0" title="0">filteredDB = filteredDB.Order(fmt.Sprintf("%s %s", sortField.Field, order))</span>
+                }
+        }
+
+        // Execute query to get all matching records
+        <span class="cov0" title="0">var results []*T
+        if err := filteredDB.Find(&amp;results).Error; err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to query database: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if len(results) == 0 </span><span class="cov0" title="0">{
+                // If no data, return empty CSV
+                return []byte(""), nil
+        }</span>
+
+        // Get headers from the first item using the custom getter
+        <span class="cov0" title="0">firstItemFields := customGetter(results[0])
+
+        // Sort field names for deterministic column ordering
+        fieldNames := make([]string, 0, len(firstItemFields))
+        for fieldName := range firstItemFields </span><span class="cov0" title="0">{
+                fieldNames = append(fieldNames, fieldName)
+        }</span>
+        <span class="cov0" title="0">sort.Strings(fieldNames)
+
+        // Build CSV content
+        var csvBuilder strings.Builder
+
+        // Write headers
+        for i, fieldName := range fieldNames </span><span class="cov0" title="0">{
+                if i &gt; 0 </span><span class="cov0" title="0">{
+                        csvBuilder.WriteString(",")
+                }</span>
+                <span class="cov0" title="0">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
+        }
+        <span class="cov0" title="0">csvBuilder.WriteString("\n")
+
+        // Write data rows
+        for _, item := range results </span><span class="cov0" title="0">{
+                itemFields := customGetter(item)
+                for i, fieldName := range fieldNames </span><span class="cov0" title="0">{
+                        if i &gt; 0 </span><span class="cov0" title="0">{
+                                csvBuilder.WriteString(",")
+                        }</span>
+                        // Get the value for this field from the custom getter result
+                        <span class="cov0" title="0">value, exists := itemFields[fieldName]
+                        if !exists </span><span class="cov0" title="0">{
+                                // If field doesn't exist in this item's result, use empty string
+                                csvBuilder.WriteString("")
+                        }</span> else<span class="cov0" title="0"> {
+                                csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+                        }</span>
+                }
+                <span class="cov0" title="0">csvBuilder.WriteString("\n")</span>
+        }
+
+        <span class="cov0" title="0">return []byte(csvBuilder.String()), nil</span>
+}
+
+// GormNoPaginationCSVCustomWithPreset is a convenience method that combines preset conditions with GormNoPaginationCSVCustom.
+// It applies preset conditions to the database query before filtering and CSV export using a custom getter function.
+//
+// Parameters:
+//   - db: GORM database instance
+//   - presetConditions: struct or map with preset WHERE conditions to apply before filtering
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that defines custom CSV field mapping
+//
+// Example usage:
+//
+//        type UserFilter struct {
+//            OrganizationID uint
+//            BranchID       uint
+//        }
+//
+//        presetConditions := &amp;UserFilter{
+//            OrganizationID: user.OrganizationID,
+//            BranchID:       *user.BranchID,
+//        }
+//
+//        csvData, err := handler.GormNoPaginationCSVCustomWithPreset(db, presetConditions, filterRoot, func(user *User) map[string]any {
+//            return map[string]any{
+//                "Employee ID": user.ID,
+//                "Full Name":   fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+//                "Department":  user.Department.Name,
+//            }
+//        })
+func (f *Handler[T]) GormNoPaginationCSVCustomWithPreset(
+        db *gorm.DB,
+        presetConditions any,
+        filterRoot Root,
+        customGetter func(*T) map[string]any,
+) ([]byte, error) <span class="cov0" title="0">{
+        // Apply preset conditions to db
+        if presetConditions != nil </span><span class="cov0" title="0">{
+                db = db.Where(presetConditions)
+        }</span>
+
+        // Call GormNoPaginationCSVCustom with the modified db
+        <span class="cov0" title="0">return f.GormNoPaginationCSVCustom(db, filterRoot, customGetter)</span>
+}
+
 func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB <span class="cov8" title="1">{
         if len(filterRoot.FieldFilters) == 0 </span><span class="cov0" title="0">{
                 return db
@@ -308,18 +705,26 @@ func (f *Handler[T]) applysGorm(db *gorm.DB, filterRoot Root) *gorm.DB <span cla
 
         <span class="cov8" title="1">if filterRoot.Logic == LogicAnd </span><span class="cov8" title="1">{
                 for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
-                        db = f.applyGormWithTableName(db, filter, mainTableName)
-                }</span>
+                        // For simple fields, check if they exist. For nested fields, let GORM handle them.
+                        if strings.Contains(filter.Field, ".") || f.fieldExists(filter.Field) </span><span class="cov8" title="1">{
+                                db = f.applyGormWithTableName(db, filter, mainTableName)
+                        }</span>
+                        // Silently ignore non-existent simple fields
+                }
         } else<span class="cov8" title="1"> {
                 var orConditions []string
                 var orValues []any
 
                 for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
-                        condition, values := f.buildConditionWithTableName(filter, mainTableName)
-                        if condition != "" </span><span class="cov8" title="1">{
-                                orConditions = append(orConditions, condition)
-                                orValues = append(orValues, values...)
-                        }</span>
+                        // For simple fields, check if they exist. For nested fields, let GORM handle them.
+                        if strings.Contains(filter.Field, ".") || f.fieldExists(filter.Field) </span><span class="cov8" title="1">{
+                                condition, values := f.buildConditionWithTableName(filter, mainTableName)
+                                if condition != "" </span><span class="cov8" title="1">{
+                                        orConditions = append(orConditions, condition)
+                                        orValues = append(orValues, values...)
+                                }</span>
+                        }
+                        // Silently ignore non-existent fields
                 }
                 <span class="cov8" title="1">if len(orConditions) &gt; 0 </span><span class="cov8" title="1">{
                         db = db.Where(strings.Join(orConditions, " OR "), orValues...)
@@ -345,15 +750,6 @@ func (f *Handler[T]) toPascalCase(s string) string <span class="cov8" title="1">
         <span class="cov8" title="1">return strings.Join(parts, "")</span>
 }
 
-// applyGorm applies a single filter to the GORM query
-func (f *Handler[T]) applyGorm(db *gorm.DB, filter FieldFilter) *gorm.DB <span class="cov0" title="0">{
-        condition, values := f.buildCondition(filter)
-        if condition != "" </span><span class="cov0" title="0">{
-                db = db.Where(condition, values...)
-        }</span>
-        <span class="cov0" title="0">return db</span>
-}
-
 // applyGormWithTableName applies a single filter with table name disambiguation
 func (f *Handler[T]) applyGormWithTableName(db *gorm.DB, filter FieldFilter, mainTableName string) *gorm.DB <span class="cov8" title="1">{
         condition, values := f.buildConditionWithTableName(filter, mainTableName)
@@ -363,11 +759,6 @@ func (f *Handler[T]) applyGormWithTableName(db *gorm.DB, filter FieldFilter, mai
         <span class="cov8" title="1">return db</span>
 }
 
-// buildCondition builds SQL condition and values for a filter
-func (f *Handler[T]) buildCondition(filter FieldFilter) (string, []any) <span class="cov0" title="0">{
-        return f.buildConditionWithTableName(filter, "")
-}</span>
-
 // buildConditionWithTableName builds SQL condition with optional table name prefix for non-nested fields
 func (f *Handler[T]) buildConditionWithTableName(filter FieldFilter, mainTableName string) (string, []any) <span class="cov8" title="1">{
         field := filter.Field
@@ -376,18 +767,27 @@ func (f *Handler[T]) buildConditionWithTableName(filter FieldFilter, mainTableNa
         // Check if this is a nested field
         isNestedField := strings.Contains(field, ".")
 
-        // Normalize nested field names: "member_profile.name" -&gt; "MemberProfile.name"
+        // For nested fields, we need to normalize the relationship name to match GORM's struct field names
+        // Example: "currency.currency_code" should become "Currency.currency_code"
+        // We also need to quote identifiers to preserve case for PostgreSQL
         if isNestedField </span><span class="cov8" title="1">{
                 parts := strings.Split(field, ".")
                 if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
-                        // Convert snake_case or lowercase to PascalCase for GORM struct fields
-                        // "member_profile" -&gt; "MemberProfile", "currency" -&gt; "Currency"
+                        // Convert the first part (relationship name) to PascalCase to match struct field name
+                        // GORM uses the struct field name for JOINs
                         parts[0] = f.toPascalCase(parts[0])
-                        field = strings.Join(parts, ".")
-                }</span>
+                        // Quote identifiers to preserve case in PostgreSQL
+                        // Format: "RelationName"."field_name"
+                        field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
+                        // For more than 2 parts, append remaining parts
+                        for i := 2; i &lt; len(parts); i++ </span><span class="cov0" title="0">{
+                                field = fmt.Sprintf(`%s."%s"`, field, parts[i])
+                        }</span>
+                }
         } else<span class="cov8" title="1"> if mainTableName != "" </span><span class="cov8" title="1">{
                 // For non-nested fields, prefix with main table name to avoid ambiguity when JOINs are present
-                field = fmt.Sprintf("%s.%s", mainTableName, field)
+                // Quote both table and field names
+                field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
         }</span>
 
         <span class="cov8" title="1">switch filter.DataType </span>{
@@ -699,6 +1099,8 @@ func (f *Handler[T]) autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, s
 
         // Check filters for nested fields
         for _, filter := range filters </span><span class="cov8" title="1">{
+                // For GORM operations, allow nested fields even if they're not in getters map
+                // GORM can handle nested relations through auto-joins
                 if strings.Contains(filter.Field, ".") </span><span class="cov8" title="1">{
                         parts := strings.Split(filter.Field, ".")
                         if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
@@ -715,6 +1117,8 @@ func (f *Handler[T]) autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, s
 
         // Check sort fields for nested fields
         <span class="cov8" title="1">for _, sortField := range sortFields </span><span class="cov8" title="1">{
+                // For GORM operations, allow nested fields even if they're not in getters map
+                // GORM can handle nested relations through auto-joins
                 if strings.Contains(sortField.Field, ".") </span><span class="cov8" title="1">{
                         parts := strings.Split(sortField.Field, ".")
                         if len(parts) &gt;= 2 </span><span class="cov8" title="1">{
@@ -1000,7 +1404,7 @@ func compareValues(a, b any) int <span class="cov8" title="1">{
                 }</span> else<span class="cov8" title="1"> if numA &gt; numB </span><span class="cov8" title="1">{
                         return 1
                 }</span>
-                <span class="cov0" title="0">return 0</span>
+                <span class="cov8" title="1">return 0</span>
         }
 
         <span class="cov8" title="1">strA, errA := parseText(a)
@@ -1050,7 +1454,7 @@ func compareValues(a, b any) int <span class="cov8" title="1">{
 }
 
 // generateGetters automatically generates field getters using reflection
-func generateGetters[T any]() map[string]func(*T) any <span class="cov8" title="1">{
+func generateGetters[T any](maxDepth int) map[string]func(*T) any <span class="cov8" title="1">{
         var zero T
         t := reflect.TypeOf(zero)
         if t.Kind() == reflect.Pointer </span><span class="cov0" title="0">{
@@ -1089,13 +1493,13 @@ func generateGetters[T any]() map[string]func(*T) any <span class="cov8" title="
                 }</span>
 
                 // Handle nested structs (both direct and pointer types)
-                // Limit nesting to 3 levels to avoid circular references
+                // Use configurable depth limit to avoid circular references
                 <span class="cov8" title="1">fieldType := field.Type
                 if fieldType.Kind() == reflect.Pointer </span><span class="cov8" title="1">{
                         fieldType = fieldType.Elem()
                 }</span>
-                <span class="cov8" title="1">if fieldType.Kind() == reflect.Struct </span><span class="cov8" title="1">{
-                        generateNestedGetters(getters, field, fieldIndex, key, field.Type.Kind() == reflect.Pointer, 1)
+                <span class="cov8" title="1">if fieldType.Kind() == reflect.Struct &amp;&amp; maxDepth &gt; 1 </span><span class="cov8" title="1">{
+                        generateNestedGetters(getters, field, fieldIndex, key, field.Type.Kind() == reflect.Pointer, 1, maxDepth)
                 }</span>
         }
 
@@ -1103,9 +1507,15 @@ func generateGetters[T any]() map[string]func(*T) any <span class="cov8" title="
 }
 
 // generateNestedGetters generates getters for nested struct fields with depth limit
-// maxDepth is set to 3 to prevent circular references and excessive nesting
-func generateNestedGetters[T any](getters map[string]func(*T) any, parentField reflect.StructField, parentIndex int, parentKey string, isPointer bool, depth int) <span class="cov8" title="1">{
-        const maxDepth = 3
+func generateNestedGetters[T any](
+        getters map[string]func(*T) any,
+        parentField reflect.StructField,
+        parentIndex int,
+        parentKey string,
+        isPointer bool,
+        depth int,
+        maxDepth int,
+) <span class="cov8" title="1">{
         if depth &gt; maxDepth </span><span class="cov0" title="0">{
                 return // Stop at maximum depth to avoid circular references
         }</span>
@@ -1165,25 +1575,24 @@ func generateNestedGetters[T any](getters map[string]func(*T) any, parentField r
                 // Recursively handle deeply nested structs with depth limit
                 <span class="cov8" title="1">nestedFieldType := nestedField.Type
                 isNestedPointer := false
-                if nestedFieldType.Kind() == reflect.Pointer </span><span class="cov8" title="1">{
+                if nestedFieldType.Kind() == reflect.Pointer </span><span class="cov0" title="0">{
                         nestedFieldType = nestedFieldType.Elem()
                         isNestedPointer = true
                 }</span>
                 <span class="cov8" title="1">if nestedFieldType.Kind() == reflect.Struct &amp;&amp; depth &lt; maxDepth </span><span class="cov8" title="1">{
-                        generateNestedGettersRecursive(getters, nestedField, parentIndex, nestedIndex, compositeKey, isPointer, isNestedPointer, depth+1)
+                        generateNestedGettersRecursive(getters, nestedField, parentIndex, nestedIndex, compositeKey, isPointer, isNestedPointer, depth+1, maxDepth)
                 }</span>
         }
 }
 
 // generateNestedGettersRecursive handles deeply nested struct fields with depth limit
-func generateNestedGettersRecursive[T any](getters map[string]func(*T) any, parentField reflect.StructField, rootIndex, parentIndex int, parentKey string, rootIsPointer, parentIsPointer bool, depth int) <span class="cov8" title="1">{
-        const maxDepth = 3
+func generateNestedGettersRecursive[T any](getters map[string]func(*T) any, parentField reflect.StructField, rootIndex, parentIndex int, parentKey string, rootIsPointer, parentIsPointer bool, depth int, maxDepth int) <span class="cov8" title="1">{
         if depth &gt; maxDepth </span><span class="cov0" title="0">{
                 return // Stop at maximum depth
         }</span>
 
         <span class="cov8" title="1">nestedType := parentField.Type
-        if parentIsPointer </span><span class="cov8" title="1">{
+        if parentIsPointer </span><span class="cov0" title="0">{
                 nestedType = nestedType.Elem()
         }</span>
 
@@ -1216,20 +1625,20 @@ func generateNestedGettersRecursive[T any](getters map[string]func(*T) any, pare
 
                         // Navigate to root parent
                         <span class="cov8" title="1">rootVal := val.Field(rootIndex)
-                        if rootIsPointer </span><span class="cov8" title="1">{
+                        if rootIsPointer </span><span class="cov0" title="0">{
                                 if rootVal.IsNil() </span><span class="cov0" title="0">{
                                         return nil
                                 }</span>
-                                <span class="cov8" title="1">rootVal = rootVal.Elem()</span>
+                                <span class="cov0" title="0">rootVal = rootVal.Elem()</span>
                         }
 
                         // Navigate to immediate parent
                         <span class="cov8" title="1">parentVal := rootVal.Field(parentIndex)
-                        if parentIsPointer </span><span class="cov8" title="1">{
+                        if parentIsPointer </span><span class="cov0" title="0">{
                                 if parentVal.IsNil() </span><span class="cov0" title="0">{
                                         return nil
                                 }</span>
-                                <span class="cov8" title="1">parentVal = parentVal.Elem()</span>
+                                <span class="cov0" title="0">parentVal = parentVal.Elem()</span>
                         }
 
                         <span class="cov8" title="1">return parentVal.Field(nestedIndex).Interface()</span>
@@ -1261,6 +1670,96 @@ func Sanitize(input string) string <span class="cov8" title="1">{
 
         return strings.TrimSpace(sanitized)
 }</span>
+
+// fieldExists checks if a field (including nested fields) exists in the getters map
+func (f *Handler[T]) fieldExists(field string) bool <span class="cov8" title="1">{
+        if f.getters == nil </span><span class="cov0" title="0">{
+                return false
+        }</span>
+
+        // Check direct field access
+        <span class="cov8" title="1">if _, exists := f.getters[field]; exists </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        // Check lowercase version
+        <span class="cov0" title="0">if _, exists := f.getters[strings.ToLower(field)]; exists </span><span class="cov0" title="0">{
+                return true
+        }</span>
+
+        <span class="cov0" title="0">return false</span>
+}
+
+func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int <span class="cov8" title="1">{
+        for _, sortField := range sortFields </span><span class="cov8" title="1">{
+                getter, exists := f.getters[sortField.Field]
+                if !exists </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">valA := getter(a)
+                valB := getter(b)
+                cmp := compareValues(valA, valB)
+                if sortField.Order == SortOrderDesc </span><span class="cov8" title="1">{
+                        cmp = -cmp
+                }</span>
+
+                <span class="cov8" title="1">if cmp != 0 </span><span class="cov8" title="1">{
+                        return cmp
+                }</span>
+        }
+        <span class="cov8" title="1">return 0</span>
+}
+
+// escapeCSVField properly escapes a field value for CSV format
+// This implementation follows RFC 4180 standard but replaces newlines with spaces for better compatibility
+func escapeCSVField(field string) string <span class="cov8" title="1">{
+        // Replace newlines with spaces for better single-line CSV readability
+        field = strings.ReplaceAll(field, "\n", " ")
+        field = strings.ReplaceAll(field, "\r", " ")
+        // Clean up multiple spaces
+        for strings.Contains(field, "  ") </span><span class="cov0" title="0">{
+                field = strings.ReplaceAll(field, "  ", " ")
+        }</span>
+        <span class="cov8" title="1">field = strings.TrimSpace(field)
+
+        // Check if field contains special characters that require quoting
+        needsQuoting := strings.Contains(field, ",") ||
+                strings.Contains(field, "\"")
+
+        if needsQuoting </span><span class="cov8" title="1">{
+                // Escape existing quotes by doubling them (RFC 4180 standard)
+                escaped := strings.ReplaceAll(field, "\"", "\"\"")
+                return "\"" + escaped + "\""
+        }</span>
+        <span class="cov8" title="1">return field</span>
+}
+
+// escapeCSVFieldWithOptions provides additional control over CSV field escaping
+func escapeCSVFieldWithOptions(field string, replaceNewlines bool) string <span class="cov0" title="0">{
+        // Option to replace newlines with spaces for better single-line readability
+        if replaceNewlines </span><span class="cov0" title="0">{
+                field = strings.ReplaceAll(field, "\n", " ")
+                field = strings.ReplaceAll(field, "\r", " ")
+                // Clean up multiple spaces
+                for strings.Contains(field, "  ") </span><span class="cov0" title="0">{
+                        field = strings.ReplaceAll(field, "  ", " ")
+                }</span>
+                <span class="cov0" title="0">field = strings.TrimSpace(field)</span>
+        }
+
+        // Check if field contains special characters that require quoting
+        <span class="cov0" title="0">needsQuoting := strings.Contains(field, ",") ||
+                strings.Contains(field, "\n") ||
+                strings.Contains(field, "\r") ||
+                strings.Contains(field, "\"")
+
+        if needsQuoting </span><span class="cov0" title="0">{
+                // Escape existing quotes by doubling them (RFC 4180 standard)
+                escaped := strings.ReplaceAll(field, "\"", "\"\"")
+                return "\"" + escaped + "\""
+        }</span>
+        <span class="cov0" title="0">return field</span>
+}
 </pre>
 		
 		<pre class="file" id="file3" style="display: none">package filter
@@ -1330,6 +1829,252 @@ func (f *Handler[T]) Hybrid(
         // Use database filtering for large datasets
         // DataGorm will combine existing WHERE conditions with filterRoot filters
         <span class="cov8" title="1">return f.DataGorm(db, filterRoot, pageIndex, pageSize)</span>
+}
+
+// DataHybridNoPage intelligently chooses between in-memory (DataQueryNoPage) and database (DataGormNoPage)
+// filtering based on estimated table size, returning results without pagination.
+//
+// IMPORTANT: Respects pre-existing WHERE conditions on the db parameter.
+// - If DataQueryNoPage is chosen (small dataset): fetches data using existing conditions, then filters in-memory
+// - If DataGormNoPage is chosen (large dataset): combines existing conditions with filterRoot filters in SQL
+//
+// Example with pre-existing conditions:
+//
+//        db := gormDB.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//        results, err := handler.DataHybridNoPage(db, 10000, filterRoot)
+//        // DataQueryNoPage path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? (fetch all, filter in-memory)
+//        // DataGormNoPage path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? AND [filterRoot conditions]
+func (f *Handler[T]) DataHybridNoPage(
+        db *gorm.DB,
+        threshold int,
+        filterRoot Root,
+) ([]*T, error) <span class="cov8" title="1">{
+        // Get table name from the model
+        stmt := &amp;gorm.Statement{DB: db}
+        if err := stmt.Parse(new(T)); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse model: %w", err)
+        }</span>
+        <span class="cov8" title="1">tableName := stmt.Table
+
+        // Estimate row count based on database type
+        // NOTE: Estimation uses the full table, not filtered by existing WHERE conditions
+        // This is intentional - we want to estimate total table size for strategy selection
+        estimatedRows, err := f.estimateTableRows(db, tableName)
+        if err != nil </span><span class="cov0" title="0">{
+                // If estimation fails, fall back to database filtering
+                return f.DataGormNoPage(db, filterRoot)
+        }</span>
+
+        // Decide which strategy to use
+        <span class="cov8" title="1">if estimatedRows &lt;= int64(threshold) </span><span class="cov8" title="1">{
+                // Use in-memory filtering for better performance on small datasets
+                // IMPORTANT: This respects any pre-existing WHERE conditions on db
+                // Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
+                var allData []*T
+
+                // Apply preload relationships before fetching data
+                queryDB := db
+                for _, relation := range filterRoot.Preload </span><span class="cov8" title="1">{
+                        queryDB = queryDB.Preload(relation)
+                }</span>
+
+                <span class="cov8" title="1">if err := queryDB.Find(&amp;allData).Error; err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
+                }</span>
+                <span class="cov8" title="1">return f.DataQueryNoPage(allData, filterRoot)</span>
+        }
+
+        // Use database filtering for large datasets
+        // DataGormNoPage will combine existing WHERE conditions with filterRoot filters
+        <span class="cov8" title="1">return f.DataGormNoPage(db, filterRoot)</span>
+}
+
+// HybridCSV intelligently chooses between in-memory (DataQueryNoPageCSV) and database (GormNoPaginationCSV)
+// filtering based on estimated table size, returning results as CSV bytes.
+//
+// IMPORTANT: Respects pre-existing WHERE conditions on the db parameter.
+// - If DataQueryNoPageCSV is chosen (small dataset): fetches data using existing conditions, then filters in-memory and exports to CSV
+// - If GormNoPaginationCSV is chosen (large dataset): combines existing conditions with filterRoot filters in SQL and exports to CSV
+//
+// Example with pre-existing conditions:
+//
+//        db := gormDB.Where("organization_id = ? AND branch_id = ?", orgID, branchID)
+//        csvData, err := handler.HybridCSV(db, 10000, filterRoot)
+//        // DataQueryNoPageCSV path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? (fetch all, filter in-memory, export CSV)
+//        // GormNoPaginationCSV path: SELECT * FROM table WHERE organization_id = ? AND branch_id = ? AND [filterRoot conditions] (export CSV)
+func (f *Handler[T]) HybridCSV(
+        db *gorm.DB,
+        threshold int,
+        filterRoot Root,
+) ([]byte, error) <span class="cov8" title="1">{
+        // Get table name from the model
+        stmt := &amp;gorm.Statement{DB: db}
+        if err := stmt.Parse(new(T)); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse model: %w", err)
+        }</span>
+        <span class="cov8" title="1">tableName := stmt.Table
+
+        // Estimate row count based on database type
+        // NOTE: Estimation uses the full table, not filtered by existing WHERE conditions
+        // This is intentional - we want to estimate total table size for strategy selection
+        estimatedRows, err := f.estimateTableRows(db, tableName)
+        if err != nil </span><span class="cov0" title="0">{
+                // If estimation fails, fall back to database filtering with CSV export
+                return f.GormNoPaginationCSV(db, filterRoot)
+        }</span>
+
+        // Decide which strategy to use
+        <span class="cov8" title="1">if estimatedRows &lt;= int64(threshold) </span><span class="cov8" title="1">{
+                // Use in-memory filtering for better performance on small datasets
+                // IMPORTANT: This respects any pre-existing WHERE conditions on db
+                // Example: if db has .Where("org_id = ?", 123), only records matching that will be fetched
+                var allData []*T
+
+                // Apply preload relationships before fetching data
+                queryDB := db
+                for _, relation := range filterRoot.Preload </span><span class="cov0" title="0">{
+                        queryDB = queryDB.Preload(relation)
+                }</span>
+
+                <span class="cov8" title="1">if err := queryDB.Find(&amp;allData).Error; err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to fetch data for in-memory filtering: %w", err)
+                }</span>
+                <span class="cov8" title="1">return f.DataQueryNoPageCSV(allData, filterRoot)</span>
+        }
+
+        // Use database filtering for large datasets with CSV export
+        // GormNoPaginationCSV will combine existing WHERE conditions with filterRoot filters
+        <span class="cov8" title="1">return f.GormNoPaginationCSV(db, filterRoot)</span>
+}
+
+// HybridCSVWithPreset is a convenience method that combines preset conditions with HybridCSV.
+// It accepts preset conditions as a struct and applies them before filtering, returning CSV results using hybrid strategy.
+//
+// Example usage:
+//
+//        type AccountTag struct {
+//            OrganizationID uint `gorm:"column:organization_id"`
+//            BranchID       uint `gorm:"column:branch_id"`
+//        }
+//
+//        tag := &amp;AccountTag{
+//            OrganizationID: user.OrganizationID,
+//            BranchID:       *user.BranchID,
+//        }
+//        csvData, err := handler.HybridCSVWithPreset(db, tag, 10000, filterRoot)
+func (f *Handler[T]) HybridCSVWithPreset(
+        db *gorm.DB,
+        presetConditions any,
+        threshold int,
+        filterRoot Root,
+) ([]byte, error) <span class="cov8" title="1">{
+        // Apply preset conditions to db
+        if presetConditions != nil </span><span class="cov8" title="1">{
+                db = db.Where(presetConditions)
+        }</span>
+
+        // Call HybridCSV with the modified db
+        <span class="cov8" title="1">return f.HybridCSV(db, threshold, filterRoot)</span>
+}
+
+// HybridCSVCustom intelligently chooses between in-memory (DataQueryNoPageCSVCustom) and database (GormNoPaginationCSVCustom)
+// approaches for CSV export based on estimated table size, using a custom callback function for field mapping.
+// For small tables (below threshold), it uses in-memory filtering with full dataset retrieval.
+// For large tables (above threshold), it uses database-level filtering to minimize memory usage.
+//
+// Parameters:
+//   - db: GORM database instance with any preset conditions
+//   - threshold: row count threshold for switching between in-memory and database strategies
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that defines custom CSV field mapping
+//
+// Strategy Selection:
+//   - If estimated table rows &lt;= threshold: DataQueryNoPageCSVCustom (in-memory processing)
+//   - If estimated table rows &gt; threshold: GormNoPaginationCSVCustom (database processing)
+//   - If estimation fails: Falls back to GormNoPaginationCSVCustom (database processing)
+//
+// Example usage:
+//
+//        csvData, err := handler.HybridCSVCustom(db, 10000, filterRoot, func(user *User) map[string]any {
+//            return map[string]any{
+//                "Employee Name": fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+//                "Contact Email": user.Email,
+//                "Department": user.Department.Name,
+//                "Join Date": user.CreatedAt.Format("2006-01-02"),
+//            }
+//        })
+func (f *Handler[T]) HybridCSVCustom(
+        db *gorm.DB,
+        threshold int,
+        filterRoot Root,
+        customGetter func(*T) map[string]any,
+) ([]byte, error) <span class="cov0" title="0">{
+        // Get table name from the model
+        stmt := &amp;gorm.Statement{DB: db}
+        if err := stmt.Parse(new(T)); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse model: %w", err)
+        }</span>
+        <span class="cov0" title="0">tableName := stmt.Table
+
+        // Estimate row count based on database type
+        estimatedRows, err := f.estimateTableRows(db, tableName)
+        if err != nil </span><span class="cov0" title="0">{
+                // If estimation fails, fall back to database filtering with CSV export
+                return f.GormNoPaginationCSVCustom(db, filterRoot, customGetter)
+        }</span>
+
+        <span class="cov0" title="0">if int(estimatedRows) &lt;= threshold </span><span class="cov0" title="0">{
+                // Small table: use in-memory filtering with custom CSV export
+                var allData []*T
+                if err := db.Find(&amp;allData).Error; err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to retrieve data: %w", err)
+                }</span>
+                <span class="cov0" title="0">return f.DataQueryNoPageCSVCustom(allData, filterRoot, customGetter)</span>
+        } else<span class="cov0" title="0"> {
+                // Large table: use database filtering with custom CSV export
+                return f.GormNoPaginationCSVCustom(db, filterRoot, customGetter)
+        }</span>
+}
+
+// HybridCSVCustomWithPreset is a convenience method that combines preset conditions with HybridCSVCustom.
+// It applies preset conditions to the database query before intelligent strategy selection and CSV export.
+//
+// Parameters:
+//   - db: GORM database instance
+//   - presetConditions: struct or map with preset WHERE conditions to apply before filtering
+//   - threshold: row count threshold for strategy selection
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that defines custom CSV field mapping
+//
+// Example usage:
+//
+//        type OrganizationFilter struct {
+//            OrganizationID uint
+//        }
+//
+//        presetConditions := &amp;OrganizationFilter{OrganizationID: user.OrganizationID}
+//
+//        csvData, err := handler.HybridCSVCustomWithPreset(db, presetConditions, 10000, filterRoot, func(user *User) map[string]any {
+//            return map[string]any{
+//                "ID": user.ID,
+//                "Name": user.Name,
+//                "Email": user.Email,
+//            }
+//        })
+func (f *Handler[T]) HybridCSVCustomWithPreset(
+        db *gorm.DB,
+        presetConditions any,
+        threshold int,
+        filterRoot Root,
+        customGetter func(*T) map[string]any,
+) ([]byte, error) <span class="cov0" title="0">{
+        // Apply preset conditions to db
+        if presetConditions != nil </span><span class="cov0" title="0">{
+                db = db.Where(presetConditions)
+        }</span>
+
+        // Call HybridCSVCustom with the modified db
+        <span class="cov0" title="0">return f.HybridCSVCustom(db, threshold, filterRoot, customGetter)</span>
 }
 
 // estimateTableRows returns an estimated row count for a table.
@@ -1516,41 +2261,46 @@ func (f *Handler[T]) DataQuery(
                         <span class="cov8" title="1">localed := resultChunks[workerID] // Reuse pre-allocated slice
 
                         for _, item := range data[start:end] </span><span class="cov8" title="1">{
-                                matches := filterRoot.Logic == LogicAnd
-                                for _, fg := range valids </span><span class="cov8" title="1">{
-                                        value := fg.getter(item)
-                                        var match bool
-                                        var err error
-                                        switch fg.filter.DataType </span>{
-                                        case DataTypeNumber:<span class="cov8" title="1">
-                                                match, _, err = f.applyNumber(value, fg.filter)</span>
-                                        case DataTypeText:<span class="cov8" title="1">
-                                                match, _, err = f.applyText(value, fg.filter)</span>
-                                        case DataTypeDate:<span class="cov8" title="1">
-                                                match, _, err = f.applyDate(value, fg.filter)</span>
-                                        case DataTypeBool:<span class="cov8" title="1">
-                                                match, _, err = f.applyBool(value, fg.filter)</span>
-                                        case DataTypeTime:<span class="cov8" title="1">
-                                                match, _, err = f.applyTime(value, fg.filter)</span>
-                                        default:<span class="cov0" title="0">
-                                                err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)</span>
+                                // If no filters are provided, include all items
+                                if len(valids) == 0 </span><span class="cov8" title="1">{
+                                        localed = append(localed, item)
+                                }</span> else<span class="cov8" title="1"> {
+                                        matches := filterRoot.Logic == LogicAnd
+                                        for _, fg := range valids </span><span class="cov8" title="1">{
+                                                value := fg.getter(item)
+                                                var match bool
+                                                var err error
+                                                switch fg.filter.DataType </span>{
+                                                case DataTypeNumber:<span class="cov8" title="1">
+                                                        match, _, err = f.applyNumber(value, fg.filter)</span>
+                                                case DataTypeText:<span class="cov8" title="1">
+                                                        match, _, err = f.applyText(value, fg.filter)</span>
+                                                case DataTypeDate:<span class="cov8" title="1">
+                                                        match, _, err = f.applyDate(value, fg.filter)</span>
+                                                case DataTypeBool:<span class="cov8" title="1">
+                                                        match, _, err = f.applyBool(value, fg.filter)</span>
+                                                case DataTypeTime:<span class="cov8" title="1">
+                                                        match, _, err = f.applyTime(value, fg.filter)</span>
+                                                default:<span class="cov0" title="0">
+                                                        err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)</span>
+                                                }
+                                                <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
+                                                        mu.Lock()
+                                                        if filterErr == nil </span><span class="cov8" title="1">{
+                                                                filterErr = err
+                                                        }</span>
+                                                        <span class="cov8" title="1">mu.Unlock()
+                                                        return</span>
+                                                }
+                                                <span class="cov8" title="1">if match != (filterRoot.Logic == LogicAnd) </span><span class="cov8" title="1">{
+                                                        matches = match
+                                                        break</span>
+                                                }
                                         }
-                                        <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
-                                                mu.Lock()
-                                                if filterErr == nil </span><span class="cov8" title="1">{
-                                                        filterErr = err
-                                                }</span>
-                                                <span class="cov8" title="1">mu.Unlock()
-                                                return</span>
-                                        }
-                                        <span class="cov8" title="1">if match != (filterRoot.Logic == LogicAnd) </span><span class="cov8" title="1">{
-                                                matches = match
-                                                break</span>
-                                        }
+                                        <span class="cov8" title="1">if matches </span><span class="cov8" title="1">{
+                                                localed = append(localed, item) // Only append pointers, no data cloning
+                                        }</span>
                                 }
-                                <span class="cov8" title="1">if matches </span><span class="cov8" title="1">{
-                                        localed = append(localed, item) // Only append pointers, no data cloning
-                                }</span>
                                 <span class="cov8" title="1">atomic.AddInt64(&amp;processedCount, 1)</span>
                         }
                         <span class="cov8" title="1">resultChunks[workerID] = localed</span>
@@ -1606,24 +2356,261 @@ func (f *Handler[T]) DataQuery(
         return &amp;result, nil</span>
 }
 
-func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int <span class="cov8" title="1">{
-        for _, sortField := range sortFields </span><span class="cov8" title="1">{
-                getter, exists := f.getters[sortField.Field]
-                if !exists </span><span class="cov0" title="0">{
-                        continue</span>
-                }
-                <span class="cov8" title="1">valA := getter(a)
-                valB := getter(b)
-                cmp := compareValues(valA, valB)
-                if sortField.Order == SortOrderDesc </span><span class="cov8" title="1">{
-                        cmp = -cmp
-                }</span>
+// DataQueryNoPage performs in-memory filtering with parallel processing without pagination.
+// It filters the provided data slice based on the filter configuration and returns all matching results as a simple array.
+func (f *Handler[T]) DataQueryNoPage(
+        data []*T,
+        filterRoot Root,
+) ([]*T, error) <span class="cov8" title="1">{
+        if len(data) == 0 </span><span class="cov8" title="1">{
+                return data, nil // Return the empty slice directly
+        }</span>
 
-                <span class="cov8" title="1">if cmp != 0 </span><span class="cov8" title="1">{
-                        return cmp
+        <span class="cov8" title="1">type filterGetter struct {
+                filter FieldFilter
+                getter func(*T) any
+        }
+        valids := make([]filterGetter, 0, len(filterRoot.FieldFilters))
+        for _, filter := range filterRoot.FieldFilters </span><span class="cov8" title="1">{
+                if getter, exists := f.getters[filter.Field]; exists </span><span class="cov8" title="1">{
+                        valids = append(valids, filterGetter{filter: filter, getter: getter})
                 }</span>
         }
-        <span class="cov8" title="1">return 0</span>
+
+        <span class="cov8" title="1">numCPU := runtime.NumCPU()
+        chunkSize := (len(data) + numCPU - 1) / numCPU
+
+        // Pre-allocate result slices with exact capacity to avoid reallocations
+        resultChunks := make([][]*T, numCPU)
+        for i := range numCPU </span><span class="cov8" title="1">{
+                resultChunks[i] = make([]*T, 0, chunkSize)
+        }</span>
+
+        <span class="cov8" title="1">var wg sync.WaitGroup
+        var mu sync.Mutex
+        var filterErr error
+
+        // Atomic counter for progress tracking
+        var processedCount int64
+
+        for i := range numCPU </span><span class="cov8" title="1">{
+                wg.Add(1)
+                go func(workerID int) </span><span class="cov8" title="1">{
+                        defer wg.Done()
+
+                        start := workerID * chunkSize
+                        end := min(start+chunkSize, len(data))
+                        if start &gt;= len(data) </span><span class="cov8" title="1">{
+                                return
+                        }</span>
+
+                        <span class="cov8" title="1">localed := resultChunks[workerID] // Reuse pre-allocated slice
+
+                        for _, item := range data[start:end] </span><span class="cov8" title="1">{
+                                // If no filters are provided, include all items
+                                if len(valids) == 0 </span><span class="cov8" title="1">{
+                                        localed = append(localed, item)
+                                }</span> else<span class="cov8" title="1"> {
+                                        matches := filterRoot.Logic == LogicAnd
+                                        for _, fg := range valids </span><span class="cov8" title="1">{
+                                                value := fg.getter(item)
+                                                var match bool
+                                                var err error
+                                                switch fg.filter.DataType </span>{
+                                                case DataTypeNumber:<span class="cov8" title="1">
+                                                        match, _, err = f.applyNumber(value, fg.filter)</span>
+                                                case DataTypeText:<span class="cov8" title="1">
+                                                        match, _, err = f.applyText(value, fg.filter)</span>
+                                                case DataTypeDate:<span class="cov0" title="0">
+                                                        match, _, err = f.applyDate(value, fg.filter)</span>
+                                                case DataTypeBool:<span class="cov8" title="1">
+                                                        match, _, err = f.applyBool(value, fg.filter)</span>
+                                                case DataTypeTime:<span class="cov0" title="0">
+                                                        match, _, err = f.applyTime(value, fg.filter)</span>
+                                                default:<span class="cov0" title="0">
+                                                        err = fmt.Errorf("unsupported data type: %s", fg.filter.DataType)</span>
+                                                }
+                                                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                                                        mu.Lock()
+                                                        if filterErr == nil </span><span class="cov0" title="0">{
+                                                                filterErr = err
+                                                        }</span>
+                                                        <span class="cov0" title="0">mu.Unlock()
+                                                        return</span>
+                                                }
+                                                <span class="cov8" title="1">if match != (filterRoot.Logic == LogicAnd) </span><span class="cov8" title="1">{
+                                                        matches = match
+                                                        break</span>
+                                                }
+                                        }
+                                        <span class="cov8" title="1">if matches </span><span class="cov8" title="1">{
+                                                localed = append(localed, item) // Only append pointers, no data cloning
+                                        }</span>
+                                }
+                                <span class="cov8" title="1">atomic.AddInt64(&amp;processedCount, 1)</span>
+                        }
+                        <span class="cov8" title="1">resultChunks[workerID] = localed</span>
+                }(i)
+        }
+
+        <span class="cov8" title="1">wg.Wait()
+
+        if filterErr != nil </span><span class="cov0" title="0">{
+                return nil, filterErr
+        }</span>
+
+        // Calculate total size first
+        <span class="cov8" title="1">totalSize := 0
+        for _, chunk := range resultChunks </span><span class="cov8" title="1">{
+                totalSize += len(chunk)
+        }</span>
+
+        // Pre-allocate exactly the size needed - no reallocation
+        <span class="cov8" title="1">filteredData := make([]*T, 0, totalSize)
+        for _, chunk := range resultChunks </span><span class="cov8" title="1">{
+                filteredData = append(filteredData, chunk...) // Only copying pointers, not data
+        }</span>
+
+        // Sort after filtering
+        <span class="cov8" title="1">if len(filterRoot.SortFields) &gt; 0 </span><span class="cov8" title="1">{
+                sort.Slice(filteredData, func(i, j int) bool </span><span class="cov8" title="1">{
+                        return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) &lt; 0
+                }</span>)
+        }
+
+        <span class="cov8" title="1">return filteredData, nil</span>
+}
+
+// DataQueryNoPageCSV performs in-memory filtering with parallel processing and returns results as CSV bytes.
+// It filters the provided data slice based on the filter configuration and exports all matching results as CSV format.
+// Field names are automatically used as CSV headers.
+func (f *Handler[T]) DataQueryNoPageCSV(
+        data []*T,
+        filterRoot Root,
+) ([]byte, error) <span class="cov8" title="1">{
+        // Use DataQueryNoPage to get filtered results
+        filteredData, err := f.DataQueryNoPage(data, filterRoot)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to filter data: %w", err)
+        }</span>
+
+        // Build CSV content
+        <span class="cov8" title="1">var csvBuilder strings.Builder
+
+        // Write headers using field names from the getters map
+        // Sort field names for deterministic column ordering
+        fieldNames := make([]string, 0, len(f.getters))
+        for fieldName := range f.getters </span><span class="cov8" title="1">{
+                fieldNames = append(fieldNames, fieldName)
+        }</span>
+        <span class="cov8" title="1">sort.Strings(fieldNames)
+
+        // Write headers
+        for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
+                if i &gt; 0 </span><span class="cov8" title="1">{
+                        csvBuilder.WriteString(",")
+                }</span>
+                <span class="cov8" title="1">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
+        }
+        <span class="cov8" title="1">csvBuilder.WriteString("\n")
+
+        // Write data rows
+        for _, item := range filteredData </span><span class="cov8" title="1">{
+                for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
+                        if i &gt; 0 </span><span class="cov8" title="1">{
+                                csvBuilder.WriteString(",")
+                        }</span>
+                        // Get the value using the getter for this field
+                        <span class="cov8" title="1">getter := f.getters[fieldName]
+                        value := getter(item)
+                        csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))</span>
+                }
+                <span class="cov8" title="1">csvBuilder.WriteString("\n")</span>
+        }
+
+        <span class="cov8" title="1">return []byte(csvBuilder.String()), nil</span>
+}
+
+// DataQueryNoPageCSVCustom performs in-memory filtering with parallel processing and returns results as CSV bytes.
+// It uses a custom callback function to allow users to define exactly what fields and values to include in the CSV output.
+// This provides full control over CSV structure and field mapping on the user side.
+//
+// Parameters:
+//   - data: slice of pointers to the data type T to filter
+//   - filterRoot: filter configuration defining conditions, logic, and sorting
+//   - customGetter: callback function that takes a data item and returns a map[string]any
+//     where keys are column headers and values are the corresponding data
+//
+// Returns CSV bytes with headers from the customGetter map keys, sorted alphabetically for deterministic ordering.
+//
+// Example usage:
+//
+//        csvData, err := handler.DataQueryNoPageCSVCustom(users, filterRoot, func(user *User) map[string]any {
+//            return map[string]any{
+//                "Full Name": user.FirstName + " " + user.LastName,
+//                "Email": user.Email,
+//                "Status": user.IsActive,
+//                "Department": user.Department.Name, // Access nested fields
+//            }
+//        })
+func (f *Handler[T]) DataQueryNoPageCSVCustom(
+        data []*T,
+        filterRoot Root,
+        customGetter func(*T) map[string]any,
+) ([]byte, error) <span class="cov8" title="1">{
+        // Use DataQueryNoPage to get filtered results
+        filteredData, err := f.DataQueryNoPage(data, filterRoot)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to filter data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if len(filteredData) == 0 </span><span class="cov8" title="1">{
+                // If no data, we can't determine headers, return empty CSV with no headers
+                return []byte(""), nil
+        }</span>
+
+        // Get headers from the first item using the custom getter
+        <span class="cov8" title="1">firstItemFields := customGetter(filteredData[0])
+
+        // Sort field names for deterministic column ordering
+        fieldNames := make([]string, 0, len(firstItemFields))
+        for fieldName := range firstItemFields </span><span class="cov8" title="1">{
+                fieldNames = append(fieldNames, fieldName)
+        }</span>
+        <span class="cov8" title="1">sort.Strings(fieldNames)
+
+        // Build CSV content
+        var csvBuilder strings.Builder
+
+        // Write headers
+        for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
+                if i &gt; 0 </span><span class="cov8" title="1">{
+                        csvBuilder.WriteString(",")
+                }</span>
+                <span class="cov8" title="1">csvBuilder.WriteString(escapeCSVField(fieldName))</span>
+        }
+        <span class="cov8" title="1">csvBuilder.WriteString("\n")
+
+        // Write data rows
+        for _, item := range filteredData </span><span class="cov8" title="1">{
+                itemFields := customGetter(item)
+                for i, fieldName := range fieldNames </span><span class="cov8" title="1">{
+                        if i &gt; 0 </span><span class="cov8" title="1">{
+                                csvBuilder.WriteString(",")
+                        }</span>
+                        // Get the value for this field from the custom getter result
+                        <span class="cov8" title="1">value, exists := itemFields[fieldName]
+                        if !exists </span><span class="cov0" title="0">{
+                                // If field doesn't exist in this item's result, use empty string
+                                csvBuilder.WriteString("")
+                        }</span> else<span class="cov8" title="1"> {
+                                csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+                        }</span>
+                }
+                <span class="cov8" title="1">csvBuilder.WriteString("\n")</span>
+        }
+
+        <span class="cov8" title="1">return []byte(csvBuilder.String()), nil</span>
 }
 
 // applyNumber applies a number filter and returns whether the value matches the filter
@@ -1633,12 +2620,12 @@ func (f *Handler[T]) applyNumber(value any, filter FieldFilter) (bool, float64, 
                 return false, 0, err
         }</span>
         <span class="cov8" title="1">switch filter.Mode </span>{
-        case ModeEqual:<span class="cov0" title="0">
+        case ModeEqual:<span class="cov8" title="1">
                 value, err := parseNumber(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{
                         return false, num, err
                 }</span>
-                <span class="cov0" title="0">return num == value, num, nil</span>
+                <span class="cov8" title="1">return num == value, num, nil</span>
         case ModeNotEqual:<span class="cov0" title="0">
                 value, err := parseNumber(filter.Value)
                 if err != nil </span><span class="cov0" title="0">{

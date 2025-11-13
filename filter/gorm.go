@@ -1,6 +1,8 @@
 package filter
 
 import (
+	"bytes"
+	"encoding/csv"
 	"fmt"
 	"sort"
 	"strings"
@@ -305,9 +307,6 @@ func (f *Handler[T]) GormNoPaginationCSV(
 		return nil, fmt.Errorf("failed to filter data: %w", err)
 	}
 
-	// Build CSV content
-	var csvBuilder strings.Builder
-
 	// Write headers using field names from the getters map
 	fieldNames := make([]string, 0, len(f.getters))
 	for fieldName := range f.getters {
@@ -315,30 +314,36 @@ func (f *Handler[T]) GormNoPaginationCSV(
 	}
 	sort.Strings(fieldNames) // Ensure deterministic column ordering
 
+	// Build CSV content using encoding/csv
+	var buf bytes.Buffer
+	csvWriter := csv.NewWriter(&buf)
+
 	// Write headers
-	for i, fieldName := range fieldNames {
-		if i > 0 {
-			csvBuilder.WriteString(",")
-		}
-		csvBuilder.WriteString(escapeCSVField(fieldName))
+	if err := csvWriter.Write(fieldNames); err != nil {
+		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
 	}
-	csvBuilder.WriteString("\n")
 
 	// Write data rows
 	for _, item := range filteredData {
+		record := make([]string, len(fieldNames))
 		for i, fieldName := range fieldNames {
-			if i > 0 {
-				csvBuilder.WriteString(",")
-			}
 			// Get the value using the getter for this field
 			getter := f.getters[fieldName]
 			value := getter(item)
-			csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+			record[i] = fmt.Sprintf("%v", value)
 		}
-		csvBuilder.WriteString("\n")
+
+		if err := csvWriter.Write(record); err != nil {
+			return nil, fmt.Errorf("failed to write CSV record: %w", err)
+		}
 	}
 
-	return []byte(csvBuilder.String()), nil
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return nil, fmt.Errorf("CSV writer error: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // DataGormWithPreset is a convenience method that combines ApplyPresetConditions and DataGorm.
@@ -498,38 +503,41 @@ func (f *Handler[T]) GormNoPaginationCSVCustom(
 	}
 	sort.Strings(fieldNames)
 
-	// Build CSV content
-	var csvBuilder strings.Builder
+	// Build CSV content using encoding/csv
+	var buf bytes.Buffer
+	csvWriter := csv.NewWriter(&buf)
 
 	// Write headers
-	for i, fieldName := range fieldNames {
-		if i > 0 {
-			csvBuilder.WriteString(",")
-		}
-		csvBuilder.WriteString(escapeCSVField(fieldName))
+	if err := csvWriter.Write(fieldNames); err != nil {
+		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
 	}
-	csvBuilder.WriteString("\n")
 
 	// Write data rows
 	for _, item := range results {
 		itemFields := customGetter(item)
+		record := make([]string, len(fieldNames))
+
 		for i, fieldName := range fieldNames {
-			if i > 0 {
-				csvBuilder.WriteString(",")
-			}
 			// Get the value for this field from the custom getter result
-			value, exists := itemFields[fieldName]
-			if !exists {
-				// If field doesn't exist in this item's result, use empty string
-				csvBuilder.WriteString("")
+			if value, exists := itemFields[fieldName]; exists {
+				record[i] = fmt.Sprintf("%v", value)
 			} else {
-				csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+				// If field doesn't exist in this item's result, use empty string
+				record[i] = ""
 			}
 		}
-		csvBuilder.WriteString("\n")
+
+		if err := csvWriter.Write(record); err != nil {
+			return nil, fmt.Errorf("failed to write CSV record: %w", err)
+		}
 	}
 
-	return []byte(csvBuilder.String()), nil
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return nil, fmt.Errorf("CSV writer error: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // GormNoPaginationCSVCustomWithPreset is a convenience method that combines preset conditions with GormNoPaginationCSVCustom.

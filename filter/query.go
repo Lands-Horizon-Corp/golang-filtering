@@ -1,6 +1,8 @@
 package filter
 
 import (
+	"bytes"
+	"encoding/csv"
 	"fmt"
 	"runtime"
 	"sort"
@@ -310,10 +312,10 @@ func (f *Handler[T]) DataQueryNoPageCSV(
 		return nil, fmt.Errorf("failed to filter data: %w", err)
 	}
 
-	// Build CSV content
-	var csvBuilder strings.Builder
+	// Build CSV content using encoding/csv
+	var csvBuffer strings.Builder
+	csvWriter := csv.NewWriter(&csvBuffer)
 
-	// Write headers using field names from the getters map
 	// Sort field names for deterministic column ordering
 	fieldNames := make([]string, 0, len(f.getters))
 	for fieldName := range f.getters {
@@ -322,29 +324,32 @@ func (f *Handler[T]) DataQueryNoPageCSV(
 	sort.Strings(fieldNames)
 
 	// Write headers
-	for i, fieldName := range fieldNames {
-		if i > 0 {
-			csvBuilder.WriteString(",")
-		}
-		csvBuilder.WriteString(escapeCSVField(fieldName))
+	if err := csvWriter.Write(fieldNames); err != nil {
+		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
 	}
-	csvBuilder.WriteString("\n")
 
 	// Write data rows
 	for _, item := range filteredData {
+		record := make([]string, len(fieldNames))
 		for i, fieldName := range fieldNames {
-			if i > 0 {
-				csvBuilder.WriteString(",")
-			}
 			// Get the value using the getter for this field
 			getter := f.getters[fieldName]
 			value := getter(item)
-			csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+			record[i] = fmt.Sprintf("%v", value)
 		}
-		csvBuilder.WriteString("\n")
+
+		if err := csvWriter.Write(record); err != nil {
+			return nil, fmt.Errorf("failed to write CSV record: %w", err)
+		}
 	}
 
-	return []byte(csvBuilder.String()), nil
+	// Flush the writer to ensure all data is written
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return nil, fmt.Errorf("CSV writer error: %w", err)
+	}
+
+	return []byte(csvBuffer.String()), nil
 }
 
 // DataQueryNoPageCSVCustom performs in-memory filtering with parallel processing and returns results as CSV bytes.
@@ -395,38 +400,41 @@ func (f *Handler[T]) DataQueryNoPageCSVCustom(
 	}
 	sort.Strings(fieldNames)
 
-	// Build CSV content
-	var csvBuilder strings.Builder
+	// Build CSV content using encoding/csv
+	var buf bytes.Buffer
+	csvWriter := csv.NewWriter(&buf)
 
 	// Write headers
-	for i, fieldName := range fieldNames {
-		if i > 0 {
-			csvBuilder.WriteString(",")
-		}
-		csvBuilder.WriteString(escapeCSVField(fieldName))
+	if err := csvWriter.Write(fieldNames); err != nil {
+		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
 	}
-	csvBuilder.WriteString("\n")
 
 	// Write data rows
 	for _, item := range filteredData {
 		itemFields := customGetter(item)
+		record := make([]string, len(fieldNames))
+
 		for i, fieldName := range fieldNames {
-			if i > 0 {
-				csvBuilder.WriteString(",")
-			}
 			// Get the value for this field from the custom getter result
-			value, exists := itemFields[fieldName]
-			if !exists {
-				// If field doesn't exist in this item's result, use empty string
-				csvBuilder.WriteString("")
+			if value, exists := itemFields[fieldName]; exists {
+				record[i] = fmt.Sprintf("%v", value)
 			} else {
-				csvBuilder.WriteString(escapeCSVField(fmt.Sprintf("%v", value)))
+				// If field doesn't exist in this item's result, use empty string
+				record[i] = ""
 			}
 		}
-		csvBuilder.WriteString("\n")
+
+		if err := csvWriter.Write(record); err != nil {
+			return nil, fmt.Errorf("failed to write CSV record: %w", err)
+		}
 	}
 
-	return []byte(csvBuilder.String()), nil
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return nil, fmt.Errorf("CSV writer error: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // applyNumber applies a number filter and returns whether the value matches the filter
