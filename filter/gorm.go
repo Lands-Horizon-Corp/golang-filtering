@@ -2,6 +2,7 @@ package filter
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -312,6 +313,7 @@ func (f *Handler[T]) GormNoPaginationCSV(
 	for fieldName := range f.getters {
 		fieldNames = append(fieldNames, fieldName)
 	}
+	sort.Strings(fieldNames) // Ensure deterministic column ordering
 
 	// Write headers
 	for i, fieldName := range fieldNames {

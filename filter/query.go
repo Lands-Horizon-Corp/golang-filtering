@@ -314,10 +314,12 @@ func (f *Handler[T]) DataQueryNoPageCSV(
 	var csvBuilder strings.Builder
 
 	// Write headers using field names from the getters map
+	// Sort field names for deterministic column ordering
 	fieldNames := make([]string, 0, len(f.getters))
 	for fieldName := range f.getters {
 		fieldNames = append(fieldNames, fieldName)
 	}
+	sort.Strings(fieldNames)
 
 	// Write headers
 	for i, fieldName := range fieldNames {
@@ -343,37 +345,6 @@ func (f *Handler[T]) DataQueryNoPageCSV(
 	}
 
 	return []byte(csvBuilder.String()), nil
-}
-
-// escapeCSVField properly escapes a field value for CSV format
-func escapeCSVField(field string) string {
-	// If field contains comma, newline, or quote, it needs to be quoted
-	if strings.Contains(field, ",") || strings.Contains(field, "\n") || strings.Contains(field, "\"") {
-		// Escape existing quotes by doubling them
-		escaped := strings.ReplaceAll(field, "\"", "\"\"")
-		return "\"" + escaped + "\""
-	}
-	return field
-}
-
-func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int {
-	for _, sortField := range sortFields {
-		getter, exists := f.getters[sortField.Field]
-		if !exists {
-			continue
-		}
-		valA := getter(a)
-		valB := getter(b)
-		cmp := compareValues(valA, valB)
-		if sortField.Order == SortOrderDesc {
-			cmp = -cmp
-		}
-
-		if cmp != 0 {
-			return cmp
-		}
-	}
-	return 0
 }
 
 // applyNumber applies a number filter and returns whether the value matches the filter

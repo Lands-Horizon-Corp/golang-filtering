@@ -550,3 +550,67 @@ func (f *Handler[T]) fieldExists(field string) bool {
 
 	return false
 }
+
+func (f *Handler[T]) compareItems(a, b *T, sortFields []SortField) int {
+	for _, sortField := range sortFields {
+		getter, exists := f.getters[sortField.Field]
+		if !exists {
+			continue
+		}
+		valA := getter(a)
+		valB := getter(b)
+		cmp := compareValues(valA, valB)
+		if sortField.Order == SortOrderDesc {
+			cmp = -cmp
+		}
+
+		if cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
+// escapeCSVField properly escapes a field value for CSV format
+// This implementation follows RFC 4180 standard for CSV formatting
+func escapeCSVField(field string) string {
+	// Check if field contains special characters that require quoting
+	needsQuoting := strings.Contains(field, ",") ||
+		strings.Contains(field, "\n") ||
+		strings.Contains(field, "\r") ||
+		strings.Contains(field, "\"")
+
+	if needsQuoting {
+		// Escape existing quotes by doubling them (RFC 4180 standard)
+		escaped := strings.ReplaceAll(field, "\"", "\"\"")
+		return "\"" + escaped + "\""
+	}
+	return field
+}
+
+// escapeCSVFieldWithOptions provides additional control over CSV field escaping
+func escapeCSVFieldWithOptions(field string, replaceNewlines bool) string {
+	// Option to replace newlines with spaces for better single-line readability
+	if replaceNewlines {
+		field = strings.ReplaceAll(field, "\n", " ")
+		field = strings.ReplaceAll(field, "\r", " ")
+		// Clean up multiple spaces
+		for strings.Contains(field, "  ") {
+			field = strings.ReplaceAll(field, "  ", " ")
+		}
+		field = strings.TrimSpace(field)
+	}
+
+	// Check if field contains special characters that require quoting
+	needsQuoting := strings.Contains(field, ",") ||
+		strings.Contains(field, "\n") ||
+		strings.Contains(field, "\r") ||
+		strings.Contains(field, "\"")
+
+	if needsQuoting {
+		// Escape existing quotes by doubling them (RFC 4180 standard)
+		escaped := strings.ReplaceAll(field, "\"", "\"\"")
+		return "\"" + escaped + "\""
+	}
+	return field
+}
