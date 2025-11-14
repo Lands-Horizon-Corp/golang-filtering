@@ -145,8 +145,34 @@ func (f *Handler[T]) DataQuery(
 
 	// Sort after filtering
 	if len(filterRoot.SortFields) > 0 {
+		// User provided sort fields - use them
 		sort.Slice(filteredData, func(i, j int) bool {
 			return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) < 0
+		})
+	} else {
+		// No user-provided sort fields - add default sorting for consistent pagination
+		// This ensures pagination results are deterministic and prevents duplicate records across pages
+		sort.Slice(filteredData, func(i, j int) bool {
+			// Default sort by ID field if it exists, otherwise maintain insertion order
+			if idGetter, exists := f.getters["id"]; exists {
+				idA := idGetter(filteredData[i])
+				idB := idGetter(filteredData[j])
+				// Try to compare as numbers first, then as strings
+				if numA, okA := idA.(uint); okA {
+					if numB, okB := idB.(uint); okB {
+						return numA < numB
+					}
+				}
+				if numA, okA := idA.(int); okA {
+					if numB, okB := idB.(int); okB {
+						return numA < numB
+					}
+				}
+				// Fallback to string comparison
+				return fmt.Sprintf("%v", idA) < fmt.Sprintf("%v", idB)
+			}
+			// If no ID field, maintain original order (no sorting needed for consistency in memory)
+			return false
 		})
 	}
 

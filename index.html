@@ -57,13 +57,13 @@
 				
 				<option value="file0">github.com/Lands-Horizon-Corp/golang-filtering/filter/doc.go (100.0%)</option>
 				
-				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (67.6%)</option>
+				<option value="file1">github.com/Lands-Horizon-Corp/golang-filtering/filter/gorm.go (67.8%)</option>
 				
 				<option value="file2">github.com/Lands-Horizon-Corp/golang-filtering/filter/helpers.go (74.4%)</option>
 				
 				<option value="file3">github.com/Lands-Horizon-Corp/golang-filtering/filter/hybrid.go (53.5%)</option>
 				
-				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (71.1%)</option>
+				<option value="file4">github.com/Lands-Horizon-Corp/golang-filtering/filter/query.go (71.3%)</option>
 				
 				</select>
 			</div>
@@ -227,6 +227,7 @@ func (f *Handler[T]) DataGorm(
 
         // Apply sorting
         <span class="cov8" title="1">if len(filterRoot.SortFields) &gt; 0 </span><span class="cov8" title="1">{
+                // User provided sort fields - use them
                 for _, sortField := range filterRoot.SortFields </span><span class="cov8" title="1">{
                         // For simple fields, check if they exist. For nested fields, let GORM handle them.
                         if !strings.Contains(sortField.Field, ".") &amp;&amp; !f.fieldExists(sortField.Field) </span><span class="cov0" title="0">{
@@ -256,6 +257,14 @@ func (f *Handler[T]) DataGorm(
                         }</span>
                         <span class="cov8" title="1">query = query.Order(fmt.Sprintf("%s %s", field, order))</span>
                 }
+        } else<span class="cov8" title="1"> {
+                // No user-provided sort fields - add default sorting for consistent pagination
+                // This ensures pagination results are deterministic and prevents duplicate records across pages
+                if mainTableName != "" </span><span class="cov8" title="1">{
+                        query = query.Order(fmt.Sprintf(`"%s"."id" ASC`, mainTableName))
+                }</span> else<span class="cov8" title="1"> {
+                        query = query.Order("id ASC")
+                }</span>
         }
 
         // Apply pagination (0-based indexing)
@@ -2375,9 +2384,35 @@ func (f *Handler[T]) DataQuery(
 
         // Sort after filtering
         <span class="cov8" title="1">if len(filterRoot.SortFields) &gt; 0 </span><span class="cov8" title="1">{
+                // User provided sort fields - use them
                 sort.Slice(filteredData, func(i, j int) bool </span><span class="cov8" title="1">{
                         return f.compareItems(filteredData[i], filteredData[j], filterRoot.SortFields) &lt; 0
                 }</span>)
+        } else<span class="cov8" title="1"> {
+                // No user-provided sort fields - add default sorting for consistent pagination
+                // This ensures pagination results are deterministic and prevents duplicate records across pages
+                sort.Slice(filteredData, func(i, j int) bool </span><span class="cov8" title="1">{
+                        // Default sort by ID field if it exists, otherwise maintain insertion order
+                        if idGetter, exists := f.getters["id"]; exists </span><span class="cov8" title="1">{
+                                idA := idGetter(filteredData[i])
+                                idB := idGetter(filteredData[j])
+                                // Try to compare as numbers first, then as strings
+                                if numA, okA := idA.(uint); okA </span><span class="cov8" title="1">{
+                                        if numB, okB := idB.(uint); okB </span><span class="cov8" title="1">{
+                                                return numA &lt; numB
+                                        }</span>
+                                }
+                                <span class="cov8" title="1">if numA, okA := idA.(int); okA </span><span class="cov0" title="0">{
+                                        if numB, okB := idB.(int); okB </span><span class="cov0" title="0">{
+                                                return numA &lt; numB
+                                        }</span>
+                                }
+                                // Fallback to string comparison
+                                <span class="cov8" title="1">return fmt.Sprintf("%v", idA) &lt; fmt.Sprintf("%v", idB)</span>
+                        }
+                        // If no ID field, maintain original order (no sorting needed for consistency in memory)
+                        <span class="cov0" title="0">return false</span>
+                })
         }
 
         // Apply pagination

@@ -123,6 +123,7 @@ func (f *Handler[T]) DataGorm(
 
 	// Apply sorting
 	if len(filterRoot.SortFields) > 0 {
+		// User provided sort fields - use them
 		for _, sortField := range filterRoot.SortFields {
 			// For simple fields, check if they exist. For nested fields, let GORM handle them.
 			if !strings.Contains(sortField.Field, ".") && !f.fieldExists(sortField.Field) {
@@ -151,6 +152,14 @@ func (f *Handler[T]) DataGorm(
 				field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
 			}
 			query = query.Order(fmt.Sprintf("%s %s", field, order))
+		}
+	} else {
+		// No user-provided sort fields - add default sorting for consistent pagination
+		// This ensures pagination results are deterministic and prevents duplicate records across pages
+		if mainTableName != "" {
+			query = query.Order(fmt.Sprintf(`"%s"."id" ASC`, mainTableName))
+		} else {
+			query = query.Order("id ASC")
 		}
 	}
 
