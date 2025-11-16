@@ -351,6 +351,7 @@ func compareValues(a, b any) int {
 }
 
 // generateGetters automatically generates field getters using reflection
+// Optimized to prevent excessive memory usage with safety checks
 func generateGetters[T any](maxDepth int) map[string]func(*T) any {
 	var zero T
 	t := reflect.TypeOf(zero)
@@ -361,6 +362,11 @@ func generateGetters[T any](maxDepth int) map[string]func(*T) any {
 	if t.Kind() != reflect.Struct {
 		return getters
 	}
+
+	// Track visited types to prevent circular reference issues
+	visited := make(map[reflect.Type]bool)
+	visited[t] = true
+
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		if !field.IsExported() {
@@ -389,13 +395,18 @@ func generateGetters[T any](maxDepth int) map[string]func(*T) any {
 			getters[lowerKey] = getter
 		}
 
-		// Handle nested structs (both direct and pointer types)
-		// Use configurable depth limit to avoid circular references
+		// Handle nested structs with safety checks
 		fieldType := field.Type
 		if fieldType.Kind() == reflect.Pointer {
 			fieldType = fieldType.Elem()
 		}
-		if fieldType.Kind() == reflect.Struct && maxDepth > 1 {
+
+		// Only process nested structs if:
+		// 1. MaxDepth allows it
+		// 2. Type hasn't been visited (prevent circular references)
+		// 3. It's actually a struct type
+		if fieldType.Kind() == reflect.Struct && maxDepth > 1 && !visited[fieldType] {
+			visited[fieldType] = true
 			generateNestedGetters(getters, field, fieldIndex, key, field.Type.Kind() == reflect.Pointer, 1, maxDepth)
 		}
 	}

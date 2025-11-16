@@ -157,9 +157,9 @@ func (f *Handler[T]) DataGorm(
 		// No user-provided sort fields - add default sorting for consistent pagination
 		// This ensures pagination results are deterministic and prevents duplicate records across pages
 		if mainTableName != "" {
-			query = query.Order(fmt.Sprintf(`"%s"."id" ASC`, mainTableName))
+			query = query.Order(fmt.Sprintf(`"%s"."created_at" ASC`, mainTableName))
 		} else {
-			query = query.Order("id ASC")
+			query = query.Order("created_at ASC")
 		}
 	}
 
