@@ -19,7 +19,7 @@ type GolangFilteringConfig struct {
 // Global cache for getters to prevent regenerating them for the same type
 var (
 	getterCacheMu sync.RWMutex
-	getterCache   = make(map[string]interface{})
+	getterCache   = make(map[string]any)
 )
 
 // NewFilter creates a new filter handler that automatically generates getters using reflection
@@ -29,11 +29,7 @@ var (
 func NewFilter[T any](config GolangFilteringConfig) *Handler[T] {
 	depth := 1
 	if config.MaxDepth != nil {
-		depth = *config.MaxDepth
-		// Safety limit: prevent excessive memory usage
-		if depth > 5 {
-			depth = 5 // Maximum safe depth
-		}
+		depth = min(*config.MaxDepth, 5)
 		if depth < 0 {
 			depth = 1
 		}
@@ -74,6 +70,18 @@ func NewFilter[T any](config GolangFilteringConfig) *Handler[T] {
 
 	return &Handler[T]{
 		getters: getters,
+	}
+}
+
+// NewSQLFilter creates a handler intended only for GORM/SQL usage.
+// It does not generate or cache getters and therefore avoids any reflection
+// overhead. Use this when you only need to build GORM queries and don't
+// require in-memory `DataQuery` features that depend on getters.
+func NewSQLFilter[T any](config GolangFilteringConfig) *Handler[T] {
+	// Return a handler with nil getters — applysGorm and GORM paths will
+	// operate using field names directly (nested fields allowed via GORM).
+	return &Handler[T]{
+		getters: nil,
 	}
 }
 

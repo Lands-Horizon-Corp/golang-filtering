@@ -209,7 +209,7 @@ func TestGormNumberConditionsEdgeCases(t *testing.T) {
 	tests := []struct {
 		name  string
 		mode  filter.Mode
-		value interface{}
+		value any
 	}{
 		{name: "GT", mode: filter.ModeGT, value: 30},
 		{name: "GTE", mode: filter.ModeGTE, value: 30},

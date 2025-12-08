@@ -112,13 +112,12 @@ func (f *Handler[T]) DataGorm(
 		}
 	}
 
-	// Get the main table name for disambiguation
+	// Try to parse the model schema so we can get table name and column info.
+	// We do this regardless of nested fields so default ordering can avoid missing columns.
 	var mainTableName string
-	if hasNestedFields {
-		stmt := &gorm.Statement{DB: db}
-		if err := stmt.Parse(new(T)); err == nil {
-			mainTableName = stmt.Schema.Table
-		}
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(new(T)); err == nil {
+		mainTableName = stmt.Schema.Table
 	}
 
 	// Apply sorting
@@ -155,11 +154,35 @@ func (f *Handler[T]) DataGorm(
 		}
 	} else {
 		// No user-provided sort fields - add default sorting for consistent pagination
-		// This ensures pagination results are deterministic and prevents duplicate records across pages
-		if mainTableName != "" {
-			query = query.Order(fmt.Sprintf(`"%s"."created_at" ASC`, mainTableName))
+		// Prefer `created_at` when the model defines it, otherwise fall back to `id`.
+		hasCreatedAt := false
+		hasID := false
+		if stmt.Schema != nil {
+			for _, f := range stmt.Schema.Fields {
+				if strings.EqualFold(f.DBName, "created_at") || strings.EqualFold(f.Name, "CreatedAt") {
+					hasCreatedAt = true
+				}
+				if strings.EqualFold(f.DBName, "id") || strings.EqualFold(f.Name, "ID") {
+					hasID = true
+				}
+			}
+		}
+
+		if hasCreatedAt {
+			if mainTableName != "" {
+				query = query.Order(fmt.Sprintf(`"%s"."created_at" ASC`, mainTableName))
+			} else {
+				query = query.Order("created_at ASC")
+			}
+		} else if hasID {
+			if mainTableName != "" {
+				query = query.Order(fmt.Sprintf(`"%s"."id" ASC`, mainTableName))
+			} else {
+				query = query.Order("id ASC")
+			}
 		} else {
-			query = query.Order("created_at ASC")
+			// As a last resort prefer id unqualified to avoid creating a column name that doesn't exist
+			query = query.Order("id ASC")
 		}
 	}
 

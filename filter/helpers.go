@@ -176,7 +176,7 @@ func parseRangeNumber(value any) (RangeNumber, error) {
 	// Handle struct type (when used directly in Go code)
 	if r, ok := value.(Range); ok {
 		rng = r
-	} else if m, ok := value.(map[string]interface{}); ok {
+	} else if m, ok := value.(map[string]any); ok {
 		// Handle map type (when parsed from JSON)
 		fromVal, hasFrom := m["from"]
 		toVal, hasTo := m["to"]
@@ -207,7 +207,7 @@ func parseRangeDateTime(value any) (RangeDate, error) {
 	// Handle struct type (when used directly in Go code)
 	if r, ok := value.(Range); ok {
 		rng = r
-	} else if m, ok := value.(map[string]interface{}); ok {
+	} else if m, ok := value.(map[string]any); ok {
 		// Handle map type (when parsed from JSON)
 		fromVal, hasFrom := m["from"]
 		toVal, hasTo := m["to"]
@@ -241,7 +241,7 @@ func parseRangeTime(value any) (RangeDate, error) {
 	// Handle struct type (when used directly in Go code)
 	if r, ok := value.(Range); ok {
 		rng = r
-	} else if m, ok := value.(map[string]interface{}); ok {
+	} else if m, ok := value.(map[string]any); ok {
 		// Handle map type (when parsed from JSON)
 		fromVal, hasFrom := m["from"]
 		toVal, hasTo := m["to"]
@@ -581,8 +581,9 @@ func Sanitize(input string) string {
 
 // fieldExists checks if a field (including nested fields) exists in the getters map
 func (f *Handler[T]) fieldExists(field string) bool {
+	// If getters are nil (SQL-only handler), assume fields exist so GORM can handle them directly.
 	if f.getters == nil {
-		return false
+		return true
 	}
 
 	// Check direct field access
