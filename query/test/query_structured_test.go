@@ -299,3 +299,78 @@ func TestStructuredPaginationWithRange(t *testing.T) {
 	assert.Equal(t, 4, resultPage1.TotalSize)
 	assert.Equal(t, 2, resultPage1.TotalPage)
 }
+
+func TestAllModes(t *testing.T) {
+	db, err := database(User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+
+	base := time.Date(2025, 12, 9, 0, 0, 0, 0, time.UTC)
+	truncate := func(t time.Time) time.Time { return t.Truncate(time.Second) }
+
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: truncate(base.Add(-5 * time.Hour))},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: truncate(base.Add(-4 * time.Hour))},
+		{ID: uuid.New(), Name: "Charlie", Age: 35, CreatedAt: truncate(base.Add(-3 * time.Hour))},
+		{ID: uuid.New(), Name: "David", Age: 40, CreatedAt: truncate(base.Add(-2 * time.Hour))},
+		{ID: uuid.New(), Name: "Eve", Age: 45, CreatedAt: truncate(base.Add(-1 * time.Hour))},
+		{ID: uuid.New(), Name: "", Age: 50, CreatedAt: truncate(base)}, // for empty check
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to insert sample data: %v", err)
+	}
+
+	p := query.NewPagination[User](true)
+
+	tests := []struct {
+		name          string
+		fieldFilter   query.FieldFilter
+		expectedNames []string
+	}{
+		// Text modes
+		{"ModeEqual", query.FieldFilter{Field: "name", Value: "Alice", Mode: query.ModeEqual, DataType: query.DataTypeText}, []string{"Alice"}},
+		{"ModeNotEqual", query.FieldFilter{Field: "name", Value: "Alice", Mode: query.ModeNotEqual, DataType: query.DataTypeText}, []string{"Bob", "Charlie", "David", "Eve", ""}},
+		{"ModeContains", query.FieldFilter{Field: "name", Value: "li", Mode: query.ModeContains, DataType: query.DataTypeText}, []string{"Alice", "Charlie"}},
+		{"ModeNotContains", query.FieldFilter{Field: "name", Value: "li", Mode: query.ModeNotContains, DataType: query.DataTypeText}, []string{"Bob", "David", "Eve", ""}},
+		{"ModeStartsWith", query.FieldFilter{Field: "name", Value: "A", Mode: query.ModeStartsWith, DataType: query.DataTypeText}, []string{"Alice"}},
+		{"ModeEndsWith", query.FieldFilter{Field: "name", Value: "e", Mode: query.ModeEndsWith, DataType: query.DataTypeText}, []string{"Alice", "Charlie", "Eve"}},
+
+		// Numeric modes
+		{"ModeGT", query.FieldFilter{Field: "age", Value: 35, Mode: query.ModeGT, DataType: query.DataTypeNumber}, []string{"David", "Eve", ""}},
+		{"ModeGTE", query.FieldFilter{Field: "age", Value: 35, Mode: query.ModeGTE, DataType: query.DataTypeNumber}, []string{"Charlie", "David", "Eve", ""}},
+		{"ModeLT", query.FieldFilter{Field: "age", Value: 35, Mode: query.ModeLT, DataType: query.DataTypeNumber}, []string{"Alice", "Bob"}},
+		{"ModeLTE", query.FieldFilter{Field: "age", Value: 35, Mode: query.ModeLTE, DataType: query.DataTypeNumber}, []string{"Alice", "Bob", "Charlie"}},
+		{"ModeRange", query.FieldFilter{Field: "age", Value: query.RangeNumber{From: 30, To: 40}, Mode: query.ModeRange, DataType: query.DataTypeNumber}, []string{"Bob", "Charlie", "David"}},
+		{"ModeInside", query.FieldFilter{Field: "age", Value: query.RangeNumber{From: 30, To: 40}, Mode: query.ModeInside, DataType: query.DataTypeNumber}, []string{"Bob", "Charlie", "David"}},
+		{"ModeOutside", query.FieldFilter{Field: "age", Value: query.RangeNumber{From: 30, To: 40}, Mode: query.ModeOutside, DataType: query.DataTypeNumber}, []string{"Alice", "Eve", ""}},
+
+		// Date modes
+		{"ModeBefore", query.FieldFilter{Field: "created_at", Value: truncate(base.Add(-2 * time.Hour)), Mode: query.ModeBefore, DataType: query.DataTypeDate}, []string{"Alice", "Bob", "Charlie"}},
+		{"ModeAfter", query.FieldFilter{Field: "created_at", Value: truncate(base.Add(-3 * time.Hour)), Mode: query.ModeAfter, DataType: query.DataTypeDate}, []string{"Charlie", "David", "Eve", ""}},
+
+		// Empty checks
+		{"ModeIsEmpty", query.FieldFilter{Field: "name", Mode: query.ModeIsEmpty, DataType: query.DataTypeText}, []string{""}},
+		{"ModeIsNotEmpty", query.FieldFilter{Field: "name", Mode: query.ModeIsNotEmpty, DataType: query.DataTypeText}, []string{"Alice", "Bob", "Charlie", "David", "Eve"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filter := query.StructuredFilter{
+				FieldFilters: []query.FieldFilter{tt.fieldFilter},
+				Logic:        query.LogicAnd,
+			}
+			result, err := p.StructuredPagination(db, filter, 0, 10)
+			if err != nil {
+				t.Fatalf("pagination failed: %v", err)
+			}
+
+			assert.Equal(t, len(tt.expectedNames), result.TotalSize)
+			names := make([]string, 0, len(result.Data))
+			for _, u := range result.Data {
+				names = append(names, u.Name)
+			}
+			assert.ElementsMatch(t, tt.expectedNames, names)
+		})
+	}
+}

@@ -193,96 +193,120 @@ func parseDateTime(value any) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("invalid type for datetime: %T", value)
 	}
 }
-
 func parseRangeNumber(value any) (RangeNumber, error) {
-	var rng Range
-	if r, ok := value.(Range); ok {
-		rng = r
-	} else if m, ok := value.(map[string]any); ok {
-		fromVal, hasFrom := m["from"]
-		toVal, hasTo := m["to"]
+	switch v := value.(type) {
+	case RangeNumber:
+		return v, nil
+	case Range:
+		from, err := parseNumber(v.From)
+		if err != nil {
+			return RangeNumber{}, err
+		}
+		to, err := parseNumber(v.To)
+		if err != nil {
+			return RangeNumber{}, err
+		}
+		return RangeNumber{From: from, To: to}, nil
+	case map[string]any:
+		fromVal, hasFrom := v["from"]
+		toVal, hasTo := v["to"]
 		if !hasFrom || !hasTo {
 			return RangeNumber{}, fmt.Errorf("range must have both 'from' and 'to' fields")
 		}
-		rng = Range{From: fromVal, To: toVal}
-	} else {
+		from, err := parseNumber(fromVal)
+		if err != nil {
+			return RangeNumber{}, err
+		}
+		to, err := parseNumber(toVal)
+		if err != nil {
+			return RangeNumber{}, err
+		}
+		return RangeNumber{From: from, To: to}, nil
+	default:
 		return RangeNumber{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
 	}
-	from, err := parseNumber(rng.From)
-	if err != nil {
-		return RangeNumber{}, err
-	}
-	to, err := parseNumber(rng.To)
-	if err != nil {
-		return RangeNumber{}, err
-	}
-	return RangeNumber{
-		From: from,
-		To:   to,
-	}, nil
 }
 
 func parseRangeDateTime(value any) (RangeDate, error) {
-	var rng Range
-	if r, ok := value.(Range); ok {
-		rng = r
-	} else if m, ok := value.(map[string]interface{}); ok {
-		fromVal, hasFrom := m["from"]
-		toVal, hasTo := m["to"]
+	switch v := value.(type) {
+	case RangeDate:
+		// Already a RangeDate, just return
+		return v, nil
+	case Range:
+		from, err := parseDateTime(v.From)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		to, err := parseDateTime(v.To)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		if from.After(to) {
+			return RangeDate{}, fmt.Errorf("range from date cannot be after to date")
+		}
+		return RangeDate{From: from, To: to}, nil
+	case map[string]interface{}:
+		fromVal, hasFrom := v["from"]
+		toVal, hasTo := v["to"]
 		if !hasFrom || !hasTo {
 			return RangeDate{}, fmt.Errorf("range must have both 'from' and 'to' fields")
 		}
-		rng = Range{From: fromVal, To: toVal}
-	} else {
+		from, err := parseDateTime(fromVal)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		to, err := parseDateTime(toVal)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		if from.After(to) {
+			return RangeDate{}, fmt.Errorf("range from date cannot be after to date")
+		}
+		return RangeDate{From: from, To: to}, nil
+	default:
 		return RangeDate{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
 	}
-	from, err := parseDateTime(rng.From)
-	if err != nil {
-		return RangeDate{}, err
-	}
-	to, err := parseDateTime(rng.To)
-	if err != nil {
-		return RangeDate{}, err
-	}
-	if from.After(to) {
-		return RangeDate{}, fmt.Errorf("range from date cannot be after to date")
-	}
-	return RangeDate{
-		From: from,
-		To:   to,
-	}, nil
 }
 
 func parseRangeTime(value any) (RangeDate, error) {
-	var rng Range
-	if r, ok := value.(Range); ok {
-		rng = r
-	} else if m, ok := value.(map[string]any); ok {
-		fromVal, hasFrom := m["from"]
-		toVal, hasTo := m["to"]
+	switch v := value.(type) {
+	case RangeDate:
+		// Already a RangeDate, just return
+		return v, nil
+	case Range:
+		from, err := parseTime(v.From)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		to, err := parseTime(v.To)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		if from.After(to) {
+			return RangeDate{}, fmt.Errorf("range from time cannot be after to time")
+		}
+		return RangeDate{From: from, To: to}, nil
+	case map[string]any:
+		fromVal, hasFrom := v["from"]
+		toVal, hasTo := v["to"]
 		if !hasFrom || !hasTo {
 			return RangeDate{}, fmt.Errorf("range must have both 'from' and 'to' fields")
 		}
-		rng = Range{From: fromVal, To: toVal}
-	} else {
+		from, err := parseTime(fromVal)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		to, err := parseTime(toVal)
+		if err != nil {
+			return RangeDate{}, err
+		}
+		if from.After(to) {
+			return RangeDate{}, fmt.Errorf("range from time cannot be after to time")
+		}
+		return RangeDate{From: from, To: to}, nil
+	default:
 		return RangeDate{}, fmt.Errorf("invalid range type for field %v (type: %T)", value, value)
 	}
-	from, err := parseTime(rng.From)
-	if err != nil {
-		return RangeDate{}, err
-	}
-	to, err := parseTime(rng.To)
-	if err != nil {
-		return RangeDate{}, err
-	}
-	if from.After(to) {
-		return RangeDate{}, fmt.Errorf("range from time cannot be after to time")
-	}
-
-	return RangeDate{
-		From: from,
-		To:   to,
-	}, nil
 }
 
 func parseBool(value any) (bool, error) {

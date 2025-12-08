@@ -97,13 +97,17 @@ func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *go
 	if len(filterRoot.FieldFilters) == 0 {
 		return db
 	}
+
 	hasNestedFields := false
 	for _, filter := range filterRoot.FieldFilters {
+
 		if strings.Contains(filter.Field, ".") {
 			hasNestedFields = true
 			break
 		}
+
 	}
+
 	var mainTableName string
 	if hasNestedFields {
 		stmt := &gorm.Statement{DB: db}
@@ -113,7 +117,9 @@ func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *go
 	}
 	if filterRoot.Logic == LogicAnd {
 		for _, filter := range filterRoot.FieldFilters {
+
 			if strings.Contains(filter.Field, ".") || f.fieldExists(db, filter.Field) {
+
 				condition, values := f.buildConditionWithTableName(filter, mainTableName)
 				if condition != "" {
 					db = db.Where(condition, values...)
@@ -155,8 +161,10 @@ func (f *Pagination[T]) buildConditionWithTableName(filter FieldFilter, mainTabl
 	} else if mainTableName != "" {
 		field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
 	}
+
 	switch filter.DataType {
 	case DataTypeNumber:
+
 		return f.buildNumberCondition(field, filter.Mode, value)
 	case DataTypeText:
 		return f.buildTextCondition(field, filter.Mode, value)
@@ -210,18 +218,25 @@ func (f *Pagination[T]) buildNumberCondition(field string, mode Mode, value any)
 			return "", nil
 		}
 		return fmt.Sprintf("%s <= ?", field), []any{num}
-	case ModeRange:
+	case ModeRange, ModeInside:
 		rangeVal, err := parseRangeNumber(value)
 		if err != nil {
 			return "", nil
 		}
 		return fmt.Sprintf("%s BETWEEN ? AND ?", field), []any{rangeVal.From, rangeVal.To}
+	case ModeOutside:
+		rangeVal, err := parseRangeNumber(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s < ? OR %s > ?", field, field), []any{rangeVal.From, rangeVal.To}
 	}
 	return "", nil
 }
 
 func (f *Pagination[T]) buildTextCondition(field string, mode Mode, value any) (string, []any) {
 	if mode == ModeRange {
+
 		rangeVal, ok := value.(Range)
 		if !ok {
 			return "", nil
@@ -241,6 +256,7 @@ func (f *Pagination[T]) buildTextCondition(field string, mode Mode, value any) (
 		return "", nil
 	}
 	switch mode {
+
 	case ModeEqual:
 		return fmt.Sprintf("LOWER(%s) = LOWER(?)", field), []any{str}
 	case ModeNotEqual:
@@ -285,6 +301,18 @@ func (f *Pagination[T]) buildBoolCondition(field string, mode Mode, value any) (
 
 func (f *Pagination[T]) buildDateCondition(field string, mode Mode, value any) (string, []any) {
 	switch mode {
+	case ModeInside:
+		rangeVal, err := parseRangeDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s >= ? AND %s <= ?", field, field), []any{rangeVal.From, rangeVal.To}
+	case ModeOutside:
+		rangeVal, err := parseRangeDateTime(value)
+		if err != nil {
+			return "", nil
+		}
+		return fmt.Sprintf("%s < ? OR %s > ?", field, field), []any{rangeVal.From, rangeVal.To}
 	case ModeEqual:
 		t, err := parseDateTime(value)
 		if err != nil {
@@ -364,10 +392,10 @@ func (f *Pagination[T]) buildDateCondition(field string, mode Mode, value any) (
 		}
 		hasTime := hasTimeComponent(t)
 		if hasTime {
-			return fmt.Sprintf("%s > ?", field), []any{t}
+			return fmt.Sprintf("%s >= ?", field), []any{t}
 		} else {
 			endOfDay := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
-			return fmt.Sprintf("%s > ?", field), []any{endOfDay}
+			return fmt.Sprintf("%s >= ?", field), []any{endOfDay}
 		}
 	case ModeRange:
 		rangeVal, err := parseRangeDateTime(value)
@@ -392,6 +420,22 @@ func (f *Pagination[T]) buildDateCondition(field string, mode Mode, value any) (
 
 func (f *Pagination[T]) buildTimeCondition(field string, mode Mode, value any) (string, []any) {
 	switch mode {
+	case ModeInside:
+		rangeVal, err := parseRangeTime(value)
+		if err != nil {
+			return "", nil
+		}
+		fromStr := rangeVal.From.Format("15:04:05")
+		toStr := rangeVal.To.Format("15:04:05")
+		return fmt.Sprintf("time(%s) BETWEEN ? AND ?", field), []any{fromStr, toStr}
+	case ModeOutside:
+		rangeVal, err := parseRangeTime(value)
+		if err != nil {
+			return "", nil
+		}
+		fromStr := rangeVal.From.Format("15:04:05")
+		toStr := rangeVal.To.Format("15:04:05")
+		return fmt.Sprintf("time(%s) < ? OR time(%s) > ?", field, field), []any{fromStr, toStr}
 	case ModeEqual:
 		t, err := parseTime(value)
 		if err != nil {
