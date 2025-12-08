@@ -362,3 +362,23 @@ func toSnakeCase(str string) string {
 	}
 	return string(result)
 }
+
+func ToModel[TData any, TResponse any](data *TData, resource func(*TData) *TResponse) *TResponse {
+	if data == nil {
+		return nil
+	}
+	return resource(data)
+}
+
+func ToModels[TData any, TResponse any](data []*TData, resource func(*TData) *TResponse) []*TResponse {
+	if data == nil {
+		return []*TResponse{}
+	}
+	out := make([]*TResponse, 0, len(data))
+	for _, item := range data {
+		if m := ToModel(item, resource); m != nil {
+			out = append(out, m)
+		}
+	}
+	return out
+}
