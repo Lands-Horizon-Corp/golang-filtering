@@ -44,7 +44,6 @@ func (f *Pagination[T]) Pagination(
 		return nil, fmt.Errorf("failed to fetch records: %w", err)
 	}
 	result.Data = data
-	f.log(query, "SQL Query - Normal")
 	return &result, nil
 }
 

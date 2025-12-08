@@ -42,7 +42,6 @@ func (f *Pagination[T]) StructuredPagination(
 	}
 	result.Data = data
 
-	f.log(query, "SQL Query - Structured")
 	return &result, nil
 }
 
