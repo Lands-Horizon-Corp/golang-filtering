@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 
+	"github.com/Lands-Horizon-Corp/golang-filtering/query"
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
@@ -27,30 +28,32 @@ type RegistryParams[TData any, TResponse any, TRequest any] struct {
 }
 
 type Registry[TData any, TResponse any, TRequest any] struct {
-	database  *gorm.DB
-	event     RegistryEvent
-	validator *validator.Validate
-	preloads  []string
-	resource  func(*TData) *TResponse
-	created   func(*TData) Topics
-	updated   func(*TData) Topics
-	deleted   func(*TData) Topics
-	tabular   func(data *TData) map[string]any
+	database   *gorm.DB
+	event      RegistryEvent
+	validator  *validator.Validate
+	preloads   []string
+	resource   func(*TData) *TResponse
+	created    func(*TData) Topics
+	updated    func(*TData) Topics
+	deleted    func(*TData) Topics
+	tabular    func(data *TData) map[string]any
+	pagination query.Pagination[TData]
 }
 
 func NewRegistry[TData any, TResponse any, TRequest any](
 	params RegistryParams[TData, TResponse, TRequest],
 ) *Registry[TData, TResponse, TRequest] {
 	return &Registry[TData, TResponse, TRequest]{
-		database:  params.Database,
-		event:     params.Event,
-		preloads:  params.Preloads,
-		resource:  params.Resource,
-		created:   params.Created,
-		updated:   params.Updated,
-		deleted:   params.Deleted,
-		tabular:   params.tabular,
-		validator: params.Validator,
+		database:   params.Database,
+		event:      params.Event,
+		preloads:   params.Preloads,
+		resource:   params.Resource,
+		created:    params.Created,
+		updated:    params.Updated,
+		deleted:    params.Deleted,
+		tabular:    params.tabular,
+		validator:  params.Validator,
+		pagination: query.Pagination[TData]{},
 	}
 }
 
