@@ -19,7 +19,6 @@ func (r *Registry[TData, TResponse, TRequest]) Create(
 	return nil
 }
 
-// CreateWithTx
 func (r *Registry[TData, TResponse, TRequest]) CreateWithTx(
 	ctx context.Context,
 	tx *gorm.DB,
@@ -32,7 +31,6 @@ func (r *Registry[TData, TResponse, TRequest]) CreateWithTx(
 	return nil
 }
 
-// CreateMany
 func (r *Registry[TData, TResponse, TRequest]) CreateMany(
 	ctx context.Context,
 	data []*TData,
@@ -44,7 +42,6 @@ func (r *Registry[TData, TResponse, TRequest]) CreateMany(
 	return nil
 }
 
-// CreateManyWithTx
 func (r *Registry[TData, TResponse, TRequest]) CreateManyWithTx(
 	ctx context.Context,
 	tx *gorm.DB,

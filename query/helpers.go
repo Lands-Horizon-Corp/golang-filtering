@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
@@ -381,4 +384,15 @@ func ToModels[TData any, TResponse any](data []*TData, resource func(*TData) *TR
 		}
 	}
 	return out
+}
+
+func Validate[T any](ctx echo.Context, v *validator.Validate) (*T, error) {
+	var req T
+	if err := ctx.Bind(&req); err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "invalid request format")
+	}
+	if err := v.Struct(req); err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "validation failed: "+err.Error())
+	}
+	return &req, nil
 }

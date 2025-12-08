@@ -1,6 +1,5 @@
 package registry
 
-// ToModel converts a data entity to its response representation.
 func (c *Registry[TData, TResponse, TRequest]) ToModel(data *TData) *TResponse {
 	if data == nil {
 		return nil
@@ -8,7 +7,6 @@ func (c *Registry[TData, TResponse, TRequest]) ToModel(data *TData) *TResponse {
 	return c.resource(data)
 }
 
-// ToModels converts a slice of data entities to their response representations.
 func (c *Registry[TData, TResponse, TRequest]) ToModels(data []*TData) []*TResponse {
 	if data == nil {
 		return []*TResponse{}
