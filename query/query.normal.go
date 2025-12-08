@@ -24,6 +24,9 @@ func (f *Pagination[T]) Pagination(
 	if result.PageSize <= 0 {
 		result.PageSize = 30
 	}
+	if f.Verbose {
+		db = db.Debug()
+	}
 	query := db.Where(&filter)
 	var totalCount int64
 	if err := query.Count(&totalCount).Error; err != nil {
@@ -41,6 +44,7 @@ func (f *Pagination[T]) Pagination(
 		return nil, fmt.Errorf("failed to fetch records: %w", err)
 	}
 	result.Data = data
+	f.log(query, "SQL Query - Normal")
 	return &result, nil
 }
 

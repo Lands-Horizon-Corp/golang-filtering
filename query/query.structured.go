@@ -13,30 +13,36 @@ func (f *Pagination[T]) StructuredPagination(
 	pageIndex int,
 	pageSize int,
 ) (*PaginationResult[T], error) {
-	result := PaginationResult[T]{
-		PageIndex: pageIndex,
-		PageSize:  pageSize,
-	}
+
+	result := PaginationResult[T]{PageIndex: pageIndex, PageSize: pageSize}
 	if result.PageIndex < 0 {
 		result.PageIndex = 0
 	}
 	if result.PageSize <= 0 {
 		result.PageSize = 30
 	}
+	if f.Verbose {
+		db = db.Debug()
+	}
 	query := f.structuredQuery(db, filterRoot)
 	var totalCount int64
 	if err := query.Count(&totalCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count records: %w", err)
 	}
+
 	result.TotalSize = int(totalCount)
 	result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
 	offset := result.PageIndex * result.PageSize
 	query = query.Offset(int(offset)).Limit(int(result.PageSize))
+
 	var data []*T
+
 	if err := query.Find(&data).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch records: %w", err)
 	}
 	result.Data = data
+
+	f.log(query, "SQL Query - Structured")
 	return &result, nil
 }
 

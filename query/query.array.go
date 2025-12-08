@@ -25,7 +25,10 @@ func (f *Pagination[T]) ArrPagination(
 	if result.PageSize <= 0 {
 		result.PageSize = 30
 	}
-	db = f.arrQuery(db, filters, sorts)
+	if f.Verbose {
+		db = db.Debug()
+	}
+	query := f.arrQuery(db, filters, sorts)
 	var totalCount int64
 	if err := db.Model(new(T)).Count(&totalCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count records: %w", err)
@@ -33,15 +36,16 @@ func (f *Pagination[T]) ArrPagination(
 	result.TotalSize = int(totalCount)
 	result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
 	offset := result.PageIndex * result.PageSize
-	db = db.Offset(offset).Limit(result.PageSize)
+	query = query.Offset(offset).Limit(result.PageSize)
 	for _, preload := range preloads {
-		db = db.Preload(preload)
+		query = query.Preload(preload)
 	}
 	var data []*T
-	if err := db.Find(&data).Error; err != nil {
+	if err := query.Find(&data).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch records: %w", err)
 	}
 	result.Data = data
+	f.log(query, "SQL Query - Structured")
 	return &result, nil
 }
 
