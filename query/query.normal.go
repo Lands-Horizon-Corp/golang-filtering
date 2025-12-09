@@ -177,8 +177,8 @@ func (p *Pagination[T]) NormalGetMax(
 ) (any, error) {
 	var result any
 	db = db.Model(new(T)).Where(&filter)
-	err := db.Select(fmt.Sprintf("MAX(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := db.Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
 	}
 	return result, nil
@@ -191,8 +191,8 @@ func (p *Pagination[T]) NormalGetMin(
 ) (any, error) {
 	var result any
 	db = db.Model(new(T)).Where(&filter)
-	err := db.Select(fmt.Sprintf("MIN(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := db.Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s: %w", field, err)
 	}
 	return result, nil
@@ -205,8 +205,8 @@ func (p *Pagination[T]) NormalGetMaxLock(
 ) (any, error) {
 	var result any
 	tx = tx.Model(new(T)).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
-	err := tx.Select(fmt.Sprintf("MAX(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := tx.Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
 	}
 	return result, nil
@@ -219,8 +219,8 @@ func (p *Pagination[T]) NormalGetMinLock(
 ) (any, error) {
 	var result any
 	tx = tx.Model(new(T)).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
-	err := tx.Select(fmt.Sprintf("MIN(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := tx.Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)
 	}
 	return result, nil

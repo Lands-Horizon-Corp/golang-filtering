@@ -214,8 +214,8 @@ func (p *Pagination[T]) ArrGetMax(
 	var result any
 	db = p.applyJoinsForFilters(db, filters)
 	db = p.applySQLFilters(db, filters)
-	err := db.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := db.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
 	}
 	return result, nil
@@ -229,8 +229,8 @@ func (p *Pagination[T]) ArrGetMin(
 	var result any
 	db = p.applyJoinsForFilters(db, filters)
 	db = p.applySQLFilters(db, filters)
-	err := db.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := db.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s: %w", field, err)
 	}
 	return result, nil
@@ -245,8 +245,8 @@ func (p *Pagination[T]) ArrGetMaxLock(
 	tx = p.applyJoinsForFilters(tx, filters)
 	tx = p.applySQLFilters(tx, filters)
 	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	err := tx.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := tx.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
 	}
 	return result, nil
@@ -261,8 +261,8 @@ func (p *Pagination[T]) ArrGetMinLock(
 	tx = p.applyJoinsForFilters(tx, filters)
 	tx = p.applySQLFilters(tx, filters)
 	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	err := tx.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Scan(&result).Error
-	if err != nil {
+	row := tx.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)
 	}
 	return result, nil
