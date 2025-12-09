@@ -98,16 +98,6 @@ func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *go
 		return db
 	}
 
-	hasNestedFields := false
-	for _, filter := range filterRoot.FieldFilters {
-
-		if strings.Contains(filter.Field, ".") {
-			hasNestedFields = true
-			break
-		}
-
-	}
-
 	var mainTableName string
 	var allowedFields map[string]struct{}
 	{
@@ -121,10 +111,8 @@ func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *go
 		}
 	}
 	fieldAllowed := func(fieldName string) bool {
-		// If nested, check first part. Otherwise check field directly.
 		parts := strings.Split(fieldName, ".")
 		if len(parts) > 1 {
-			// Check related struct/table exists, but focus only on direct field name
 			_, ok := allowedFields[parts[0]]
 			return ok
 		}
@@ -135,7 +123,6 @@ func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *go
 		for _, filter := range filterRoot.FieldFilters {
 			if strings.Contains(filter.Field, ".") || f.fieldExists(db, filter.Field) {
 				if !fieldAllowed(filter.Field) {
-					// skip unknown fields
 					continue
 				}
 				condition, values := f.buildConditionWithTableName(filter, mainTableName)
