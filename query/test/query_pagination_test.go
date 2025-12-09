@@ -209,3 +209,783 @@ func TestPaginationComplex(t *testing.T) {
 	assert.Equal(t, "Eve", result.Data[0].Name)   // Newest
 	assert.Equal(t, "David", result.Data[1].Name) // Second newest
 }
+
+// TestPaginationStructuredNoRouteFilter tests PaginationStructured without route filter
+func TestPaginationStructuredNoRouteFilter(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+		{ID: uuid.New(), Name: "Eve", Age: 60, CreatedAt: base},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Query params only: age >= 30
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    30,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	filterEncoded := encodeFilter(queryFilter)
+	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
+
+	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, query.StructuredFilter{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, 4, result.TotalSize) // Bob, Charlie, David, Eve
+	assert.Len(t, result.Data, 4)
+}
+
+// TestPaginationStructuredWithRouteFilter tests PaginationStructured merging route filter with query filters
+func TestPaginationStructuredWithRouteFilter(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+		{ID: uuid.New(), Name: "Eve", Age: 60, CreatedAt: base},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Query params: age >= 30
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    30,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	// Route filter: name = "Bob"
+	routeFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "name",
+				Value:    "Bob",
+				Mode:     query.ModeEqual,
+				DataType: query.DataTypeText,
+			},
+		},
+	}
+
+	filterEncoded := encodeFilter(queryFilter)
+	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
+
+	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
+	assert.NoError(t, err)
+
+	// Both conditions must be true (AND logic): age >= 30 AND name = "Bob" -> only Bob matches
+	assert.Equal(t, 1, result.TotalSize)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Bob", result.Data[0].Name)
+	assert.Equal(t, 30, result.Data[0].Age)
+}
+
+// TestPaginationStructuredSortFieldOverride tests that route filter sort takes precedence
+func TestPaginationStructuredSortFieldOverride(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 28, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 35, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Query has no sort (defaults to created_at DESC)
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    25,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	// Route filter specifies sort by age ASC
+	routeFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{}, // No additional filters
+		SortFields: []query.SortField{
+			{
+				Field: "age",
+				Order: "ASC",
+			},
+		},
+	}
+
+	filterEncoded := encodeFilter(queryFilter)
+	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
+
+	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
+	assert.NoError(t, err)
+
+	// Results should be sorted by age ASC: 25, 28, 30, 35
+	assert.Len(t, result.Data, 4)
+	assert.Equal(t, 25, result.Data[0].Age) // Alice
+	assert.Equal(t, 28, result.Data[1].Age) // Bob
+	assert.Equal(t, 30, result.Data[2].Age) // Charlie
+	assert.Equal(t, 35, result.Data[3].Age) // David
+}
+
+// TestPaginationStructuredPreloadMerging tests that preloads are merged
+func TestPaginationStructuredPreloadMerging(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	seedUsers(t, db)
+
+	p := query.NewPagination[User](false)
+
+	// Route filter without additional filters, just with empty preloads
+	routeFilter := query.StructuredFilter{
+		Preload: []string{}, // Empty preloads
+	}
+
+	ctx := createEchoContext("pageIndex=0&pageSize=10")
+
+	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
+	assert.NoError(t, err)
+
+	// Just verify the query executed without error and returned all users
+	assert.Equal(t, 5, result.TotalSize)
+	assert.Len(t, result.Data, 5)
+}
+
+// TestPaginationStructuredComplexMerge tests complex scenario with multiple filters and sorts
+func TestPaginationStructuredComplexMerge(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 28, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 35, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Query params: age >= 28
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    28,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	// Route filter: name = "Charlie", with sort by name ASC
+	routeFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "name",
+				Value:    "Charlie",
+				Mode:     query.ModeEqual,
+				DataType: query.DataTypeText,
+			},
+		},
+		SortFields: []query.SortField{
+			{
+				Field: "name",
+				Order: "ASC",
+			},
+		},
+	}
+
+	filterEncoded := encodeFilter(queryFilter)
+	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
+
+	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
+	assert.NoError(t, err)
+
+	// Conditions: (age >= 28) AND (name = 'Charlie')
+	// Only Charlie matches: age 30 >= 28 and name = "Charlie"
+	assert.Equal(t, 1, result.TotalSize)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Charlie", result.Data[0].Name)
+	assert.Equal(t, 30, result.Data[0].Age)
+}
+
+// ------------------------------------------
+// PAGINATION ARRAY TESTS
+// ------------------------------------------
+
+// TestPaginationArrayNoFilters tests PaginationArray without array filters
+func TestPaginationArrayNoFilters(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	seedUsers(t, db)
+
+	p := query.NewPagination[User](false)
+
+	// Query: pageIndex=0, pageSize=2, no filters
+	ctx := createEchoContext("pageIndex=0&pageSize=2")
+	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, nil, nil)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 5, result.TotalSize)
+	assert.Equal(t, 3, result.TotalPage)
+	assert.Len(t, result.Data, 2)
+}
+
+// TestPaginationArrayWithSingleFilter tests PaginationArray with one array filter
+func TestPaginationArrayWithSingleFilter(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+		{ID: uuid.New(), Name: "Eve", Age: 60, CreatedAt: base},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Filter: name = "Bob" (use string for text filters)
+	filters := []query.ArrFilterSQL{{Field: "name", Op: query.ModeEqual, Value: "Bob"}}
+
+	ctx := createEchoContext("pageIndex=0&pageSize=10")
+	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, filters, nil)
+	assert.NoError(t, err)
+
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Bob", result.Data[0].Name)
+	assert.Equal(t, 30, result.Data[0].Age)
+}
+
+// TestPaginationArrayWithMultipleFilters tests PaginationArray with multiple array filters (AND logic)
+func TestPaginationArrayWithMultipleFilters(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Filters: name starts with "B" AND age = 30 (AND logic)
+	filters := []query.ArrFilterSQL{
+		{Field: "name", Op: query.ModeStartsWith, Value: "B"},
+		{Field: "age", Op: query.ModeEqual, Value: 30},
+	}
+
+	ctx := createEchoContext("pageIndex=0&pageSize=10")
+	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, filters, nil)
+	assert.NoError(t, err)
+
+	// Only Bob matches: name starts with "B" AND age = 30
+	assert.Equal(t, 1, result.TotalSize)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Bob", result.Data[0].Name)
+}
+
+// TestPaginationArrayWithSort tests PaginationArray with sort fields
+func TestPaginationArrayWithSort(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 28, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 35, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Sort by name ASC (overrides default created_at DESC)
+	sorts := []query.ArrFilterSortSQL{
+		{Field: "name", Order: "ASC"},
+	}
+
+	ctx := createEchoContext("pageIndex=0&pageSize=10")
+	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, nil, sorts)
+	assert.NoError(t, err)
+
+	assert.Len(t, result.Data, 4)
+	// Sorted by name ASC: Alice, Bob, Charlie, David
+	assert.Equal(t, "Alice", result.Data[0].Name)
+	assert.Equal(t, "Bob", result.Data[1].Name)
+	assert.Equal(t, "Charlie", result.Data[2].Name)
+	assert.Equal(t, "David", result.Data[3].Name)
+}
+
+// TestPaginationArrayWithFilterAndSort tests PaginationArray with both filters and sorts
+func TestPaginationArrayWithFilterAndSort(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 28, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 35, CreatedAt: base.Add(-6 * time.Hour)},
+		{ID: uuid.New(), Name: "Emma", Age: 40, CreatedAt: base},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Filters: name starts with "C" or "D" (applying AND with OR within filter)
+	filters := []query.ArrFilterSQL{
+		{Field: "name", Op: query.ModeStartsWith, Value: "C"},
+	}
+
+	// Sort by name ASC
+	sorts := []query.ArrFilterSortSQL{
+		{Field: "name", Order: "ASC"},
+	}
+
+	ctx := createEchoContext("pageIndex=0&pageSize=10")
+	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, filters, sorts)
+	assert.NoError(t, err)
+
+	// Matches: Charlie (30), and possibly others starting with C
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Charlie", result.Data[0].Name)
+}
+
+// TestPaginationArrayWithQueryFilters tests PaginationArray merging URL query filters with array filters (AND logic)
+func TestPaginationArrayWithQueryFilters(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Query URL filter: age >= 35
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    35,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	// Array filter: name starts with "D"
+	arrayFilters := []query.ArrFilterSQL{
+		{Field: "name", Op: query.ModeStartsWith, Value: "D"},
+	}
+
+	filterEncoded := encodeFilter(queryFilter)
+	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
+	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, arrayFilters, nil)
+	assert.NoError(t, err)
+
+	// Conditions: (age >= 35) AND (name starts with 'D')
+	// Only David matches: age 50 >= 35 and name starts with "D"
+	assert.Equal(t, 1, result.TotalSize)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "David", result.Data[0].Name)
+	assert.Equal(t, 50, result.Data[0].Age)
+}
+
+// TestPaginationArrayPagination tests PaginationArray pagination with page size and index
+func TestPaginationArrayPagination(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Filter: age >= 20 (all match)
+	filters := []query.ArrFilterSQL{
+		{Field: "age", Op: query.ModeGTE, Value: 20},
+	}
+
+	// Page 1: pageIndex=0, pageSize=2
+	ctx1 := createEchoContext("pageIndex=0&pageSize=2")
+	result1, err := p.PaginationArray(db, ctx1.Request().Context(), ctx1, filters, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, result1.TotalSize)
+	assert.Equal(t, 2, result1.TotalPage)
+	assert.Len(t, result1.Data, 2)
+
+	// Page 2: pageIndex=1, pageSize=2
+	ctx2 := createEchoContext("pageIndex=1&pageSize=2")
+	result2, err := p.PaginationArray(db, ctx2.Request().Context(), ctx2, filters, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, result2.TotalSize)
+	assert.Equal(t, 2, result2.TotalPage)
+	assert.Len(t, result2.Data, 2)
+
+	// Data should be different between pages
+	assert.NotEqual(t, result1.Data[0].ID, result2.Data[0].ID)
+}
+
+// ------------------------------------------
+// PAGINATION NORMAL TESTS
+// ------------------------------------------
+
+// TestPaginationNormalNoFilter tests PaginationNormal without model filter
+func TestPaginationNormalNoFilter(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	seedUsers(t, db)
+
+	p := query.NewPagination[User](false)
+
+	// Query: pageIndex=0, pageSize=2, no model filter
+	ctx := createEchoContext("pageIndex=0&pageSize=2")
+	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, nil)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 5, result.TotalSize)
+	assert.Equal(t, 3, result.TotalPage)
+	assert.Len(t, result.Data, 2)
+}
+
+// TestPaginationNormalWithModelFilter tests PaginationNormal with model-based filter
+func TestPaginationNormalWithModelFilter(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+		{ID: uuid.New(), Name: "Eve", Age: 60, CreatedAt: base},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Model filter: Age = 30
+	filter := &User{Age: 30}
+
+	ctx := createEchoContext("pageIndex=0&pageSize=10")
+	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, filter)
+	assert.NoError(t, err)
+
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Bob", result.Data[0].Name)
+	assert.Equal(t, 30, result.Data[0].Age)
+}
+
+// TestPaginationNormalWithQueryFilter tests PaginationNormal merging URL query filters with model filter
+func TestPaginationNormalWithQueryFilter(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// URL query filter: age >= 30
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    30,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	// Model filter: name = "Bob"
+	modelFilter := &User{Name: "Bob"}
+
+	filterEncoded := encodeFilter(queryFilter)
+	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
+	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, modelFilter)
+	assert.NoError(t, err)
+
+	// Conditions: (age >= 30) AND (name = "Bob")
+	// Only Bob matches: age 30 >= 30 and name = "Bob"
+	assert.Equal(t, 1, result.TotalSize)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Bob", result.Data[0].Name)
+	assert.Equal(t, 30, result.Data[0].Age)
+}
+
+// TestPaginationNormalWithQuerySort tests PaginationNormal with URL sort parameters
+func TestPaginationNormalWithQuerySort(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 28, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 35, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Sort by age ASC via query params
+	sorts := []query.SortField{
+		{Field: "age", Order: "ASC"},
+	}
+	sortEncoded := encodeSort(sorts)
+
+	ctx := createEchoContext("sort=" + sortEncoded + "&pageIndex=0&pageSize=10")
+	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, nil)
+	assert.NoError(t, err)
+
+	assert.Len(t, result.Data, 4)
+	// Sorted by age ASC: 25, 28, 30, 35
+	assert.Equal(t, 25, result.Data[0].Age)
+	assert.Equal(t, 28, result.Data[1].Age)
+	assert.Equal(t, 30, result.Data[2].Age)
+	assert.Equal(t, 35, result.Data[3].Age)
+}
+
+// TestPaginationNormalPagination tests PaginationNormal pagination with model filter
+func TestPaginationNormalPagination(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 30, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 30, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// Model filter: Age = 30 (all records match)
+	filter := &User{Age: 30}
+
+	// Page 1: pageIndex=0, pageSize=2
+	ctx1 := createEchoContext("pageIndex=0&pageSize=2")
+	result1, err := p.PaginationNormal(db, ctx1.Request().Context(), ctx1, filter)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, result1.TotalSize)
+	assert.Equal(t, 2, result1.TotalPage)
+	assert.Len(t, result1.Data, 2)
+
+	// Page 2: pageIndex=1, pageSize=2
+	ctx2 := createEchoContext("pageIndex=1&pageSize=2")
+	result2, err := p.PaginationNormal(db, ctx2.Request().Context(), ctx2, filter)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, result2.TotalSize)
+	assert.Equal(t, 2, result2.TotalPage)
+	assert.Len(t, result2.Data, 2)
+
+	// Data should be different between pages
+	assert.NotEqual(t, result1.Data[0].ID, result2.Data[0].ID)
+}
+
+// TestPaginationNormalComplexMerge tests PaginationNormal with model filter, query filter, and sort
+func TestPaginationNormalComplexMerge(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 30, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 35, CreatedAt: base.Add(-6 * time.Hour)},
+		{ID: uuid.New(), Name: "Eve", Age: 40, CreatedAt: base},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// URL query filter: age >= 30
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    30,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	// Model filter: name not empty (matches all in our test data)
+	modelFilter := &User{Name: "Bob"}
+
+	// Sort by age DESC
+	sorts := []query.SortField{
+		{Field: "age", Order: "DESC"},
+	}
+
+	filterEncoded := encodeFilter(queryFilter)
+	sortEncoded := encodeSort(sorts)
+	ctx := createEchoContext("filter=" + filterEncoded + "&sort=" + sortEncoded + "&pageIndex=0&pageSize=10")
+	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, modelFilter)
+	assert.NoError(t, err)
+
+	// Conditions: (age >= 30) AND (name = "Bob")
+	// Only Bob matches both conditions
+	assert.Equal(t, 1, result.TotalSize)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, "Bob", result.Data[0].Name)
+	assert.Equal(t, 30, result.Data[0].Age)
+}
+
+// TestPaginationNormalNoModelFilterWithQueryFilter tests PaginationNormal with only URL query filter (nil model filter)
+func TestPaginationNormalNoModelFilterWithQueryFilter(t *testing.T) {
+	db, err := database(&User{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
+		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
+		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
+		{ID: uuid.New(), Name: "David", Age: 50, CreatedAt: base.Add(-6 * time.Hour)},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	p := query.NewPagination[User](false)
+
+	// URL query filter: age >= 35
+	queryFilter := query.StructuredFilter{
+		FieldFilters: []query.FieldFilter{
+			{
+				Field:    "age",
+				Value:    35,
+				Mode:     query.ModeGTE,
+				DataType: query.DataTypeNumber,
+			},
+		},
+	}
+
+	filterEncoded := encodeFilter(queryFilter)
+	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
+	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, nil)
+	assert.NoError(t, err)
+
+	// Only query filter applies: age >= 35
+	// Matches: David (50), Charlie (40)
+	assert.Equal(t, 2, result.TotalSize)
+	assert.Len(t, result.Data, 2)
+}
