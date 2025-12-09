@@ -29,9 +29,6 @@ func seedUsers(t *testing.T, db *gorm.DB) []User {
 	return users
 }
 
-// ------------------------------------------
-// TEST 1: BASIC PAGINATION
-// ------------------------------------------
 func TestPaginationBasic(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -52,10 +49,6 @@ func TestPaginationBasic(t *testing.T) {
 	assert.Equal(t, users[0].Name, res.Data[0].Name)
 	assert.Equal(t, users[1].Name, res.Data[1].Name)
 }
-
-// ------------------------------------------
-// TEST 2: PAGE 2
-// ------------------------------------------
 func TestPaginationPage2(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -73,9 +66,6 @@ func TestPaginationPage2(t *testing.T) {
 	assert.Equal(t, users[3].Name, res.Data[1].Name)
 }
 
-// ------------------------------------------
-// TEST 3: LAST PAGE (REMAINDER ITEMS)
-// ------------------------------------------
 func TestPaginationLastPage(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -92,9 +82,6 @@ func TestPaginationLastPage(t *testing.T) {
 	assert.Equal(t, users[4].Name, res.Data[0].Name)
 }
 
-// ------------------------------------------
-// TEST 4: WITH FILTER (Age = 30)
-// ------------------------------------------
 func TestPaginationWithFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -111,9 +98,6 @@ func TestPaginationWithFilter(t *testing.T) {
 	assert.Equal(t, "Bob", res.Data[0].Name)
 }
 
-// ------------------------------------------
-// TEST 5: INVALID PAGE SIZE → AUTO DEFAULT (30)
-// ------------------------------------------
 func TestPaginationPageSizeValidation(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -127,9 +111,6 @@ func TestPaginationPageSizeValidation(t *testing.T) {
 	assert.Equal(t, 30, res.PageSize)
 }
 
-// ------------------------------------------
-// TEST 6: INVALID PAGE INDEX → AUTO SET TO 0
-// ------------------------------------------
 func TestPaginationPageIndexValidation(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {

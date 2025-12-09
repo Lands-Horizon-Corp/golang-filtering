@@ -11,7 +11,7 @@ func (r *Registry[TData, TResponse, TRequest]) Count(
 	context context.Context,
 	fields *TData,
 ) (int64, error) {
-	return r.pagination.Count(r.Client(context), *fields)
+	return r.pagination.NormalCount(r.Client(context), *fields)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) ArrCount(
