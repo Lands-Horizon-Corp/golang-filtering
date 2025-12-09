@@ -66,6 +66,9 @@ func (r *Registry[TData, TResponse, TRequest]) Client(context context.Context) *
 
 func (r *Registry[TData, TResponse, TRequest]) preload(preloads ...string) []string {
 	if len(preloads) > 0 {
+		if preloads[0] == "" {
+			return []string{}
+		}
 		return preloads
 	}
 	return r.preloads
