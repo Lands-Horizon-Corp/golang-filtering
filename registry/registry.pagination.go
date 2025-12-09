@@ -2,11 +2,9 @@ package registry
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Lands-Horizon-Corp/golang-filtering/query"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 )
 
 func (r *Registry[TData, TResponse, TRequest]) Pagination(
@@ -14,40 +12,77 @@ func (r *Registry[TData, TResponse, TRequest]) Pagination(
 	ctx echo.Context,
 	preloads ...string,
 ) (*query.PaginationResult[TResponse], error) {
-	filterRoot, pageIndex, pageSize, err := parseQuery(ctx)
+	data, err := r.pagination.Pagination(r.Client(context), context, ctx, r.preload(preloads...)...)
 	if err != nil {
-		return &query.PaginationResult[TResponse]{}, fmt.Errorf("failed to parse query: %w", err)
+		return nil, err
 	}
+	return &query.PaginationResult[TResponse]{
+		Data:      r.ToModels(data.Data),
+		TotalSize: data.TotalSize,
+		TotalPage: data.TotalPage,
+		PageIndex: data.PageIndex,
+		PageSize:  data.PageSize,
+	}, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) NormalPagination(
 	context context.Context,
-	fields *TData,
-	pageIndex int,
-	pageSize int,
+	ctx echo.Context,
+	filter *TData,
 	preloads ...string,
-) (*query.PaginationResult[TData], error) {
-	return r.pagination.Pagination(r.Client(context), fields, pageIndex, pageSize, r.preload(preloads...)...)
+) (*query.PaginationResult[TResponse], error) {
+	data, err := r.pagination.PaginationNormal(r.Client(context), context, ctx, filter, r.preload(preloads...)...)
+	if err != nil {
+		return nil, err
+	}
+	return &query.PaginationResult[TResponse]{
+		Data:      r.ToModels(data.Data),
+		TotalSize: data.TotalSize,
+		TotalPage: data.TotalPage,
+		PageIndex: data.PageIndex,
+		PageSize:  data.PageSize,
+	}, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) ArrPagination(
 	context context.Context,
+	ctx echo.Context,
+
 	filters []query.ArrFilterSQL,
 	sorts []query.ArrFilterSortSQL,
-	pageIndex int,
-	pageSize int,
+
 	preloads ...string,
-) (*query.PaginationResult[TData], error) {
-	return r.pagination.ArrPagination(r.Client(context), filters, sorts, pageIndex, pageSize, r.preload(preloads...)...)
+) (*query.PaginationResult[TResponse], error) {
+	data, err := r.pagination.PaginationArray(r.Client(context), context, ctx, filters, sorts, r.preload(preloads...)...)
+	if err != nil {
+		return nil, err
+	}
+	return &query.PaginationResult[TResponse]{
+		Data:      r.ToModels(data.Data),
+		TotalSize: data.TotalSize,
+		TotalPage: data.TotalPage,
+		PageIndex: data.PageIndex,
+		PageSize:  data.PageSize,
+	}, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) StructuredPagination(
 	context context.Context,
-	db *gorm.DB,
-	filterRoot query.StructuredFilter,
-	pageIndex int,
-	pageSize int,
+	ctx echo.Context,
+
+	filter query.StructuredFilter,
+
 	preloads ...string,
-) (*query.PaginationResult[TData], error) {
-	return r.pagination.StructuredPagination(db, filterRoot, pageIndex, pageSize, r.preload(preloads...)...)
+) (*query.PaginationResult[TResponse], error) {
+	data, err := r.pagination.PaginationStructured(r.Client(context), context, ctx, filter, r.preload(preloads...)...)
+	if err != nil {
+		return nil, err
+	}
+	return &query.PaginationResult[TResponse]{
+		Data:      r.ToModels(data.Data),
+		TotalSize: data.TotalSize,
+		TotalPage: data.TotalPage,
+		PageIndex: data.PageIndex,
+		PageSize:  data.PageSize,
+	}, nil
 }
