@@ -45,7 +45,6 @@ func TestRegistryTabularVariants(t *testing.T) {
 		}
 	}
 
-	// NormalTabular with filter Age = 30
 	normalFilter := User{Age: 30}
 	normalCSV, err := r.NormalTabular(ctx, normalFilter, getter)
 	assert.NoError(t, err)
