@@ -150,8 +150,8 @@ func (p *Pagination[T]) StructuredExistsByID(
 	id any,
 ) (bool, error) {
 	var dummy int
-	subQuery := db.Model(new(T)).Select("1").Where("id = ?", id).Limit(1)
-	err := db.Raw("SELECT EXISTS (?)", subQuery).Scan(&dummy).Error
+	query := db.Model(new(T)).Where("id = ?", id)
+	err := query.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence by ID: %w", err)
 	}

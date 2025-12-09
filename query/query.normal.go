@@ -133,8 +133,8 @@ func (p *Pagination[T]) NormalExistsByID(
 	id any,
 ) (bool, error) {
 	var dummy int
-	subQuery := db.Where("id = ?", id).Select("1").Limit(1)
-	err := db.Raw("SELECT EXISTS (?)", subQuery).Scan(&dummy).Error
+	query := db.Model(new(T)).Where("id = ?", id)
+	err := query.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence by ID: %w", err)
 	}
@@ -145,7 +145,7 @@ func (p *Pagination[T]) NormalExistsIncludingDeleted(
 	db *gorm.DB,
 	filter T,
 ) (bool, error) {
-	db = db.Unscoped().Where(&filter)
+	db = db.Unscoped().Model(new(T)).Where(&filter)
 	var dummy int
 	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
