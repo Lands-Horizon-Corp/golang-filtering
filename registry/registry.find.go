@@ -10,24 +10,24 @@ func (r *Registry[TData, TResponse, TRequest]) Find(
 	context context.Context,
 	fields *TData,
 	preloads ...string,
-) ([]*TResponse, error) {
+) ([]*TData, error) {
 	data, err := r.pagination.NormalFind(r.Client(context), *fields, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
-	return r.ToModels(data), nil
+	return data, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) FindWithLock(
 	context context.Context,
 	fields *TData,
 	preloads ...string,
-) ([]*TResponse, error) {
+) ([]*TData, error) {
 	data, err := r.pagination.NormalFindLock(r.Client(context), *fields, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
-	return r.ToModels(data), nil
+	return data, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) ArrFind(
@@ -35,12 +35,12 @@ func (r *Registry[TData, TResponse, TRequest]) ArrFind(
 	filters []query.ArrFilterSQL,
 	sorts []query.ArrFilterSortSQL,
 	preloads ...string,
-) ([]*TResponse, error) {
+) ([]*TData, error) {
 	data, err := r.pagination.ArrFind(r.Client(context), filters, sorts, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
-	return r.ToModels(data), nil
+	return data, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) ArrFindWithLock(
@@ -48,32 +48,106 @@ func (r *Registry[TData, TResponse, TRequest]) ArrFindWithLock(
 	filters []query.ArrFilterSQL,
 	sorts []query.ArrFilterSortSQL,
 	preloads ...string,
-) ([]*TResponse, error) {
+) ([]*TData, error) {
 	data, err := r.pagination.ArrFindLock(r.Client(context), filters, sorts, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
-	return r.ToModels(data), nil
+	return data, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) StructuredFind(
 	context context.Context,
 	filter query.StructuredFilter,
 	preloads ...string,
-) ([]*TResponse, error) {
+) ([]*TData, error) {
 	data, err := r.pagination.StructuredFind(r.Client(context), filter)
 	if err != nil {
 		return nil, err
 	}
-	return r.ToModels(data), nil
+	return data, nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) StructuredFindWithLock(
 	context context.Context,
 	filter query.StructuredFilter,
 	preloads ...string,
-) ([]*TResponse, error) {
+) ([]*TData, error) {
 	data, err := r.pagination.StructuredFindLock(r.Client(context), filter, r.preload(preloads...)...)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) FindRaw(
+	context context.Context,
+	fields *TData,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.Find(context, fields, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) FindWithLockRaw(
+	context context.Context,
+	fields *TData,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.FindWithLock(context, fields, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) ArrFindRaw(
+	context context.Context,
+	filters []query.ArrFilterSQL,
+	sorts []query.ArrFilterSortSQL,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.ArrFind(context, filters, sorts, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) ArrFindWithLockRaw(
+	context context.Context,
+	filters []query.ArrFilterSQL,
+	sorts []query.ArrFilterSortSQL,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.ArrFindWithLock(context, filters, sorts, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) StructuredFindRaw(
+	context context.Context,
+	filter query.StructuredFilter,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.StructuredFind(context, filter, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) StructuredFindWithLockRaw(
+	context context.Context,
+	filter query.StructuredFilter,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.StructuredFindWithLock(context, filter, preloads...)
 	if err != nil {
 		return nil, err
 	}

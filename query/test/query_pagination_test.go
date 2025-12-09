@@ -580,7 +580,6 @@ func TestPaginationArrayWithSort(t *testing.T) {
 	assert.Equal(t, "David", result.Data[3].Name)
 }
 
-// TestPaginationArrayWithFilterAndSort tests PaginationArray with both filters and sorts
 func TestPaginationArrayWithFilterAndSort(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -600,12 +599,10 @@ func TestPaginationArrayWithFilterAndSort(t *testing.T) {
 
 	p := query.NewPagination[User](false)
 
-	// Filters: name starts with "C" or "D" (applying AND with OR within filter)
 	filters := []query.ArrFilterSQL{
 		{Field: "name", Op: query.ModeStartsWith, Value: "C"},
 	}
 
-	// Sort by name ASC
 	sorts := []query.ArrFilterSortSQL{
 		{Field: "name", Order: "ASC"},
 	}
@@ -614,12 +611,10 @@ func TestPaginationArrayWithFilterAndSort(t *testing.T) {
 	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, filters, sorts)
 	assert.NoError(t, err)
 
-	// Matches: Charlie (30), and possibly others starting with C
 	assert.Len(t, result.Data, 1)
 	assert.Equal(t, "Charlie", result.Data[0].Name)
 }
 
-// TestPaginationArrayWithQueryFilters tests PaginationArray merging URL query filters with array filters (AND logic)
 func TestPaginationArrayWithQueryFilters(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -638,7 +633,6 @@ func TestPaginationArrayWithQueryFilters(t *testing.T) {
 
 	p := query.NewPagination[User](false)
 
-	// Query URL filter: age >= 35
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -650,7 +644,6 @@ func TestPaginationArrayWithQueryFilters(t *testing.T) {
 		},
 	}
 
-	// Array filter: name starts with "D"
 	arrayFilters := []query.ArrFilterSQL{
 		{Field: "name", Op: query.ModeStartsWith, Value: "D"},
 	}
@@ -660,15 +653,12 @@ func TestPaginationArrayWithQueryFilters(t *testing.T) {
 	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, arrayFilters, nil)
 	assert.NoError(t, err)
 
-	// Conditions: (age >= 35) AND (name starts with 'D')
-	// Only David matches: age 50 >= 35 and name starts with "D"
 	assert.Equal(t, 1, result.TotalSize)
 	assert.Len(t, result.Data, 1)
 	assert.Equal(t, "David", result.Data[0].Name)
 	assert.Equal(t, 50, result.Data[0].Age)
 }
 
-// TestPaginationArrayPagination tests PaginationArray pagination with page size and index
 func TestPaginationArrayPagination(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -687,12 +677,10 @@ func TestPaginationArrayPagination(t *testing.T) {
 
 	p := query.NewPagination[User](false)
 
-	// Filter: age >= 20 (all match)
 	filters := []query.ArrFilterSQL{
 		{Field: "age", Op: query.ModeGTE, Value: 20},
 	}
 
-	// Page 1: pageIndex=0, pageSize=2
 	ctx1 := createEchoContext("pageIndex=0&pageSize=2")
 	result1, err := p.PaginationArray(db, ctx1.Request().Context(), ctx1, filters, nil)
 	assert.NoError(t, err)
@@ -700,7 +688,6 @@ func TestPaginationArrayPagination(t *testing.T) {
 	assert.Equal(t, 2, result1.TotalPage)
 	assert.Len(t, result1.Data, 2)
 
-	// Page 2: pageIndex=1, pageSize=2
 	ctx2 := createEchoContext("pageIndex=1&pageSize=2")
 	result2, err := p.PaginationArray(db, ctx2.Request().Context(), ctx2, filters, nil)
 	assert.NoError(t, err)
@@ -708,15 +695,9 @@ func TestPaginationArrayPagination(t *testing.T) {
 	assert.Equal(t, 2, result2.TotalPage)
 	assert.Len(t, result2.Data, 2)
 
-	// Data should be different between pages
 	assert.NotEqual(t, result1.Data[0].ID, result2.Data[0].ID)
 }
 
-// ------------------------------------------
-// PAGINATION NORMAL TESTS
-// ------------------------------------------
-
-// TestPaginationNormalNoFilter tests PaginationNormal without model filter
 func TestPaginationNormalNoFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -726,7 +707,6 @@ func TestPaginationNormalNoFilter(t *testing.T) {
 
 	p := query.NewPagination[User](false)
 
-	// Query: pageIndex=0, pageSize=2, no model filter
 	ctx := createEchoContext("pageIndex=0&pageSize=2")
 	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, nil)
 	assert.NoError(t, err)
@@ -736,7 +716,6 @@ func TestPaginationNormalNoFilter(t *testing.T) {
 	assert.Len(t, result.Data, 2)
 }
 
-// TestPaginationNormalWithModelFilter tests PaginationNormal with model-based filter
 func TestPaginationNormalWithModelFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -756,7 +735,6 @@ func TestPaginationNormalWithModelFilter(t *testing.T) {
 
 	p := query.NewPagination[User](false)
 
-	// Model filter: Age = 30
 	filter := &User{Age: 30}
 
 	ctx := createEchoContext("pageIndex=0&pageSize=10")
@@ -768,7 +746,6 @@ func TestPaginationNormalWithModelFilter(t *testing.T) {
 	assert.Equal(t, 30, result.Data[0].Age)
 }
 
-// TestPaginationNormalWithQueryFilter tests PaginationNormal merging URL query filters with model filter
 func TestPaginationNormalWithQueryFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -787,7 +764,6 @@ func TestPaginationNormalWithQueryFilter(t *testing.T) {
 
 	p := query.NewPagination[User](false)
 
-	// URL query filter: age >= 30
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -799,7 +775,6 @@ func TestPaginationNormalWithQueryFilter(t *testing.T) {
 		},
 	}
 
-	// Model filter: name = "Bob"
 	modelFilter := &User{Name: "Bob"}
 
 	filterEncoded := encodeFilter(queryFilter)
@@ -807,15 +782,12 @@ func TestPaginationNormalWithQueryFilter(t *testing.T) {
 	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, modelFilter)
 	assert.NoError(t, err)
 
-	// Conditions: (age >= 30) AND (name = "Bob")
-	// Only Bob matches: age 30 >= 30 and name = "Bob"
 	assert.Equal(t, 1, result.TotalSize)
 	assert.Len(t, result.Data, 1)
 	assert.Equal(t, "Bob", result.Data[0].Name)
 	assert.Equal(t, 30, result.Data[0].Age)
 }
 
-// TestPaginationNormalWithQuerySort tests PaginationNormal with URL sort parameters
 func TestPaginationNormalWithQuerySort(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -834,7 +806,6 @@ func TestPaginationNormalWithQuerySort(t *testing.T) {
 
 	p := query.NewPagination[User](false)
 
-	// Sort by age ASC via query params
 	sorts := []query.SortField{
 		{Field: "age", Order: "ASC"},
 	}
@@ -845,14 +816,12 @@ func TestPaginationNormalWithQuerySort(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Len(t, result.Data, 4)
-	// Sorted by age ASC: 25, 28, 30, 35
 	assert.Equal(t, 25, result.Data[0].Age)
 	assert.Equal(t, 28, result.Data[1].Age)
 	assert.Equal(t, 30, result.Data[2].Age)
 	assert.Equal(t, 35, result.Data[3].Age)
 }
 
-// TestPaginationNormalPagination tests PaginationNormal pagination with model filter
 func TestPaginationNormalPagination(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -870,11 +839,8 @@ func TestPaginationNormalPagination(t *testing.T) {
 	}
 
 	p := query.NewPagination[User](false)
-
-	// Model filter: Age = 30 (all records match)
 	filter := &User{Age: 30}
 
-	// Page 1: pageIndex=0, pageSize=2
 	ctx1 := createEchoContext("pageIndex=0&pageSize=2")
 	result1, err := p.PaginationNormal(db, ctx1.Request().Context(), ctx1, filter)
 	assert.NoError(t, err)
@@ -882,7 +848,6 @@ func TestPaginationNormalPagination(t *testing.T) {
 	assert.Equal(t, 2, result1.TotalPage)
 	assert.Len(t, result1.Data, 2)
 
-	// Page 2: pageIndex=1, pageSize=2
 	ctx2 := createEchoContext("pageIndex=1&pageSize=2")
 	result2, err := p.PaginationNormal(db, ctx2.Request().Context(), ctx2, filter)
 	assert.NoError(t, err)
@@ -890,11 +855,9 @@ func TestPaginationNormalPagination(t *testing.T) {
 	assert.Equal(t, 2, result2.TotalPage)
 	assert.Len(t, result2.Data, 2)
 
-	// Data should be different between pages
 	assert.NotEqual(t, result1.Data[0].ID, result2.Data[0].ID)
 }
 
-// TestPaginationNormalComplexMerge tests PaginationNormal with model filter, query filter, and sort
 func TestPaginationNormalComplexMerge(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -926,10 +889,8 @@ func TestPaginationNormalComplexMerge(t *testing.T) {
 		},
 	}
 
-	// Model filter: name not empty (matches all in our test data)
 	modelFilter := &User{Name: "Bob"}
 
-	// Sort by age DESC
 	sorts := []query.SortField{
 		{Field: "age", Order: "DESC"},
 	}
@@ -940,15 +901,12 @@ func TestPaginationNormalComplexMerge(t *testing.T) {
 	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, modelFilter)
 	assert.NoError(t, err)
 
-	// Conditions: (age >= 30) AND (name = "Bob")
-	// Only Bob matches both conditions
 	assert.Equal(t, 1, result.TotalSize)
 	assert.Len(t, result.Data, 1)
 	assert.Equal(t, "Bob", result.Data[0].Name)
 	assert.Equal(t, 30, result.Data[0].Age)
 }
 
-// TestPaginationNormalNoModelFilterWithQueryFilter tests PaginationNormal with only URL query filter (nil model filter)
 func TestPaginationNormalNoModelFilterWithQueryFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -966,8 +924,6 @@ func TestPaginationNormalNoModelFilterWithQueryFilter(t *testing.T) {
 	}
 
 	p := query.NewPagination[User](false)
-
-	// URL query filter: age >= 35
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -983,9 +939,6 @@ func TestPaginationNormalNoModelFilterWithQueryFilter(t *testing.T) {
 	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
 	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, nil)
 	assert.NoError(t, err)
-
-	// Only query filter applies: age >= 35
-	// Matches: David (50), Charlie (40)
 	assert.Equal(t, 2, result.TotalSize)
 	assert.Len(t, result.Data, 2)
 }

@@ -20,7 +20,6 @@ func TestRegistryFindOneVariants(t *testing.T) {
 	if err := db.AutoMigrate(&User{}); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
-
 	users := []User{
 		{ID: uuid.New(), Name: "Alice", Age: 25},
 		{ID: uuid.New(), Name: "Bob", Age: 30},
@@ -29,40 +28,29 @@ func TestRegistryFindOneVariants(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to seed: %v", err)
 	}
-
 	r := registry.NewRegistry(registry.RegistryParams[User, User, any]{
 		Database: db,
 		Resource: func(d *User) *User { return d },
 	})
 
 	ctx := context.Background()
-
-	// Normal FindOne
 	res, err := r.FindOne(ctx, &User{Age: 30})
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, "Bob", res.Name)
-
-	// Normal FindOneWithLock
 	resLock, err := r.FindOneWithLock(ctx, &User{Age: 30})
 	assert.NoError(t, err)
 	assert.NotNil(t, resLock)
 	assert.Equal(t, "Bob", resLock.Name)
-
-	// Array FindOne
 	filters := []query.ArrFilterSQL{{Field: "age", Op: query.ModeEqual, Value: 35}}
 	resArr, err := r.ArrFindOne(ctx, filters, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, resArr)
 	assert.Equal(t, "Charlie", resArr.Name)
-
-	// Array FindOneWithLock
 	resArrLock, err := r.ArrFindOneWithLock(ctx, filters, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, resArrLock)
 	assert.Equal(t, "Charlie", resArrLock.Name)
-
-	// Structured FindOne
 	structFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{{Field: "age", Value: 30, Mode: query.ModeEqual, DataType: query.DataTypeNumber}},
 		Logic:        query.LogicAnd,
@@ -71,8 +59,6 @@ func TestRegistryFindOneVariants(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resStruct)
 	assert.Equal(t, "Bob", resStruct.Name)
-
-	// Structured FindOneWithLock
 	resStructLock, err := r.StructuredFindOneWithLock(ctx, structFilter)
 	assert.NoError(t, err)
 	assert.NotNil(t, resStructLock)

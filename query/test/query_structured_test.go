@@ -95,7 +95,6 @@ func TestStructuredPaginationComplex(t *testing.T) {
 		return t.Truncate(time.Second)
 	}
 
-	// Deterministic timestamps
 	base := truncate(time.Date(2025, 12, 9, 0, 0, 0, 0, time.UTC))
 
 	users := []User{
@@ -125,7 +124,6 @@ func TestStructuredPaginationComplex(t *testing.T) {
 		Logic: query.LogicAnd,
 	}
 
-	// Page 0, size 2
 	result, err := p.StructuredPagination(db, filter, 0, 2)
 	if err != nil {
 		t.Fatalf("pagination failed: %v", err)
@@ -133,7 +131,7 @@ func TestStructuredPaginationComplex(t *testing.T) {
 
 	assert.Equal(t, 0, result.PageIndex)
 	assert.Equal(t, 2, result.PageSize)
-	assert.Equal(t, 4, result.TotalSize) // Charlie, David, Eve, Frank
+	assert.Equal(t, 4, result.TotalSize)
 	assert.Equal(t, 2, result.TotalPage)
 	assert.Len(t, result.Data, 2)
 	assert.Equal(t, "Charlie", result.Data[0].Name)
@@ -146,7 +144,7 @@ func TestStructuredPaginationComplex(t *testing.T) {
 	}
 
 	assert.Equal(t, 1, resultPage2.PageIndex)
-	assert.Len(t, resultPage2.Data, 2) // Eve, Frank
+	assert.Len(t, resultPage2.Data, 2)
 	assert.Equal(t, "Eve", resultPage2.Data[0].Name)
 	assert.Equal(t, "Frank", resultPage2.Data[1].Name)
 }
@@ -157,13 +155,11 @@ func TestStructuredPaginationComplexAdvanced(t *testing.T) {
 		t.Fatalf("failed to open database: %v", err)
 	}
 
-	// Deterministic timestamps
 	base := time.Date(2025, 12, 9, 0, 0, 0, 0, time.UTC)
 	truncate := func(t time.Time) time.Time {
 		return t.Truncate(time.Second)
 	}
 
-	// Create 7 users with varied ages and timestamps
 	users := []User{
 		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: truncate(base.Add(-7 * time.Hour))},
 		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: truncate(base.Add(-6 * time.Hour))},
@@ -179,24 +175,19 @@ func TestStructuredPaginationComplexAdvanced(t *testing.T) {
 	}
 
 	p := query.NewPagination[User](true)
-
-	// Complex filter: age >= 30 AND created_at >= base-5h
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{Field: "age", Value: 30, Mode: query.ModeGTE, DataType: query.DataTypeNumber},
 			{Field: "created_at", Value: truncate(base.Add(-5 * time.Hour)), Mode: query.ModeGTE, DataType: query.DataTypeDate},
 		},
 		SortFields: []query.SortField{
-			{Field: "age", Order: query.SortOrderDesc},       // sort by age descending
-			{Field: "created_at", Order: query.SortOrderAsc}, // then by created_at ascending
-			{Field: "name", Order: query.SortOrderAsc},       // then by name ascending
+			{Field: "age", Order: query.SortOrderDesc},
+			{Field: "created_at", Order: query.SortOrderAsc},
+			{Field: "name", Order: query.SortOrderAsc},
 		},
 		Logic: query.LogicAnd,
 	}
 
-	// Page size 2 → total matching: Charlie, David, Eve, Frank, Grace = 5
-	// This ensures last page will have odd number (1 item)
-	// Page 0
 	resultPage0, err := p.StructuredPagination(db, filter, 0, 2)
 	if err != nil {
 		t.Fatalf("pagination failed: %v", err)
@@ -204,8 +195,8 @@ func TestStructuredPaginationComplexAdvanced(t *testing.T) {
 
 	assert.Equal(t, 0, resultPage0.PageIndex)
 	assert.Len(t, resultPage0.Data, 2)
-	assert.Equal(t, "Grace", resultPage0.Data[0].Name) // highest age
-	assert.Equal(t, "Frank", resultPage0.Data[1].Name) // next highest
+	assert.Equal(t, "Grace", resultPage0.Data[0].Name)
+	assert.Equal(t, "Frank", resultPage0.Data[1].Name)
 
 	// Page 1
 	resultPage1, err := p.StructuredPagination(db, filter, 1, 2)
@@ -218,7 +209,6 @@ func TestStructuredPaginationComplexAdvanced(t *testing.T) {
 	assert.Equal(t, "Eve", resultPage1.Data[0].Name)
 	assert.Equal(t, "David", resultPage1.Data[1].Name)
 
-	// Page 2 (last page, odd item)
 	resultPage2, err := p.StructuredPagination(db, filter, 2, 2)
 	if err != nil {
 		t.Fatalf("pagination failed: %v", err)
@@ -228,7 +218,7 @@ func TestStructuredPaginationComplexAdvanced(t *testing.T) {
 	assert.Len(t, resultPage2.Data, 1)
 	assert.Equal(t, "Charlie", resultPage2.Data[0].Name)
 	assert.Equal(t, 5, resultPage2.TotalSize)
-	assert.Equal(t, 3, resultPage2.TotalPage) // 5 items / page size 2 → 3 pages
+	assert.Equal(t, 3, resultPage2.TotalPage)
 }
 
 func TestStructuredPaginationWithRange(t *testing.T) {
@@ -237,11 +227,9 @@ func TestStructuredPaginationWithRange(t *testing.T) {
 		t.Fatalf("failed to open database: %v", err)
 	}
 
-	// Deterministic timestamps
 	base := time.Date(2025, 12, 9, 0, 0, 0, 0, time.UTC)
 	truncate := func(t time.Time) time.Time { return t.Truncate(time.Second) }
 
-	// Create 7 users with varied ages
 	users := []User{
 		{ID: uuid.New(), Name: "Alice", Age: 25, CreatedAt: truncate(base.Add(-7 * time.Hour))},
 		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: truncate(base.Add(-6 * time.Hour))},
@@ -258,7 +246,6 @@ func TestStructuredPaginationWithRange(t *testing.T) {
 
 	p := query.NewPagination[User](true)
 
-	// Range filter: age between 35 and 50 inclusive
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -275,7 +262,6 @@ func TestStructuredPaginationWithRange(t *testing.T) {
 		Logic: query.LogicAnd,
 	}
 
-	// Page size 2 → 4 matching users: Charlie(35), David(40), Eve(45), Frank(50)
 	resultPage0, err := p.StructuredPagination(db, filter, 0, 2)
 	if err != nil {
 		t.Fatalf("pagination failed: %v", err)
@@ -285,7 +271,6 @@ func TestStructuredPaginationWithRange(t *testing.T) {
 	assert.Equal(t, "Charlie", resultPage0.Data[0].Name)
 	assert.Equal(t, "David", resultPage0.Data[1].Name)
 
-	// Page 1
 	resultPage1, err := p.StructuredPagination(db, filter, 1, 2)
 	if err != nil {
 		t.Fatalf("pagination failed: %v", err)
@@ -295,7 +280,6 @@ func TestStructuredPaginationWithRange(t *testing.T) {
 	assert.Equal(t, "Eve", resultPage1.Data[0].Name)
 	assert.Equal(t, "Frank", resultPage1.Data[1].Name)
 
-	// Total size & pages
 	assert.Equal(t, 4, resultPage1.TotalSize)
 	assert.Equal(t, 2, resultPage1.TotalPage)
 }
@@ -328,7 +312,6 @@ func TestAllModes(t *testing.T) {
 		fieldFilter   query.FieldFilter
 		expectedNames []string
 	}{
-		// Text modes
 		{"ModeEqual", query.FieldFilter{Field: "name", Value: "Alice", Mode: query.ModeEqual, DataType: query.DataTypeText}, []string{"Alice"}},
 		{"ModeNotEqual", query.FieldFilter{Field: "name", Value: "Alice", Mode: query.ModeNotEqual, DataType: query.DataTypeText}, []string{"Bob", "Charlie", "David", "Eve", ""}},
 		{"ModeContains", query.FieldFilter{Field: "name", Value: "li", Mode: query.ModeContains, DataType: query.DataTypeText}, []string{"Alice", "Charlie"}},
@@ -336,7 +319,6 @@ func TestAllModes(t *testing.T) {
 		{"ModeStartsWith", query.FieldFilter{Field: "name", Value: "A", Mode: query.ModeStartsWith, DataType: query.DataTypeText}, []string{"Alice"}},
 		{"ModeEndsWith", query.FieldFilter{Field: "name", Value: "e", Mode: query.ModeEndsWith, DataType: query.DataTypeText}, []string{"Alice", "Charlie", "Eve"}},
 
-		// Numeric modes
 		{"ModeGT", query.FieldFilter{Field: "age", Value: 35, Mode: query.ModeGT, DataType: query.DataTypeNumber}, []string{"David", "Eve", ""}},
 		{"ModeGTE", query.FieldFilter{Field: "age", Value: 35, Mode: query.ModeGTE, DataType: query.DataTypeNumber}, []string{"Charlie", "David", "Eve", ""}},
 		{"ModeLT", query.FieldFilter{Field: "age", Value: 35, Mode: query.ModeLT, DataType: query.DataTypeNumber}, []string{"Alice", "Bob"}},
@@ -345,11 +327,9 @@ func TestAllModes(t *testing.T) {
 		{"ModeInside", query.FieldFilter{Field: "age", Value: query.RangeNumber{From: 30, To: 40}, Mode: query.ModeInside, DataType: query.DataTypeNumber}, []string{"Bob", "Charlie", "David"}},
 		{"ModeOutside", query.FieldFilter{Field: "age", Value: query.RangeNumber{From: 30, To: 40}, Mode: query.ModeOutside, DataType: query.DataTypeNumber}, []string{"Alice", "Eve", ""}},
 
-		// Date modes
 		{"ModeBefore", query.FieldFilter{Field: "created_at", Value: truncate(base.Add(-2 * time.Hour)), Mode: query.ModeBefore, DataType: query.DataTypeDate}, []string{"Alice", "Bob", "Charlie"}},
 		{"ModeAfter", query.FieldFilter{Field: "created_at", Value: truncate(base.Add(-3 * time.Hour)), Mode: query.ModeAfter, DataType: query.DataTypeDate}, []string{"Charlie", "David", "Eve", ""}},
 
-		// Empty checks
 		{"ModeIsEmpty", query.FieldFilter{Field: "name", Mode: query.ModeIsEmpty, DataType: query.DataTypeText}, []string{""}},
 		{"ModeIsNotEmpty", query.FieldFilter{Field: "name", Mode: query.ModeIsNotEmpty, DataType: query.DataTypeText}, []string{"Alice", "Bob", "Charlie", "David", "Eve"}},
 	}

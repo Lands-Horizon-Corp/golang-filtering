@@ -25,7 +25,6 @@ func TestRegistryCreateVariants(t *testing.T) {
 		Resource: func(d *User) *User { return d },
 	})
 
-	// Create
 	u1 := User{ID: uuid.New(), Name: "CreateOne", Age: 21}
 	err = r.Create(context.Background(), &u1)
 	assert.NoError(t, err)
@@ -35,7 +34,6 @@ func TestRegistryCreateVariants(t *testing.T) {
 	}
 	assert.Equal(t, "CreateOne", got.Name)
 
-	// CreateWithTx
 	u2 := User{ID: uuid.New(), Name: "CreateTx", Age: 22}
 	tx := db.Begin()
 	if err := r.CreateWithTx(context.Background(), tx, &u2); err != nil {
@@ -45,14 +43,12 @@ func TestRegistryCreateVariants(t *testing.T) {
 	if err := tx.Commit().Error; err != nil {
 		t.Fatalf("failed to commit tx: %v", err)
 	}
-	// reset destination struct to avoid residual PK values affecting the query
 	got = User{}
 	if err := db.First(&got, "id = ?", u2.ID).Error; err != nil {
 		t.Fatalf("record not found after CreateWithTx: %v", err)
 	}
 	assert.Equal(t, "CreateTx", got.Name)
 
-	// CreateMany
 	u3 := &User{ID: uuid.New(), Name: "Many1", Age: 23}
 	u4 := &User{ID: uuid.New(), Name: "Many2", Age: 24}
 	if err := r.CreateMany(context.Background(), []*User{u3, u4}); err != nil {
@@ -64,7 +60,6 @@ func TestRegistryCreateVariants(t *testing.T) {
 	}
 	assert.Equal(t, int64(2), count)
 
-	// CreateManyWithTx
 	u5 := &User{ID: uuid.New(), Name: "ManyTx1", Age: 25}
 	u6 := &User{ID: uuid.New(), Name: "ManyTx2", Age: 26}
 	tx2 := db.Begin()

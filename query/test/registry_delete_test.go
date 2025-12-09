@@ -35,8 +35,6 @@ func TestRegistryDeleteVariants(t *testing.T) {
 	})
 
 	ctx := context.Background()
-
-	// Delete single
 	if err := r.Delete(ctx, users[1].ID); err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
@@ -44,9 +42,6 @@ func TestRegistryDeleteVariants(t *testing.T) {
 	if err := db.First(&got, "id = ?", users[1].ID).Error; err == nil {
 		t.Fatalf("expected record to be deleted, but found: %v", got)
 	}
-
-	// DeleteWithTx
-	// create a new user to delete via tx
 	txUser := User{ID: uuid.New(), Name: "TxDelete", Age: 40}
 	if err := db.Create(&txUser).Error; err != nil {
 		t.Fatalf("failed to seed txUser: %v", err)
@@ -63,9 +58,6 @@ func TestRegistryDeleteVariants(t *testing.T) {
 	if err := db.First(&got, "id = ?", txUser.ID).Error; err == nil {
 		t.Fatalf("expected txUser to be deleted, but found: %v", got)
 	}
-
-	// BulkDelete
-	// create two users to bulk delete
 	b1 := User{ID: uuid.New(), Name: "Bulk1", Age: 50}
 	b2 := User{ID: uuid.New(), Name: "Bulk2", Age: 51}
 	if err := db.Create(&[]User{b1, b2}).Error; err != nil {
@@ -80,9 +72,6 @@ func TestRegistryDeleteVariants(t *testing.T) {
 		t.Fatalf("count query failed: %v", err)
 	}
 	assert.Equal(t, int64(0), count)
-
-	// BulkDeleteWithTx
-	// create two users to bulk delete with tx
 	c1 := User{ID: uuid.New(), Name: "BulkTx1", Age: 60}
 	c2 := User{ID: uuid.New(), Name: "BulkTx2", Age: 61}
 	if err := db.Create(&[]User{c1, c2}).Error; err != nil {
