@@ -30,7 +30,8 @@ func (f *Pagination[T]) ArrPagination(
 	}
 	query := f.arrQuery(db, filters, sorts)
 	var totalCount int64
-	if err := db.Model(new(T)).Count(&totalCount).Error; err != nil {
+	query = query.Model(new(T))
+	if err := query.Count(&totalCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count records: %w", err)
 	}
 	result.TotalSize = int(totalCount)
@@ -76,7 +77,7 @@ func (p *Pagination[T]) ArrFind(
 	if len(sorts) > 0 {
 		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("updated_at DESC")
+		db = db.Order("created_at DESC")
 	}
 	if err := db.Find(&entities).Error; err != nil {
 		return nil, fmt.Errorf("failed to find entities with %d filters: %w", len(filters), err)
@@ -99,7 +100,7 @@ func (r *Pagination[T]) ArrFindLock(
 	if len(sorts) > 0 {
 		db = r.applySort(db, sorts)
 	} else {
-		db = db.Order("updated_at DESC")
+		db = db.Order("created_at DESC")
 	}
 	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
 	if err := db.Find(&entities).Error; err != nil {
@@ -123,7 +124,7 @@ func (p *Pagination[T]) ArrFindOne(
 	if len(sorts) > 0 {
 		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("updated_at DESC")
+		db = db.Order("created_at DESC")
 	}
 	err := db.First(&entity).Error
 	if err != nil {
@@ -150,7 +151,7 @@ func (p *Pagination[T]) ArrFindOneWithLock(
 	if len(sorts) > 0 {
 		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("updated_at DESC")
+		db = db.Order("created_at DESC")
 	}
 	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
 	err := db.First(&entity).Error

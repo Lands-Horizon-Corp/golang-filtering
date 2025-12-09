@@ -18,7 +18,7 @@ func (f *Pagination[T]) arrQuery(
 	if len(sorts) > 0 {
 		db = f.applySort(db, sorts)
 	} else {
-		db = db.Order("updated_at DESC")
+		db = db.Order("created_at DESC")
 	}
 	return db
 }
