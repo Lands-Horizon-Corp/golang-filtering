@@ -13,7 +13,6 @@ import (
 )
 
 func TestRegistryNormalPaginationSimple(t *testing.T) {
-	// setup in-memory DB and migrate model
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
@@ -28,17 +27,16 @@ func TestRegistryNormalPaginationSimple(t *testing.T) {
 		{ID: uuid.New(), Name: "Bob", Age: 30, CreatedAt: base.Add(-24 * time.Hour)},
 		{ID: uuid.New(), Name: "Charlie", Age: 40, CreatedAt: base.Add(-12 * time.Hour)},
 	}
+
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	// create registry with resource mapping identity
-	r := registry.NewRegistry[User, User, any](registry.RegistryParams[User, User, any]{
+	r := registry.NewRegistry(registry.RegistryParams[User, User, any]{
 		Database: db,
 		Resource: func(d *User) *User { return d },
 	})
 
-	// call NormalPagination with a model filter (age = 30)
 	ctx := createEchoContext("pageIndex=0&pageSize=10")
 	res, err := r.NormalPagination(context.Background(), ctx, &User{Age: 30})
 	assert.NoError(t, err)
