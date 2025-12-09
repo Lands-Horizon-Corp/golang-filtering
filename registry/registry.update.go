@@ -16,7 +16,7 @@ func (r *Registry[TData, TResponse, TRequest]) UpdateByID(
 	if preloads == nil {
 		preloads = r.preloads
 	}
-	if err := r.Client(ctx).Where("id = ?", id).Save(fields).Error; err != nil {
+	if err := r.Client(ctx).Model(new(TData)).Where("id = ?", id).Updates(fields).Error; err != nil {
 		return fmt.Errorf("failed to update fields for entity %v: %w", id, err)
 	}
 	reloadDb := r.Client(ctx).Where("id = ?", id)
@@ -40,7 +40,7 @@ func (r *Registry[TData, TResponse, TRequest]) UpdateByIDWithTx(
 	if preloads == nil {
 		preloads = r.preloads
 	}
-	if err := tx.Where("id = ?", id).Save(fields).Error; err != nil {
+	if err := tx.Model(new(TData)).Where("id = ?", id).Updates(fields).Error; err != nil {
 		return fmt.Errorf("failed to update fields for entity %v in transaction: %w", id, err)
 	}
 	reloadDb := tx.Where("id = ?", id)
