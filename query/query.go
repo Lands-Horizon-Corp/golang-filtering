@@ -8,22 +8,22 @@ import (
 	"gorm.io/gorm"
 )
 
-func (p *Pagination[T]) arrQuery(
+func (f *Pagination[T]) arrQuery(
 	db *gorm.DB,
 	filters []ArrFilterSQL,
 	sorts []ArrFilterSortSQL,
 ) *gorm.DB {
-	db = p.applyJoinsForFilters(db, filters)
-	db = p.applySQLFilters(db, filters)
+	db = f.applyJoinsForFilters(db, filters)
+	db = f.applySQLFilters(db, filters)
 	if len(sorts) > 0 {
-		db = p.applySort(db, sorts)
+		db = f.applySort(db, sorts)
 	} else {
-		db = db.Order(p.columnDefaultSort)
+		db = db.Order("created_at DESC")
 	}
 	return db
 }
 
-func (p *Pagination[T]) structuredQuery(
+func (f *Pagination[T]) structuredQuery(
 	db *gorm.DB,
 	filterRoot StructuredFilter,
 ) *gorm.DB {
@@ -34,7 +34,7 @@ func (p *Pagination[T]) structuredQuery(
 		}
 	}
 	if len(filterRoot.FieldFilters) > 0 {
-		db = p.applysGorm(db, filterRoot)
+		db = f.applysGorm(db, filterRoot)
 	}
 	hasNestedFields := false
 	for _, filter := range filterRoot.FieldFilters {
@@ -60,7 +60,7 @@ func (p *Pagination[T]) structuredQuery(
 	}
 	if len(filterRoot.SortFields) > 0 {
 		for _, sortField := range filterRoot.SortFields {
-			if !strings.Contains(sortField.Field, ".") && !p.fieldExists(db, sortField.Field) {
+			if !strings.Contains(sortField.Field, ".") && !f.fieldExists(db, sortField.Field) {
 				continue
 			}
 			order := "ASC"
@@ -84,10 +84,9 @@ func (p *Pagination[T]) structuredQuery(
 		}
 	} else {
 		if mainTableName != "" {
-			db = db.Order(fmt.Sprintf(`"%s"."%s"`, mainTableName, (p.columnDefaultSort)))
-
+			db = db.Order(fmt.Sprintf(`"%s"."created_at" DESC`, mainTableName))
 		} else {
-			db = db.Order(p.columnDefaultSort)
+			db = db.Order("created_at DESC")
 		}
 	}
 	return db
@@ -98,47 +97,31 @@ func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *go
 		return db
 	}
 
-	var mainTableName string
-	var allowedFields map[string]struct{}
-	{
-		stmt := &gorm.Statement{DB: db}
-		if err := stmt.Parse(new(T)); err == nil && stmt.Schema != nil {
-			mainTableName = stmt.Schema.Table
-			allowedFields = make(map[string]struct{})
-			for k := range stmt.Schema.FieldsByDBName {
-				allowedFields[k] = struct{}{}
-			}
+	hasNestedFields := false
+	for _, filter := range filterRoot.FieldFilters {
+
+		if strings.Contains(filter.Field, ".") {
+			hasNestedFields = true
+			break
 		}
+
 	}
-	fieldAllowed := func(fieldName string) bool {
-		parts := strings.Split(fieldName, ".")
-		if len(parts) > 1 {
-			// For nested fields: ensure first part matches a valid table (relationship), and the last part is a valid column.
-			// The first part must be a relationship, the last part a valid field in the related schema.
-			relName := parts[0]
-			colName := parts[len(parts)-1]
-			relField, ok := stmt.Schema.Relationships.Relations[relName]
-			if !ok || relField == nil || relField.FieldSchema == nil {
-				return false
-			}
-			_, ok = relField.FieldSchema.FieldsByDBName[colName]
-			return ok
+
+	var mainTableName string
+	if hasNestedFields {
+		stmt := &gorm.Statement{DB: db}
+		if err := stmt.Parse(new(T)); err == nil {
+			mainTableName = stmt.Schema.Table
 		}
-		_, ok := allowedFields[fieldName]
-		return ok
 	}
 	if filterRoot.Logic == LogicAnd {
 		for _, filter := range filterRoot.FieldFilters {
+
 			if strings.Contains(filter.Field, ".") || f.fieldExists(db, filter.Field) {
-				if !fieldAllowed(filter.Field) {
-					continue
-				}
+
 				condition, values := f.buildConditionWithTableName(filter, mainTableName)
 				if condition != "" {
 					db = db.Where(condition, values...)
-				}
-				if !fieldAllowed(filter.Field) {
-					continue
 				}
 			}
 		}
@@ -168,33 +151,14 @@ func (f *Pagination[T]) buildConditionWithTableName(filter FieldFilter, mainTabl
 	if isNestedField {
 		parts := strings.Split(field, ".")
 		if len(parts) >= 2 {
-			// Validate relationship and column
-			relName := parts[0]
-			colName := parts[len(parts)-1]
-			stmt := &gorm.Statement{DB: f.db}
-			if err := stmt.Parse(new(T)); err == nil && stmt.Schema != nil {
-				relField, ok := stmt.Schema.Relationships.Relations[relName]
-				if ok && relField != nil && relField.FieldSchema != nil {
-					if _, ok := relField.FieldSchema.FieldsByDBName[colName]; ok {
-						// Quote table and column via GORM (safer than manual quoting)
-						field = fmt.Sprintf("%s.%s", stmt.Quote(relField.FieldSchema.Table), stmt.Quote(colName))
-					} else {
-						return "", nil
-					}
-				} else {
-					return "", nil
-				}
-			} else {
-				return "", nil
+			parts[0] = toPascalCase(parts[0])
+			field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
+			for i := 2; i < len(parts); i++ {
+				field = fmt.Sprintf(`%s."%s"`, field, parts[i])
 			}
 		}
 	} else if mainTableName != "" {
-		stmt := &gorm.Statement{DB: f.db}
-		if err := stmt.Parse(new(T)); err == nil && stmt.Schema != nil {
-			field = fmt.Sprintf("%s.%s", stmt.Quote(mainTableName), stmt.Quote(field))
-		} else {
-			return "", nil
-		}
+		field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
 	}
 
 	switch filter.DataType {
