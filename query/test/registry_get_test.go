@@ -18,7 +18,6 @@ func TestRegistryGetByIDVariants(t *testing.T) {
 	err = db.AutoMigrate(&User{})
 	assert.NoError(t, err)
 
-	// Seed
 	u := User{
 		ID:   uuid.New(),
 		Name: "Alice",
@@ -34,33 +33,21 @@ func TestRegistryGetByIDVariants(t *testing.T) {
 
 	ctx := context.Background()
 
-	// ---------------------------
-	// 1. SUCCESS CASE: Existing ID
-	// ---------------------------
 	res, err := r.GetByID(ctx, u.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, "Alice", res.Name)
 
-	// ---------------------------
-	// 2. ERROR CASE: Non-existent ID
-	// ---------------------------
 	nonID := uuid.New()
 	res2, err := r.GetByID(ctx, nonID)
 	assert.Error(t, err)
 	assert.Nil(t, res2)
 
-	// ---------------------------
-	// 3. SUCCESS: IncludingDeleted on existing row
-	// ---------------------------
 	res3, err := r.GetByIDIncludingDeleted(ctx, u.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, res3)
 	assert.Equal(t, "Alice", res3.Name)
 
-	// ---------------------------
-	// 4. ERROR: IncludingDeleted for unknown row
-	// ---------------------------
 	nonDelID := uuid.New()
 	res4, err := r.GetByIDIncludingDeleted(ctx, nonDelID)
 	assert.Error(t, err)
