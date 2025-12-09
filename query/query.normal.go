@@ -235,11 +235,9 @@ func (p *Pagination[T]) NormalGetByID(
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
+
 	err := db.First(&entity, "id = ?", id).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, nil
-		}
 		return nil, fmt.Errorf("failed to get entity by ID %v: %w", id, err)
 	}
 	return &entity, nil
@@ -264,6 +262,25 @@ func (p *Pagination[T]) NormalGetByIDLock(
 	}
 	return &entity, nil
 }
+func (p *Pagination[T]) NormalGetByIDIncludingDeleted(
+	db *gorm.DB,
+	id any,
+	preloads ...string,
+) (*T, error) {
+	db = db.Unscoped()
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+
+	var entity T
+	err := db.First(&entity, "id = ?", id).Error
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get entity by ID %v including deleted: %w", id, err)
+	}
+
+	return &entity, nil
+}
 
 func (f *Pagination[T]) NormalTabular(
 	db *gorm.DB,
@@ -275,25 +292,4 @@ func (f *Pagination[T]) NormalTabular(
 		return nil, fmt.Errorf("failed to get data: %w", err)
 	}
 	return csvCreation(data, getter)
-}
-
-func (p *Pagination[T]) NormalGetByIDIncludingDeleted(
-	db *gorm.DB,
-	id any,
-	preloads ...string,
-) (*T, error) {
-	db = db.Unscoped()
-	for _, preload := range preloads {
-		db = db.Preload(preload)
-	}
-	var entity T
-	err := db.First(&entity, "id = ?", id).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get entity by ID %v including deleted: %w", id, err)
-	}
-
-	return &entity, nil
 }
