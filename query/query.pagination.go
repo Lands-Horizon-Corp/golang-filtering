@@ -1,50 +1,98 @@
 package query
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
 func (f *Pagination[T]) Pagination(
 	db *gorm.DB,
-	filterRoot StructuredFilter,
-	pageIndex int,
-	pageSize int,
+	context context.Context,
+	ctx echo.Context,
 	preloads ...string,
 ) (*PaginationResult[T], error) {
-
-	result := PaginationResult[T]{PageIndex: pageIndex, PageSize: pageSize}
-	if result.PageIndex < 0 {
-		result.PageIndex = 0
+	filterRoot, pageIndex, pageSize, err := parseQuery(ctx)
+	if err != nil {
+		return &PaginationResult[T]{}, fmt.Errorf("failed to parse query: %w", err)
 	}
-	if result.PageSize <= 0 {
-		result.PageSize = 30
-	}
-	if f.Verbose {
-		db = db.Debug()
-	}
-	query := f.structuredQuery(db, filterRoot)
-	var totalCount int64
-	if err := query.Count(&totalCount).Error; err != nil {
-		return nil, fmt.Errorf("failed to count records: %w", err)
-	}
+	return f.StructuredPagination(db, filterRoot, pageIndex, pageSize, preloads...)
+}
 
-	result.TotalSize = int(totalCount)
-	result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
-	offset := result.PageIndex * result.PageSize
-	query = query.Offset(int(offset)).Limit(int(result.PageSize))
+func (f *Pagination[T]) PaginationStructured(
+	db *gorm.DB,
 
-	for _, preload := range preloads {
-		query = query.Preload(preload)
+	context context.Context,
+	ctx echo.Context,
+
+	filter StructuredFilter,
+
+	preloads ...string,
+) (*PaginationResult[T], error) {
+	filterRoot, pageIndex, pageSize, err := parseQuery(ctx)
+	if err != nil {
+		return &PaginationResult[T]{}, fmt.Errorf("failed to parse query: %w", err)
 	}
-
-	var data []*T
-
-	if err := query.Find(&data).Error; err != nil {
-		return nil, fmt.Errorf("failed to fetch records: %w", err)
+	filterRoot.FieldFilters = append(filterRoot.FieldFilters, filter.FieldFilters...)
+	filterRoot.Logic = LogicAnd
+	if len(filterRoot.SortFields) == 0 && len(filter.SortFields) > 0 {
+		filterRoot.SortFields = filter.SortFields
 	}
-	result.Data = data
+	filterRoot.Preload = append(filterRoot.Preload, filter.Preload...)
+	return f.StructuredPagination(db, filterRoot, pageIndex, pageSize, preloads...)
+}
 
-	return &result, nil
+func (f *Pagination[T]) PaginationArray(
+	db *gorm.DB,
+
+	context context.Context,
+	ctx echo.Context,
+
+	filters []ArrFilterSQL,
+	sorts []ArrFilterSortSQL,
+
+	preloads ...string,
+) (*PaginationResult[T], error) {
+	filterRoot, pageIndex, pageSize, err := parseQuery(ctx)
+	if err != nil {
+		return &PaginationResult[T]{}, fmt.Errorf("failed to parse query: %w", err)
+	}
+	for _, f := range filters {
+		filterRoot.FieldFilters = append(filterRoot.FieldFilters, FieldFilter{
+			Field:    f.Field,
+			Value:    f.Value,
+			Mode:     f.Op,
+			DataType: DataTypeText,
+		})
+	}
+	filterRoot.Logic = LogicAnd
+	if len(filterRoot.SortFields) == 0 && len(sorts) > 0 {
+		for _, s := range sorts {
+			filterRoot.SortFields = append(filterRoot.SortFields, SortField(s))
+		}
+	}
+	filterRoot.Preload = append(filterRoot.Preload, preloads...)
+	return f.StructuredPagination(db, filterRoot, pageIndex, pageSize, preloads...)
+}
+
+func (f *Pagination[T]) PaginationNormal(
+	db *gorm.DB,
+
+	context context.Context,
+	ctx echo.Context,
+
+	filter *T,
+
+	preloads ...string,
+) (*PaginationResult[T], error) {
+	filterRoot, pageIndex, pageSize, err := parseQuery(ctx)
+	if err != nil {
+		return &PaginationResult[T]{}, fmt.Errorf("failed to parse query: %w", err)
+	}
+	if filter != nil {
+		db = db.Where(filter)
+	}
+	return f.StructuredPagination(db, filterRoot, pageIndex, pageSize, preloads...)
 }
