@@ -45,6 +45,8 @@ func TestRegistryCreateVariants(t *testing.T) {
 	if err := tx.Commit().Error; err != nil {
 		t.Fatalf("failed to commit tx: %v", err)
 	}
+	// reset destination struct to avoid residual PK values affecting the query
+	got = User{}
 	if err := db.First(&got, "id = ?", u2.ID).Error; err != nil {
 		t.Fatalf("record not found after CreateWithTx: %v", err)
 	}
