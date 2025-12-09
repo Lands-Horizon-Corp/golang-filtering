@@ -12,6 +12,7 @@ func (f *Pagination[T]) StructuredPagination(
 	filterRoot StructuredFilter,
 	pageIndex int,
 	pageSize int,
+	preloads ...string,
 ) (*PaginationResult[T], error) {
 
 	result := PaginationResult[T]{PageIndex: pageIndex, PageSize: pageSize}
@@ -34,6 +35,10 @@ func (f *Pagination[T]) StructuredPagination(
 	result.TotalPage = (result.TotalSize + result.PageSize - 1) / result.PageSize
 	offset := result.PageIndex * result.PageSize
 	query = query.Offset(int(offset)).Limit(int(result.PageSize))
+
+	for _, preload := range preloads {
+		query = query.Preload(preload)
+	}
 
 	var data []*T
 
