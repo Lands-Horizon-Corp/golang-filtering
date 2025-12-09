@@ -63,14 +63,21 @@ var timeLayouts = []string{
 
 func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []SortField) *gorm.DB {
 	joinedTables := make(map[string]bool)
+	allowedJoinTables := map[string]struct{}{
+		// Add allowed, PascalCase table names here:
+		// Example: "User": {}, "Profile": {}, "Order": {}, etc.
+		// TODO: Fill from schema or config as appropriate!
+	}
 	for _, filter := range filters {
 		if strings.Contains(filter.Field, ".") {
 			parts := strings.Split(filter.Field, ".")
 			if len(parts) >= 2 {
 				tableName := toPascalCase(parts[0])
-				if !joinedTables[tableName] {
-					db = db.Joins(tableName)
-					joinedTables[tableName] = true
+				if _, allowed := allowedJoinTables[tableName]; allowed {
+					if !joinedTables[tableName] {
+						db = db.Joins(tableName)
+						joinedTables[tableName] = true
+					}
 				}
 			}
 		}
@@ -80,9 +87,11 @@ func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []Sort
 			parts := strings.Split(sortField.Field, ".")
 			if len(parts) >= 2 {
 				tableName := toPascalCase(parts[0])
-				if !joinedTables[tableName] {
-					db = db.Joins(tableName)
-					joinedTables[tableName] = true
+				if _, allowed := allowedJoinTables[tableName]; allowed {
+					if !joinedTables[tableName] {
+						db = db.Joins(tableName)
+						joinedTables[tableName] = true
+					}
 				}
 			}
 		}
