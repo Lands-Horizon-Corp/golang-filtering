@@ -276,3 +276,24 @@ func (f *Pagination[T]) NormalTabular(
 	}
 	return csvCreation(data, getter)
 }
+
+func (p *Pagination[T]) NormalGetByIDIncludingDeleted(
+	db *gorm.DB,
+	id any,
+	preloads ...string,
+) (*T, error) {
+	db = db.Unscoped()
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	var entity T
+	err := db.First(&entity, "id = ?", id).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get entity by ID %v including deleted: %w", id, err)
+	}
+
+	return &entity, nil
+}

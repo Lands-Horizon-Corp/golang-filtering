@@ -230,45 +230,6 @@ func (p *Pagination[T]) StructuredGetMinLock(
 	return result, nil
 }
 
-func (p *Pagination[T]) StructuredGetByID(
-	db *gorm.DB,
-	id any,
-	preloads ...string,
-) (*T, error) {
-	var entity T
-	for _, preload := range preloads {
-		db = db.Preload(preload)
-	}
-	err := db.First(&entity, "id = ?", id).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get entity by ID %v: %w", id, err)
-	}
-	return &entity, nil
-}
-
-func (p *Pagination[T]) StructuredGetByIDLock(
-	tx *gorm.DB,
-	id any,
-	preloads ...string,
-) (*T, error) {
-	var entity T
-	for _, preload := range preloads {
-		tx = tx.Preload(preload)
-	}
-	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	err := tx.First(&entity, "id = ?", id).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get entity by ID %v with lock: %w", id, err)
-	}
-	return &entity, nil
-}
-
 func (f *Pagination[T]) StructuredTabular(
 	db *gorm.DB,
 	filterRoot StructuredFilter,
