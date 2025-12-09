@@ -74,6 +74,22 @@ func (p *Pagination[T]) NormalFind(
 	}
 	return data, nil
 }
+func (r *Pagination[T]) NormalFindLock(
+	db *gorm.DB,
+	filter T,
+	preloads ...string,
+) ([]*T, error) {
+	var entities []*T
+	db = db.Model(new(T)).Where(&filter)
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
+	if err := db.Find(&entities).Error; err != nil {
+		return nil, fmt.Errorf("failed to find entities with lock: %w", err)
+	}
+	return entities, nil
+}
 func (p *Pagination[T]) NormalFindOne(
 	db *gorm.DB,
 	filter T,
