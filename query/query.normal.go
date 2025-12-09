@@ -52,7 +52,7 @@ func (p *Pagination[T]) NormalCount(
 	filter T,
 ) (int64, error) {
 	var count int64
-	db = db.Where(&filter)
+	db = db.Model(new(T)).Where(&filter)
 	if err := db.Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("failed to count entities: %w", err)
 	}
@@ -64,7 +64,7 @@ func (p *Pagination[T]) NormalFind(
 	filter T,
 	preloads ...string,
 ) ([]*T, error) {
-	db = db.Where(&filter)
+	db = db.Model(new(T)).Where(&filter)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
@@ -79,7 +79,7 @@ func (p *Pagination[T]) NormalFindOne(
 	filter T,
 	preloads ...string,
 ) (*T, error) {
-	db = db.Where(&filter)
+	db = db.Model(new(T)).Where(&filter)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
@@ -99,7 +99,7 @@ func (p *Pagination[T]) NormalFindOneWithLock(
 	filter T,
 	preloads ...string,
 ) (*T, error) {
-	db = db.Where(&filter)
+	db = db.Model(new(T)).Where(&filter)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
@@ -119,7 +119,7 @@ func (p *Pagination[T]) NormalExists(
 	db *gorm.DB,
 	filter T,
 ) (bool, error) {
-	db = db.Where(&filter)
+	db = db.Model(new(T)).Where(&filter)
 	var dummy int
 	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
@@ -160,7 +160,7 @@ func (p *Pagination[T]) NormalGetMax(
 	filter T,
 ) (any, error) {
 	var result any
-	db = db.Where(&filter)
+	db = db.Model(new(T)).Where(&filter)
 	err := db.Select(fmt.Sprintf("MAX(%s)", field)).Scan(&result).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
@@ -174,7 +174,7 @@ func (p *Pagination[T]) NormalGetMin(
 	filter T,
 ) (any, error) {
 	var result any
-	db = db.Where(&filter)
+	db = db.Model(new(T)).Where(&filter)
 	err := db.Select(fmt.Sprintf("MIN(%s)", field)).Scan(&result).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get min of %s: %w", field, err)
@@ -188,7 +188,7 @@ func (p *Pagination[T]) NormalGetMaxLock(
 	filter T,
 ) (any, error) {
 	var result any
-	tx = tx.Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
+	tx = tx.Model(new(T)).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
 	err := tx.Select(fmt.Sprintf("MAX(%s)", field)).Scan(&result).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
@@ -202,7 +202,7 @@ func (p *Pagination[T]) NormalGetMinLock(
 	filter T,
 ) (any, error) {
 	var result any
-	tx = tx.Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
+	tx = tx.Model(new(T)).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
 	err := tx.Select(fmt.Sprintf("MIN(%s)", field)).Scan(&result).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)
