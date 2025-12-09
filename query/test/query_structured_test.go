@@ -31,7 +31,7 @@ type User struct {
 }
 
 func TestStructuredPagination(t *testing.T) {
-	db, err := database[any](&User{})
+	db, err := database(&User{})
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}

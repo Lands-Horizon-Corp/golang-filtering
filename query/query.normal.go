@@ -9,7 +9,7 @@ import (
 
 func (f *Pagination[T]) Pagination(
 	db *gorm.DB,
-	filter T,
+	filter *T,
 	pageIndex int,
 	pageSize int,
 	preloads ...string,
@@ -27,7 +27,7 @@ func (f *Pagination[T]) Pagination(
 	if f.Verbose {
 		db = db.Debug()
 	}
-	query := db.Where(&filter)
+	query := db.Model(new(T)).Where(filter)
 	var totalCount int64
 	if err := query.Count(&totalCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count records: %w", err)

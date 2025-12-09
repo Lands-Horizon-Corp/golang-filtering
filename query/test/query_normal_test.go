@@ -12,7 +12,7 @@ import (
 )
 
 func seedUsers(t *testing.T, db *gorm.DB) []User {
-	base := time.Now().UTC()
+	base := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
 
 	users := []User{
 		{ID: uuid.New(), Name: "Alice", Age: 20, CreatedAt: base.Add(-48 * time.Hour)},
@@ -29,16 +29,18 @@ func seedUsers(t *testing.T, db *gorm.DB) []User {
 	return users
 }
 
+// ------------------------------------------
+// TEST 1: BASIC PAGINATION
+// ------------------------------------------
 func TestPaginationBasic(t *testing.T) {
-	db, err := database[any](&User{})
+	db, err := database(&User{})
 	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
+		t.Fatalf("failed to open database: %v", err)
 	}
 	users := seedUsers(t, db)
 	p := query.NewPagination[User](true)
 
-	// Filter: Age > 0 (match all)
-	filter := User{Age: 0}
+	filter := &User{} // No filter — match all
 
 	res, err := p.Pagination(db, filter, 0, 2)
 	assert.NoError(t, err)
@@ -51,8 +53,11 @@ func TestPaginationBasic(t *testing.T) {
 	assert.Equal(t, users[1].Name, res.Data[1].Name)
 }
 
+// ------------------------------------------
+// TEST 2: PAGE 2
+// ------------------------------------------
 func TestPaginationPage2(t *testing.T) {
-	db, err := database[any](&User{})
+	db, err := database(&User{})
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -60,9 +65,7 @@ func TestPaginationPage2(t *testing.T) {
 	users := seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	filter := User{} // no filters
-
-	res, err := p.Pagination(db, filter, 1, 2)
+	res, err := p.Pagination(db.Order("created_at ASC"), &User{}, 1, 2)
 	assert.NoError(t, err)
 
 	assert.Len(t, res.Data, 2)
@@ -70,8 +73,11 @@ func TestPaginationPage2(t *testing.T) {
 	assert.Equal(t, users[3].Name, res.Data[1].Name)
 }
 
+// ------------------------------------------
+// TEST 3: LAST PAGE (REMAINDER ITEMS)
+// ------------------------------------------
 func TestPaginationLastPage(t *testing.T) {
-	db, err := database[any](&User{})
+	db, err := database(&User{})
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -79,23 +85,25 @@ func TestPaginationLastPage(t *testing.T) {
 	users := seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	res, err := p.Pagination(db, User{}, 2, 2)
+	res, err := p.Pagination(db.Order("created_at ASC"), &User{}, 2, 2)
 	assert.NoError(t, err)
 
 	assert.Len(t, res.Data, 1)
 	assert.Equal(t, users[4].Name, res.Data[0].Name)
 }
 
+// ------------------------------------------
+// TEST 4: WITH FILTER (Age = 30)
+// ------------------------------------------
 func TestPaginationWithFilter(t *testing.T) {
-	db, err := database[any](&User{})
+	db, err := database(&User{})
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
 	seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	// Filter only Age = 30 (Bob)
-	res, err := p.Pagination(db, User{Age: 30}, 0, 10)
+	res, err := p.Pagination(db.Order("created_at ASC"), &User{Age: 30}, 0, 10)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, res.TotalSize)
@@ -103,22 +111,27 @@ func TestPaginationWithFilter(t *testing.T) {
 	assert.Equal(t, "Bob", res.Data[0].Name)
 }
 
+// ------------------------------------------
+// TEST 5: INVALID PAGE SIZE → AUTO DEFAULT (30)
+// ------------------------------------------
 func TestPaginationPageSizeValidation(t *testing.T) {
-	db, err := database[any](&User{})
+	db, err := database(&User{})
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
 	seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	// Invalid pageSize should default to 30
-	res, err := p.Pagination(db, User{}, 0, -1)
+	res, err := p.Pagination(db, &User{}, 0, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, 30, res.PageSize)
 }
 
+// ------------------------------------------
+// TEST 6: INVALID PAGE INDEX → AUTO SET TO 0
+// ------------------------------------------
 func TestPaginationPageIndexValidation(t *testing.T) {
-	db, err := database[any](&User{})
+	db, err := database(&User{})
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -126,8 +139,7 @@ func TestPaginationPageIndexValidation(t *testing.T) {
 	seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	// Negative pageIndex should reset to 0
-	res, err := p.Pagination(db, User{}, -10, 10)
+	res, err := p.Pagination(db, &User{}, -10, 10)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, res.PageIndex)
 }
