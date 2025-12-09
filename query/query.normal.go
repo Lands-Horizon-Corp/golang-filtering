@@ -1,8 +1,10 @@
 package query
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -244,6 +246,7 @@ func (p *Pagination[T]) NormalGetByID(
 }
 
 func (p *Pagination[T]) NormalGetByIDLock(
+	ctx context.Context,
 	tx *gorm.DB,
 	id any,
 	preloads ...string,
@@ -252,7 +255,7 @@ func (p *Pagination[T]) NormalGetByIDLock(
 	for _, preload := range preloads {
 		tx = tx.Preload(preload)
 	}
-	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
+	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"}).WithContext(ctx)
 	err := tx.First(&entity, fmt.Sprintf("%s = ?", p.columnDefaultID), id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -282,6 +285,31 @@ func (p *Pagination[T]) NormalGetByIDIncludingDeleted(
 	return &entity, nil
 }
 
+func (p *Pagination[T]) NormalGetByIDIncludingDeletedLock(
+	tx *gorm.DB,
+	id any,
+	preloads ...string,
+) (*T, error) {
+	tx = tx.Unscoped()
+	for _, preload := range preloads {
+		tx = tx.Preload(preload)
+	}
+	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
+	var entity T
+	err := tx.First(&entity, fmt.Sprintf("%s = ?", p.columnDefaultID), id).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"failed to get entity by ID %v including deleted with lock: %w",
+			id, err,
+		)
+	}
+
+	return &entity, nil
+}
+
 func (f *Pagination[T]) NormalTabular(
 	db *gorm.DB,
 	filter T,
@@ -296,4 +324,90 @@ func (f *Pagination[T]) NormalTabular(
 		return nil, fmt.Errorf("failed to get data: %w", err)
 	}
 	return csvCreation(data, getter)
+}
+
+// NormalRequestTabular uses echo.Context and optional filter
+func (f *Pagination[T]) NormalRequestTabular(
+	db *gorm.DB,
+	ctx echo.Context,
+	filter *T,
+	getter func(data *T) map[string]any,
+	preloads ...string,
+) ([]byte, error) {
+	filterRoot, _, _, err := parseQuery(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse query: %w", err)
+	}
+
+	if filter != nil {
+		db = db.Where(filter)
+	}
+
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+
+	data, err := f.StructuredFind(db, filterRoot, preloads...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data: %w", err)
+	}
+
+	return csvCreation(data, getter)
+}
+
+func (f *Pagination[T]) NormalStringTabular(
+	db *gorm.DB,
+	filterValue string,
+	filter *T,
+	getter func(data *T) map[string]any,
+	preloads ...string,
+) ([]byte, error) {
+	filterRoot, _, _, err := strParseQuery(filterValue)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse query string: %w", err)
+	}
+	if filter != nil {
+		db = db.Where(filter)
+	}
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	data, err := f.StructuredFind(db, filterRoot, preloads...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data: %w", err)
+	}
+	return csvCreation(data, getter)
+}
+
+func (p *Pagination[T]) NormalFindIncludeDeleted(
+	db *gorm.DB,
+	filter T,
+	preloads ...string,
+) ([]*T, error) {
+	db = db.Unscoped().Where(&filter)
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	var data []*T
+	if err := db.Find(&data).Error; err != nil {
+		return nil, fmt.Errorf("failed to find entities including deleted: %w", err)
+	}
+	return data, nil
+}
+
+func (r *Pagination[T]) NormalFindLockIncludeDeleted(
+	db *gorm.DB,
+	filter T,
+	preloads ...string,
+) ([]*T, error) {
+	db = db.Unscoped().Where(&filter)
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
+	var entities []*T
+	if err := db.Find(&entities).Error; err != nil {
+		return nil, fmt.Errorf("failed to find entities including deleted with lock: %w", err)
+	}
+	return entities, nil
 }

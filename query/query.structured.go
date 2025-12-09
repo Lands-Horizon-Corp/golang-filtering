@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -50,6 +51,21 @@ func (f *Pagination[T]) StructuredPagination(
 	return &result, nil
 }
 
+func (f *Pagination[T]) StructuredFind(
+	db *gorm.DB,
+	filterRoot StructuredFilter,
+	preloads ...string,
+) ([]*T, error) {
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	query := f.structuredQuery(db, filterRoot)
+	var data []*T
+	if err := query.Find(&data).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch records: %w", err)
+	}
+	return data, nil
+}
 func (f *Pagination[T]) StructuredCount(
 	db *gorm.DB,
 	filterRoot StructuredFilter,
@@ -60,18 +76,6 @@ func (f *Pagination[T]) StructuredCount(
 		return 0, fmt.Errorf("failed to count records: %w", err)
 	}
 	return totalCount, nil
-}
-
-func (f *Pagination[T]) StructuredFind(
-	db *gorm.DB,
-	filterRoot StructuredFilter,
-) ([]*T, error) {
-	query := f.structuredQuery(db, filterRoot)
-	var data []*T
-	if err := query.Find(&data).Error; err != nil {
-		return nil, fmt.Errorf("failed to fetch records: %w", err)
-	}
-	return data, nil
 }
 
 func (p *Pagination[T]) StructuredFindLock(
@@ -231,4 +235,92 @@ func (f *Pagination[T]) StructuredTabular(
 		return nil, fmt.Errorf("failed to get data: %w", err)
 	}
 	return csvCreation(data, getter)
+}
+func (f *Pagination[T]) StructuredRequestTabular(
+	db *gorm.DB,
+	ctx echo.Context,
+	filter StructuredFilter,
+	getter func(data *T) map[string]any,
+	preloads ...string,
+) ([]byte, error) {
+	filterRoot, _, _, err := parseQuery(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse query: %w", err)
+	}
+	filterRoot.FieldFilters = append(filterRoot.FieldFilters, filter.FieldFilters...)
+	filterRoot.Logic = LogicAnd
+	if len(filterRoot.SortFields) == 0 && len(filter.SortFields) > 0 {
+		filterRoot.SortFields = filter.SortFields
+	}
+	filterRoot.Preload = append(filterRoot.Preload, filter.Preload...)
+
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	data, err := f.StructuredFind(db, filterRoot, preloads...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get structured data: %w", err)
+	}
+	return csvCreation(data, getter)
+}
+
+func (f *Pagination[T]) StructuredStringTabular(
+	db *gorm.DB,
+	filterValue string,
+	filter StructuredFilter,
+	getter func(data *T) map[string]any,
+	preloads ...string,
+) ([]byte, error) {
+	filterRoot, _, _, err := strParseQuery(filterValue)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse query string: %w", err)
+	}
+	filterRoot.FieldFilters = append(filterRoot.FieldFilters, filter.FieldFilters...)
+	filterRoot.Logic = LogicAnd
+	if len(filterRoot.SortFields) == 0 && len(filter.SortFields) > 0 {
+		filterRoot.SortFields = filter.SortFields
+	}
+	filterRoot.Preload = append(filterRoot.Preload, filter.Preload...)
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	data, err := f.StructuredFind(db, filterRoot, preloads...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get structured data: %w", err)
+	}
+	return csvCreation(data, getter)
+}
+func (p *Pagination[T]) StructuredFindIncludeDeleted(
+	db *gorm.DB,
+	filterRoot StructuredFilter,
+	preloads ...string,
+) ([]*T, error) {
+	db = db.Unscoped()
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	query := p.structuredQuery(db, filterRoot)
+	var data []*T
+	if err := query.Find(&data).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch records including deleted: %w", err)
+	}
+	return data, nil
+}
+
+func (p *Pagination[T]) StructuredFindLockIncludeDeleted(
+	db *gorm.DB,
+	filterRoot StructuredFilter,
+	preloads ...string,
+) ([]*T, error) {
+	db = db.Unscoped()
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
+	query := p.structuredQuery(db, filterRoot)
+	query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+	var data []*T
+	if err := query.Find(&data).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch records including deleted with lock: %w", err)
+	}
+	return data, nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Lands-Horizon-Corp/golang-filtering/query"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 func (r *Registry[TData, TResponse, TRequest]) Pagination(
@@ -75,6 +76,30 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredPagination(
 	preloads ...string,
 ) (*query.PaginationResult[TResponse], error) {
 	data, err := r.pagination.PaginationStructured(r.Client(context), context, ctx, filter, r.preload(preloads...)...)
+	if err != nil {
+		return nil, err
+	}
+	return &query.PaginationResult[TResponse]{
+		Data:      r.ToModels(data.Data),
+		TotalSize: data.TotalSize,
+		TotalPage: data.TotalPage,
+		PageIndex: data.PageIndex,
+		PageSize:  data.PageSize,
+	}, nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawPagination(
+	ctx context.Context,
+	echoCtx echo.Context,
+	rawQuery func(*gorm.DB) *gorm.DB,
+	preloads ...string,
+) (*query.PaginationResult[TResponse], error) {
+	data, err := r.pagination.PaginationRaw(
+		r.Client(ctx),
+		echoCtx,
+		rawQuery,
+		r.preload(preloads...)...,
+	)
 	if err != nil {
 		return nil, err
 	}

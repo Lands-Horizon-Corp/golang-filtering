@@ -22,12 +22,15 @@ func (r *Registry[TData, TResponse, TRequest]) DeleteWithTx(
 	id any,
 ) error {
 	var entity TData
-	if err := tx.First(&entity, id).Error; err != nil {
+	// Use the custom column name
+	if err := tx.Where(fmt.Sprintf("%s = ?", r.columnDefaultID), id).First(&entity).Error; err != nil {
 		return fmt.Errorf("failed to find entity for delete: %w", err)
 	}
+
 	if err := tx.Delete(&entity).Error; err != nil {
 		return fmt.Errorf("failed to delete entity with transaction: %w", err)
 	}
+
 	r.OnDelete(ctx, &entity)
 	return nil
 }
@@ -53,17 +56,19 @@ func (r *Registry[TData, TResponse, TRequest]) BulkDeleteWithTx(
 		return nil
 	}
 	var entities []TData
-	if err := tx.Find(&entities, ids).Error; err != nil {
+	if err := tx.Where(fmt.Sprintf("%s IN ?", r.columnDefaultID), ids).Find(&entities).Error; err != nil {
 		return fmt.Errorf("failed to find entities for bulk delete: %w", err)
 	}
+
 	if len(entities) != len(ids) {
 		return fmt.Errorf("some entities not found for bulk delete")
 	}
-	if err := tx.Delete(&entities).Error; err != nil {
+	if err := tx.Where(fmt.Sprintf("%s IN ?", r.columnDefaultID), ids).Delete(&entities).Error; err != nil {
 		return fmt.Errorf("failed to bulk delete entities: %w", err)
 	}
 	for _, data := range entities {
 		r.OnDelete(ctx, &data)
 	}
+
 	return nil
 }

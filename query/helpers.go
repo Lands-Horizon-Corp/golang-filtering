@@ -65,9 +65,9 @@ func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []Sort
 	joinedTables := make(map[string]bool)
 	allowedJoinTables := map[string]struct{}{
 		// Allowed PascalCase table names (example):
-		"User": {},
+		"User":    {},
 		"Profile": {},
-		"Order": {},
+		"Order":   {},
 		// TODO: Add other table names from your schema as appropriate.
 	}
 	for _, filter := range filters {
@@ -531,5 +531,112 @@ func parseQuery(ctx echo.Context) (StructuredFilter, int, int, error) {
 		return StructuredFilter{}, 0, 0, fmt.Errorf("pageSize processing failed: %w", err)
 	}
 
+	return filterRoot, pageIndex, pageSize, nil
+}
+
+func strParseFilters(value string) (StructuredFilter, error) {
+	if value == "" {
+		return StructuredFilter{Logic: LogicAnd}, nil
+	}
+	decodedRaw, err := url.QueryUnescape(value)
+	if err != nil {
+		return StructuredFilter{}, fmt.Errorf("unescaping failed: %w", err)
+	}
+	filterBytes, err := base64.StdEncoding.DecodeString(decodedRaw)
+	if err != nil {
+		return StructuredFilter{}, fmt.Errorf("base64 decoding failed: %w", err)
+	}
+	var filterRoot StructuredFilter
+	if err := json.Unmarshal(filterBytes, &filterRoot); err != nil {
+		return StructuredFilter{}, fmt.Errorf("JSON unmarshalling failed: %w", err)
+	}
+	if filterRoot.Logic == "" {
+		filterRoot.Logic = LogicAnd
+	}
+	return filterRoot, nil
+}
+
+func strParseSort(value string) ([]SortField, error) {
+	if value == "" {
+		return nil, nil
+	}
+	decodedRaw, err := url.QueryUnescape(value)
+	if err != nil {
+		return nil, fmt.Errorf("unescaping failed: %w", err)
+	}
+	sortBytes, err := base64.StdEncoding.DecodeString(decodedRaw)
+	if err != nil {
+		return nil, fmt.Errorf("base64 decoding failed: %w", err)
+	}
+	var sortFields []SortField
+	if err := json.Unmarshal(sortBytes, &sortFields); err != nil {
+		return nil, fmt.Errorf("JSON unmarshalling failed: %w", err)
+	}
+	for i, sf := range sortFields {
+		order := strings.ToLower(strings.TrimSpace(string(sf.Order)))
+		if order != "asc" && order != "desc" {
+			sortFields[i].Order = "asc"
+		} else {
+			sortFields[i].Order = SortOrder(order)
+		}
+	}
+	return sortFields, nil
+}
+
+func strParsePageSize(value string) (int, error) {
+	if value == "" {
+		return 0, nil
+	}
+	pageSize, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid pageSize parameter: %w", err)
+	}
+	return pageSize, nil
+}
+
+func strParsePageIndex(value string) (int, error) {
+	if value == "" {
+		return 0, nil
+	}
+	pageIndex, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid pageIndex parameter: %w", err)
+	}
+	return pageIndex, nil
+}
+
+func strParseQuery(value string) (StructuredFilter, int, int, error) {
+	parts := strings.Split(value, "|")
+	var filterStr, sortStr, pageIndexStr, pageSizeStr string
+	if len(parts) > 0 {
+		filterStr = parts[0]
+	}
+	if len(parts) > 1 {
+		sortStr = parts[1]
+	}
+	if len(parts) > 2 {
+		pageIndexStr = parts[2]
+	}
+	if len(parts) > 3 {
+		pageSizeStr = parts[3]
+	}
+
+	filterRoot, err := strParseFilters(filterStr)
+	if err != nil {
+		return StructuredFilter{}, 0, 0, fmt.Errorf("filter processing failed: %w", err)
+	}
+	sortFields, err := strParseSort(sortStr)
+	if err != nil {
+		return StructuredFilter{}, 0, 0, fmt.Errorf("sort processing failed: %w", err)
+	}
+	filterRoot.SortFields = sortFields
+	pageIndex, err := strParsePageIndex(pageIndexStr)
+	if err != nil {
+		return StructuredFilter{}, 0, 0, fmt.Errorf("pageIndex processing failed: %w", err)
+	}
+	pageSize, err := strParsePageSize(pageSizeStr)
+	if err != nil {
+		return StructuredFilter{}, 0, 0, fmt.Errorf("pageSize processing failed: %w", err)
+	}
 	return filterRoot, pageIndex, pageSize, nil
 }

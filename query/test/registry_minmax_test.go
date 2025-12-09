@@ -36,28 +36,20 @@ func TestRegistryMinMaxVariants(t *testing.T) {
 	})
 
 	ctx := context.Background()
-
-	// Normal GetMax/GetMin
-	maxVal, err := r.GetMax(ctx, "age", &User{})
+	maxVal, err := r.GetMaxInt(ctx, "age", &User{})
 	assert.NoError(t, err)
 	assert.NotNil(t, maxVal)
 	assert.EqualValues(t, 40, maxVal)
-
 	minVal, err := r.GetMin(ctx, "age", &User{})
 	assert.NoError(t, err)
 	assert.NotNil(t, minVal)
 	assert.EqualValues(t, 20, minVal)
-
-	// Normal lock variants
-	maxLock, err := r.GetMaxLock(ctx, "age", &User{})
+	maxLock, err := r.GetMaxLockInt(ctx, db, "age", &User{})
 	assert.NoError(t, err)
 	assert.EqualValues(t, 40, maxLock)
-
-	minLock, err := r.GetMinLock(ctx, "age", &User{})
+	minLock, err := r.GetMinLock(ctx, db, "age", &User{})
 	assert.NoError(t, err)
 	assert.EqualValues(t, 20, minLock)
-
-	// Structured filters: age >= 30 -> min 30, max 40
 	structFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{{Field: "age", Value: 30, Mode: query.ModeGTE, DataType: query.DataTypeNumber}},
 		Logic:        query.LogicAnd,

@@ -9,23 +9,18 @@ import (
 )
 
 type Topics []string
-type RegistryEvent interface {
-	Run(ctx context.Context) error
-	Stop(ctx context.Context) error
-	Publish(topic string, payload any) error
-	Dispatch(topics Topics, payload any) error
-}
+
 type RegistryParams[TData any, TResponse any, TRequest any] struct {
 	ColumnDefaultID   string
 	ColumnDefaultSort string
 	Database          *gorm.DB
-	Event             RegistryEvent
+	Dispatch          func(topics Topics, payload any) error
 	Validator         *validator.Validate
 	Created           func(*TData) Topics
 	Updated           func(*TData) Topics
 	Deleted           func(*TData) Topics
 	Resource          func(*TData) *TResponse
-	tabular           func(data *TData) map[string]any
+	Tabular           func(data *TData) map[string]any
 	Preloads          []string
 }
 
@@ -33,7 +28,7 @@ type Registry[TData any, TResponse any, TRequest any] struct {
 	columnDefaultID   string
 	columnDefaultSort string
 	database          *gorm.DB
-	event             RegistryEvent
+	dispatch          func(topics Topics, payload any) error
 	validator         *validator.Validate
 	preloads          []string
 	resource          func(*TData) *TResponse
@@ -51,13 +46,13 @@ func NewRegistry[TData any, TResponse any, TRequest any](
 		columnDefaultID:   params.ColumnDefaultID,
 		columnDefaultSort: params.ColumnDefaultSort,
 		database:          params.Database,
-		event:             params.Event,
+		dispatch:          params.Dispatch,
 		preloads:          params.Preloads,
 		resource:          params.Resource,
 		created:           params.Created,
 		updated:           params.Updated,
 		deleted:           params.Deleted,
-		tabular:           params.tabular,
+		tabular:           params.Tabular,
 		validator:         params.Validator,
 		pagination: *query.NewPagination[TData](query.PaginationConfig{
 			Verbose:           true,

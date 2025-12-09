@@ -33,20 +33,17 @@ func TestRegistryTabularVariants(t *testing.T) {
 	r := registry.NewRegistry(registry.RegistryParams[User, User, any]{
 		Database: db,
 		Resource: func(d *User) *User { return d },
+		Tabular: func(data *User) map[string]any {
+			return map[string]any{
+				"id":   data.ID,
+				"name": data.Name,
+				"age":  data.Age,
+			}
+		},
 	})
-
 	ctx := context.Background()
-
-	getter := func(u *User) map[string]any {
-		return map[string]any{
-			"id":   u.ID,
-			"name": u.Name,
-			"age":  u.Age,
-		}
-	}
-
 	normalFilter := User{Age: 30}
-	normalCSV, err := r.NormalTabular(ctx, normalFilter, getter)
+	normalCSV, err := r.Tabular(ctx, normalFilter)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, normalCSV)
 	csvStr := string(normalCSV)
@@ -56,7 +53,7 @@ func TestRegistryTabularVariants(t *testing.T) {
 
 	// ArrTabular with filter Age = 35
 	arrFilters := []query.ArrFilterSQL{{Field: "age", Op: query.ModeEqual, Value: 35}}
-	arrCSV, err := r.ArrTabular(ctx, getter, arrFilters, nil)
+	arrCSV, err := r.ArrTabular(ctx, arrFilters, nil)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, arrCSV)
 	arrCSVStr := string(arrCSV)
@@ -71,7 +68,7 @@ func TestRegistryTabularVariants(t *testing.T) {
 		},
 		Logic: query.LogicAnd,
 	}
-	structCSV, err := r.StructuredTabular(ctx, structFilter, getter)
+	structCSV, err := r.StructuredTabular(ctx, structFilter)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, structCSV)
 	structCSVStr := string(structCSV)
