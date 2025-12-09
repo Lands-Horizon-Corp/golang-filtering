@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func (f *Pagination[T]) Pagination(
+func (f *Pagination[T]) NormalPagination(
 	db *gorm.DB,
 	filter *T,
 	pageIndex int,
@@ -47,7 +47,7 @@ func (f *Pagination[T]) Pagination(
 	return &result, nil
 }
 
-func (p *Pagination[T]) Count(
+func (p *Pagination[T]) NormalCount(
 	db *gorm.DB,
 	filter T,
 ) (int64, error) {
@@ -59,7 +59,7 @@ func (p *Pagination[T]) Count(
 	return count, nil
 }
 
-func (p *Pagination[T]) Find(
+func (p *Pagination[T]) NormalFind(
 	db *gorm.DB,
 	filter T,
 	preloads ...string,
@@ -74,7 +74,7 @@ func (p *Pagination[T]) Find(
 	}
 	return data, nil
 }
-func (p *Pagination[T]) FindOne(
+func (p *Pagination[T]) NormalFindOne(
 	db *gorm.DB,
 	filter T,
 	preloads ...string,
@@ -94,7 +94,7 @@ func (p *Pagination[T]) FindOne(
 	return &entity, nil
 }
 
-func (p *Pagination[T]) FindOneWithLock(
+func (p *Pagination[T]) NormalFindOneWithLock(
 	db *gorm.DB,
 	filter T,
 	preloads ...string,
@@ -115,7 +115,7 @@ func (p *Pagination[T]) FindOneWithLock(
 	return &entity, nil
 }
 
-func (p *Pagination[T]) Exists(
+func (p *Pagination[T]) NormalExists(
 	db *gorm.DB,
 	filter T,
 ) (bool, error) {
@@ -128,7 +128,7 @@ func (p *Pagination[T]) Exists(
 	return dummy == 1, nil
 }
 
-func (p *Pagination[T]) ExistsByID(
+func (p *Pagination[T]) NormalExistsByID(
 	db *gorm.DB,
 	id any,
 ) (bool, error) {
@@ -141,7 +141,7 @@ func (p *Pagination[T]) ExistsByID(
 	return dummy == 1, nil
 }
 
-func (p *Pagination[T]) ExistsIncludingDeleted(
+func (p *Pagination[T]) NormalExistsIncludingDeleted(
 	db *gorm.DB,
 	filter T,
 ) (bool, error) {
@@ -154,7 +154,7 @@ func (p *Pagination[T]) ExistsIncludingDeleted(
 	return dummy == 1, nil
 }
 
-func (p *Pagination[T]) GetMax(
+func (p *Pagination[T]) NormalGetMax(
 	db *gorm.DB,
 	field string,
 	filter T,
@@ -168,7 +168,7 @@ func (p *Pagination[T]) GetMax(
 	return result, nil
 }
 
-func (p *Pagination[T]) GetMin(
+func (p *Pagination[T]) NormalGetMin(
 	db *gorm.DB,
 	field string,
 	filter T,
@@ -182,7 +182,7 @@ func (p *Pagination[T]) GetMin(
 	return result, nil
 }
 
-func (p *Pagination[T]) GetMaxLock(
+func (p *Pagination[T]) NormalGetMaxLock(
 	tx *gorm.DB,
 	field string,
 	filter T,
@@ -196,7 +196,7 @@ func (p *Pagination[T]) GetMaxLock(
 	return result, nil
 }
 
-func (p *Pagination[T]) GetMinLock(
+func (p *Pagination[T]) NormalGetMinLock(
 	tx *gorm.DB,
 	field string,
 	filter T,
@@ -210,7 +210,7 @@ func (p *Pagination[T]) GetMinLock(
 	return result, nil
 }
 
-func (p *Pagination[T]) GetByID(
+func (p *Pagination[T]) NormalGetByID(
 	db *gorm.DB,
 	id any,
 	preloads ...string,
@@ -229,7 +229,7 @@ func (p *Pagination[T]) GetByID(
 	return &entity, nil
 }
 
-func (p *Pagination[T]) GetByIDLock(
+func (p *Pagination[T]) NormalGetByIDLock(
 	tx *gorm.DB,
 	id any,
 	preloads ...string,
@@ -249,12 +249,12 @@ func (p *Pagination[T]) GetByIDLock(
 	return &entity, nil
 }
 
-func (f *Pagination[T]) Tabular(
+func (f *Pagination[T]) NormalTabular(
 	db *gorm.DB,
 	filter T,
 	getter func(data *T) map[string]any,
 ) ([]byte, error) {
-	data, err := f.Find(db, filter)
+	data, err := f.NormalFind(db, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data: %w", err)
 	}

@@ -46,7 +46,6 @@ func (r *Registry[TData, TResponse, TRequest]) CreateManyWithTx(
 	ctx context.Context,
 	tx *gorm.DB,
 	data []*TData,
-	preloads ...string,
 ) error {
 	if err := tx.Create(data).Error; err != nil {
 		return fmt.Errorf("failed to create entities with transaction: %w", err)

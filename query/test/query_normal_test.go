@@ -42,7 +42,7 @@ func TestPaginationBasic(t *testing.T) {
 
 	filter := &User{} // No filter — match all
 
-	res, err := p.Pagination(db, filter, 0, 2)
+	res, err := p.NormalPagination(db, filter, 0, 2)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 5, res.TotalSize)
@@ -65,7 +65,7 @@ func TestPaginationPage2(t *testing.T) {
 	users := seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	res, err := p.Pagination(db.Order("created_at ASC"), &User{}, 1, 2)
+	res, err := p.NormalPagination(db.Order("created_at ASC"), &User{}, 1, 2)
 	assert.NoError(t, err)
 
 	assert.Len(t, res.Data, 2)
@@ -85,7 +85,7 @@ func TestPaginationLastPage(t *testing.T) {
 	users := seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	res, err := p.Pagination(db.Order("created_at ASC"), &User{}, 2, 2)
+	res, err := p.NormalPagination(db.Order("created_at ASC"), &User{}, 2, 2)
 	assert.NoError(t, err)
 
 	assert.Len(t, res.Data, 1)
@@ -103,7 +103,7 @@ func TestPaginationWithFilter(t *testing.T) {
 	seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	res, err := p.Pagination(db.Order("created_at ASC"), &User{Age: 30}, 0, 10)
+	res, err := p.NormalPagination(db.Order("created_at ASC"), &User{Age: 30}, 0, 10)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, res.TotalSize)
@@ -122,7 +122,7 @@ func TestPaginationPageSizeValidation(t *testing.T) {
 	seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	res, err := p.Pagination(db, &User{}, 0, -1)
+	res, err := p.NormalPagination(db, &User{}, 0, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, 30, res.PageSize)
 }
@@ -139,7 +139,7 @@ func TestPaginationPageIndexValidation(t *testing.T) {
 	seedUsers(t, db)
 	p := query.NewPagination[User](false)
 
-	res, err := p.Pagination(db, &User{}, -10, 10)
+	res, err := p.NormalPagination(db, &User{}, -10, 10)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, res.PageIndex)
 }

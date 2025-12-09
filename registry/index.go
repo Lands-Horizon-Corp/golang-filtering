@@ -63,3 +63,10 @@ func (r *Registry[TData, TResponse, TRequest]) Client(context context.Context) *
 	}
 	return r.database.WithContext(context).Model(new(TData))
 }
+
+func (r *Registry[TData, TResponse, TRequest]) preload(preloads ...string) []string {
+	if len(preloads) > 0 {
+		return preloads
+	}
+	return r.preloads
+}
