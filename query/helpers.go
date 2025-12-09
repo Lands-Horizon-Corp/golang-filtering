@@ -64,9 +64,11 @@ var timeLayouts = []string{
 func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []SortField) *gorm.DB {
 	joinedTables := make(map[string]bool)
 	allowedJoinTables := map[string]struct{}{
-		// Add allowed, PascalCase table names here:
-		// Example: "User": {}, "Profile": {}, "Order": {}, etc.
-		// TODO: Fill from schema or config as appropriate!
+		// Allowed PascalCase table names (example):
+		"User": {},
+		"Profile": {},
+		"Order": {},
+		// TODO: Add other table names from your schema as appropriate.
 	}
 	for _, filter := range filters {
 		if strings.Contains(filter.Field, ".") {
@@ -78,6 +80,10 @@ func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []Sort
 						db = db.Joins(tableName)
 						joinedTables[tableName] = true
 					}
+				} else {
+					// Optionally: log or handle attempt to join disallowed table
+					// fmt.Printf("Attempt to join disallowed table: %s\n", tableName)
+					continue
 				}
 			}
 		}
@@ -92,6 +98,10 @@ func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []Sort
 						db = db.Joins(tableName)
 						joinedTables[tableName] = true
 					}
+				} else {
+					// Optionally: log or handle attempt to join disallowed table
+					// fmt.Printf("Attempt to join disallowed table: %s\n", tableName)
+					continue
 				}
 			}
 		}
