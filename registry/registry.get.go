@@ -10,9 +10,7 @@ func (r *Registry[TData, TResponse, TRequest]) GetByID(
 	id any,
 	preloads ...string,
 ) (*TData, error) {
-
 	db := r.Client(ctx)
-
 	entity, err := r.pagination.NormalGetByID(db, id, r.preload(preloads...)...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity by ID: %w", err)
