@@ -32,14 +32,6 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredExists(
 	return r.pagination.StructuredExists(db, filterRoot)
 }
 
-func (r *Registry[TData, TResponse, TRequest]) ExistsWithTx(
-	context context.Context,
-	tx *gorm.DB,
-	filters []FilterSQL,
-) (bool, error) {
-	return r.pagination.ArrExists(tx, filters)
-}
-
 func (r *Registry[TData, TResponse, TRequest]) ExistsByID(
 	context context.Context,
 	id any,

@@ -46,9 +46,6 @@ func TestRegistryExistsVariants(t *testing.T) {
 	assert.True(t, ok)
 
 	filters := []query.ArrFilterSQL{{Field: "age", Op: query.ModeEqual, Value: 30}}
-	ok, err = r.ExistsWithTx(ctx, db, filters)
-	assert.NoError(t, err)
-	assert.True(t, ok)
 
 	ok, err = r.ExistsIncludingDeleted(ctx, filters)
 	assert.NoError(t, err)
