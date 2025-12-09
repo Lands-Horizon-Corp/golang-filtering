@@ -113,7 +113,15 @@ func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *go
 	fieldAllowed := func(fieldName string) bool {
 		parts := strings.Split(fieldName, ".")
 		if len(parts) > 1 {
-			_, ok := allowedFields[parts[0]]
+			// For nested fields: ensure first part matches a valid table (relationship), and the last part is a valid column.
+			// The first part must be a relationship, the last part a valid field in the related schema.
+			relName := parts[0]
+			colName := parts[len(parts)-1]
+			relField, ok := stmt.Schema.Relationships.Relations[relName]
+			if !ok || relField == nil || relField.FieldSchema == nil {
+				return false
+			}
+			_, ok = relField.FieldSchema.FieldsByDBName[colName]
 			return ok
 		}
 		_, ok := allowedFields[fieldName]
@@ -160,14 +168,33 @@ func (f *Pagination[T]) buildConditionWithTableName(filter FieldFilter, mainTabl
 	if isNestedField {
 		parts := strings.Split(field, ".")
 		if len(parts) >= 2 {
-			parts[0] = toPascalCase(parts[0])
-			field = fmt.Sprintf(`"%s"."%s"`, parts[0], parts[1])
-			for i := 2; i < len(parts); i++ {
-				field = fmt.Sprintf(`%s."%s"`, field, parts[i])
+			// Validate relationship and column
+			relName := parts[0]
+			colName := parts[len(parts)-1]
+			stmt := &gorm.Statement{DB: f.db}
+			if err := stmt.Parse(new(T)); err == nil && stmt.Schema != nil {
+				relField, ok := stmt.Schema.Relationships.Relations[relName]
+				if ok && relField != nil && relField.FieldSchema != nil {
+					if _, ok := relField.FieldSchema.FieldsByDBName[colName]; ok {
+						// Quote table and column via GORM (safer than manual quoting)
+						field = fmt.Sprintf("%s.%s", stmt.Quote(relField.FieldSchema.Table), stmt.Quote(colName))
+					} else {
+						return "", nil
+					}
+				} else {
+					return "", nil
+				}
+			} else {
+				return "", nil
 			}
 		}
 	} else if mainTableName != "" {
-		field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
+		stmt := &gorm.Statement{DB: f.db}
+		if err := stmt.Parse(new(T)); err == nil && stmt.Schema != nil {
+			field = fmt.Sprintf("%s.%s", stmt.Quote(mainTableName), stmt.Quote(field))
+		} else {
+			return "", nil
+		}
 	}
 
 	switch filter.DataType {
