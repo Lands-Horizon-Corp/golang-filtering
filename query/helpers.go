@@ -15,51 +15,50 @@ import (
 	"unicode"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
 var dateTimeLayouts = []string{
-	time.RFC3339,                     // "2006-01-02T15:04:05Z07:00"
-	time.RFC3339Nano,                 // "2006-01-02T15:04:05.999999999Z07:00"
-	time.RFC1123,                     // "Mon, 02 Jan 2006 15:04:05 MST"
-	time.RFC1123Z,                    // "Mon, 02 Jan 2006 15:04:05 -0700"
-	time.RFC822,                      // "02 Jan 06 15:04 MST"
-	time.RFC822Z,                     // "02 Jan 06 15:04 -0700"
-	time.RFC850,                      // "Monday, 02-Jan-06 15:04:05 MST"
-	time.ANSIC,                       // "Mon Jan _2 15:04:05 2006"
-	time.UnixDate,                    // "Mon Jan _2 15:04:05 MST 2006"
-	time.RubyDate,                    // "Mon Jan 02 15:04:05 -0700 2006"
-	"2006-01-02T15:04:05Z",           // ISO with Z
-	"2006-01-02T15:04:05",            // ISO without zone
-	"2006-01-02 15:04:05",            // Space separator
-	"2006-01-02T15:04:05.999999999",  // With nanoseconds, no zone
-	"01/02/2006 15:04:05",            // US MM/DD/YYYY
-	"02/01/2006 15:04:05",            // EU DD/MM/YYYY
-	"2006-01-02T15:04:05-07:00",      // With offset
-	"Mon Jan 02 2006 15:04:05 -0700", // Variation with space and offset
-	"2006/01/02 15:04:05",            // New: YYYY/MM/DD HH:MM:SS (addresses "2025/11/02 19:26:31")
-	"2006/01/02T15:04:05",            // New: YYYY/MM/DDTHH:MM:SS
-	"2006/01/02 15:04:05Z07:00",      // New: With offset
-	"2006/01/02 15:04:05 MST",        // New: With named zone
-	"2006-01-02",                     // New: Fallback for date-only as midnight
-	"2006/01/02",                     // New: Slashed date-only
-	"01/02/2006",                     // New: US date-only
-	"02/01/2006",                     // New: EU date-only
+	time.RFC3339,
+	time.RFC3339Nano,
+	time.RFC1123,
+	time.RFC1123Z,
+	time.RFC822,
+	time.RFC822Z,
+	time.RFC850,
+	time.ANSIC,
+	time.UnixDate,
+	time.RubyDate,
+	"2006-01-02T15:04:05Z",
+	"2006-01-02T15:04:05",
+	"2006-01-02 15:04:05",
+	"2006-01-02T15:04:05.999999999",
+	"01/02/2006 15:04:05",
+	"02/01/2006 15:04:05",
+	"2006-01-02T15:04:05-07:00",
+	"Mon Jan 02 2006 15:04:05 -0700",
+	"2006/01/02 15:04:05",
+	"2006/01/02T15:04:05",
+	"2006/01/02 15:04:05Z07:00",
+	"2006/01/02 15:04:05 MST",
+	"2006-01-02",
+	"2006/01/02",
+	"01/02/2006",
+	"02/01/2006",
 }
 
 var timeLayouts = []string{
-	time.Kitchen,         // "3:04PM"
-	"15:04:05",           // HH:MM:SS 24-hour
-	"15:04",              // HH:MM
-	"15:04:05.999999999", // With nanoseconds
-	"3:04:05 PM",         // 12-hour with seconds
-	"3:04 PM",            // 12-hour
-	"15:04:05Z07:00",     // With offset
-	"15:04:05 MST",       // With named zone
-	"3:04:05 PM MST",     // 12-hour with named zone
-	"15:04:05-07:00",     // New: Offset without Z
+	time.Kitchen,
+	"15:04:05",
+	"15:04",
+	"15:04:05.999999999",
+	"3:04:05 PM",
+	"3:04 PM",
+	"15:04:05Z07:00",
+	"15:04:05 MST",
+	"3:04:05 PM MST",
+	"15:04:05-07:00",
 }
 
 func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []SortField) *gorm.DB {
@@ -514,92 +513,4 @@ func parseQuery(ctx echo.Context) (StructuredFilter, int, int, error) {
 	}
 
 	return filterRoot, pageIndex, pageSize, nil
-}
-
-func parseStringQuery(queryStr string) (StructuredFilter, int, int, error) {
-	values, err := url.ParseQuery(queryStr)
-	if err != nil {
-		return StructuredFilter{}, 0, 0, fmt.Errorf("failed to parse query string: %w", err)
-	}
-	var filterRoot StructuredFilter
-	var pageIndex, pageSize int
-
-	if filterParam := values.Get("filter"); filterParam != "" {
-		filterDecodedRaw, err := url.QueryUnescape(filterParam)
-		if err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("unescaping filter failed: %w", err)
-		}
-		filterBytes, err := base64.StdEncoding.DecodeString(filterDecodedRaw)
-		if err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("base64 decoding filter failed: %w", err)
-		}
-		if err := json.Unmarshal(filterBytes, &filterRoot); err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("JSON unmarshalling filter failed: %w", err)
-		}
-	}
-	if filterRoot.Logic == "" {
-		filterRoot.Logic = LogicAnd
-	}
-	if sortParam := values.Get("sort"); sortParam != "" {
-		sortDecodedRaw, err := url.QueryUnescape(sortParam)
-		if err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("unescaping sort failed: %w", err)
-		}
-		sortBytes, err := base64.StdEncoding.DecodeString(sortDecodedRaw)
-		if err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("base64 decoding sort failed: %w", err)
-		}
-		var sortFields []SortField
-		if err := json.Unmarshal(sortBytes, &sortFields); err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("JSON unmarshalling sort failed: %w", err)
-		}
-		for i, sf := range sortFields {
-			order := strings.ToUpper(string(sf.Order))
-			if order != "ASC" && order != "DESC" {
-				sortFields[i].Order = "ASC"
-			} else {
-				sortFields[i].Order = SortOrder(order)
-			}
-		}
-		filterRoot.SortFields = sortFields
-	}
-	if pageIndexParam := values.Get("pageIndex"); pageIndexParam != "" {
-		pageIndex, err = strconv.Atoi(pageIndexParam)
-		if err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("invalid pageIndex parameter: %w", err)
-		}
-	}
-	if pageSizeParam := values.Get("pageSize"); pageSizeParam != "" {
-		pageSize, err = strconv.Atoi(pageSizeParam)
-		if err != nil {
-			return StructuredFilter{}, 0, 0, fmt.Errorf("invalid pageSize parameter: %w", err)
-		}
-	}
-
-	return filterRoot, pageIndex, pageSize, nil
-}
-
-func parseUUIDArrayFromQuery(query string) (uuid.UUIDs, bool) {
-	if query == "" {
-		return nil, false
-	}
-	query = strings.TrimSpace(query)
-	if strings.HasPrefix(query, "[") && strings.HasSuffix(query, "]") {
-		query = strings.Trim(query, "[]")
-	}
-	values := strings.Split(query, ",")
-	if len(values) == 0 {
-		return nil, false
-	}
-	var uuids uuid.UUIDs
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		value = strings.Trim(value, `"'`)
-		parsedUUID, err := uuid.Parse(value)
-		if err != nil {
-			return nil, false
-		}
-		uuids = append(uuids, parsedUUID)
-	}
-	return uuids, true
 }
