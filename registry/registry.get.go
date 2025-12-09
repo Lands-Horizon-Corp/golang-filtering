@@ -38,10 +38,7 @@ func (r *Registry[TData, TResponse, TRequest]) GetByIDIncludingDeleted(
 	preloads ...string,
 ) (*TData, error) {
 	db := r.Client(ctx)
-	entity, err := r.pagination.NormalGetByIDIncludingDeleted(db,
-		id,
-		r.preload(preloads...)...,
-	)
+	entity, err := r.pagination.NormalGetByIDIncludingDeleted(db, id, r.preload(preloads...)...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity by ID including deleted: %w", err)
 	}
