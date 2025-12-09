@@ -22,7 +22,7 @@ func (f *Pagination[T]) StructuredPagination(
 	if result.PageSize <= 0 {
 		result.PageSize = 30
 	}
-	if f.Verbose {
+	if f.verbose {
 		db = db.Debug()
 	}
 	query := f.structuredQuery(db, filterRoot)
@@ -141,19 +141,6 @@ func (p *Pagination[T]) StructuredExists(
 	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence: %w", err)
-	}
-	return dummy == 1, nil
-}
-
-func (p *Pagination[T]) StructuredExistsByID(
-	db *gorm.DB,
-	id any,
-) (bool, error) {
-	var dummy int
-	query := db.Where("id = ?", id)
-	err := query.Select("1").Limit(1).Scan(&dummy).Error
-	if err != nil {
-		return false, fmt.Errorf("failed to check existence by ID: %w", err)
 	}
 	return dummy == 1, nil
 }

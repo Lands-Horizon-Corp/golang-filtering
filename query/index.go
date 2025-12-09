@@ -5,13 +5,21 @@ import (
 )
 
 type Pagination[T any] struct {
-	Verbose bool `json:"verbose"`
-	logger  *zap.Logger
+	verbose           bool
+	columnDefaultSort string
+	columnDefaultID   string
+	logger            *zap.Logger
 }
 
-func NewPagination[T any](verbose bool) *Pagination[T] {
+type PaginationConfig struct {
+	Verbose           bool   `json:"verbose"`
+	ColumnDefaultSort string `json:"column_default_sort"`
+	ColumnDefaultID   string `json:"column_default_id"`
+}
+
+func NewPagination[T any](config PaginationConfig) *Pagination[T] {
 	var logger *zap.Logger
-	if verbose {
+	if config.Verbose {
 		var err error
 		logger, err = zap.NewDevelopment()
 		if err != nil {
@@ -20,5 +28,16 @@ func NewPagination[T any](verbose bool) *Pagination[T] {
 	} else {
 		logger = zap.NewNop()
 	}
-	return &Pagination[T]{Verbose: verbose, logger: logger}
+	if config.ColumnDefaultID == "" {
+		config.ColumnDefaultID = "id"
+	}
+	if config.ColumnDefaultSort == "" {
+		config.ColumnDefaultSort = "created_at DESC"
+	}
+	return &Pagination[T]{
+		verbose:           config.Verbose,
+		columnDefaultSort: config.ColumnDefaultSort,
+		columnDefaultID:   config.ColumnDefaultID,
+		logger:            logger,
+	}
 }

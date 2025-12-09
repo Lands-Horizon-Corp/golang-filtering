@@ -43,7 +43,9 @@ func TestPaginationBasicNoFilters(t *testing.T) {
 		t.Fatalf("failed to open database: %v", err)
 	}
 	seedUsers(t, db)
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Query: pageIndex=0, pageSize=2
 	ctx := createEchoContext("pageIndex=0&pageSize=2")
@@ -74,7 +76,9 @@ func TestPaginationWithStructuredFilter(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to seed: %v", err)
 	}
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Filter: age >= 30
 	filter := query.StructuredFilter{
@@ -110,7 +114,9 @@ func TestPaginationWithSort(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to seed: %v", err)
 	}
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Sort by age ascending
 	sorts := []query.SortField{
@@ -148,7 +154,9 @@ func TestPaginationQueryPage2(t *testing.T) {
 	if err := db.Create(&seedList).Error; err != nil {
 		t.Fatalf("failed to seed: %v", err)
 	}
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Page 1 (second page), size 2
 	ctx := createEchoContext("pageIndex=1&pageSize=2")
@@ -184,7 +192,9 @@ func TestPaginationComplex(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to seed: %v", err)
 	}
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Filter: age >= 30, Sort: age ASC
 	filter := query.StructuredFilter{
@@ -228,7 +238,9 @@ func TestPaginationStructuredNoRouteFilter(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Query params only: age >= 30
 	queryFilter := query.StructuredFilter{
@@ -270,7 +282,9 @@ func TestPaginationStructuredWithRouteFilter(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Query params: age >= 30
 	queryFilter := query.StructuredFilter{
@@ -326,7 +340,9 @@ func TestPaginationStructuredSortFieldOverride(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Query has no sort (defaults to created_at DESC)
 	queryFilter := query.StructuredFilter{
@@ -373,7 +389,9 @@ func TestPaginationStructuredPreloadMerging(t *testing.T) {
 	}
 	seedUsers(t, db)
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Route filter without additional filters, just with empty preloads
 	routeFilter := query.StructuredFilter{
@@ -407,7 +425,9 @@ func TestPaginationStructuredComplexMerge(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Query params: age >= 28
 	queryFilter := query.StructuredFilter{
@@ -465,7 +485,9 @@ func TestPaginationArrayNoFilters(t *testing.T) {
 	}
 	seedUsers(t, db)
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Query: pageIndex=0, pageSize=2, no filters
 	ctx := createEchoContext("pageIndex=0&pageSize=2")
@@ -495,7 +517,9 @@ func TestPaginationArrayWithSingleFilter(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Filter: name = "Bob" (use string for text filters)
 	filters := []query.ArrFilterSQL{{Field: "name", Op: query.ModeEqual, Value: "Bob"}}
@@ -526,7 +550,9 @@ func TestPaginationArrayWithMultipleFilters(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Filters: name starts with "B" AND age = 30 (AND logic)
 	filters := []query.ArrFilterSQL{
@@ -561,7 +587,9 @@ func TestPaginationArrayWithSort(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// Sort by name ASC (overrides default created_at DESC)
 	sorts := []query.ArrFilterSortSQL{
@@ -597,7 +625,9 @@ func TestPaginationArrayWithFilterAndSort(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	filters := []query.ArrFilterSQL{
 		{Field: "name", Op: query.ModeStartsWith, Value: "C"},
@@ -631,7 +661,9 @@ func TestPaginationArrayWithQueryFilters(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
@@ -675,7 +707,9 @@ func TestPaginationArrayPagination(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	filters := []query.ArrFilterSQL{
 		{Field: "age", Op: query.ModeGTE, Value: 20},
@@ -705,7 +739,9 @@ func TestPaginationNormalNoFilter(t *testing.T) {
 	}
 	seedUsers(t, db)
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	ctx := createEchoContext("pageIndex=0&pageSize=2")
 	result, err := p.PaginationNormal(db, ctx.Request().Context(), ctx, nil)
@@ -733,7 +769,9 @@ func TestPaginationNormalWithModelFilter(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	filter := &User{Age: 30}
 
@@ -762,7 +800,9 @@ func TestPaginationNormalWithQueryFilter(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
@@ -804,7 +844,9 @@ func TestPaginationNormalWithQuerySort(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	sorts := []query.SortField{
 		{Field: "age", Order: "ASC"},
@@ -838,7 +880,9 @@ func TestPaginationNormalPagination(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 	filter := &User{Age: 30}
 
 	ctx1 := createEchoContext("pageIndex=0&pageSize=2")
@@ -875,7 +919,9 @@ func TestPaginationNormalComplexMerge(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// URL query filter: age >= 30
 	queryFilter := query.StructuredFilter{
@@ -923,7 +969,9 @@ func TestPaginationNormalNoModelFilterWithQueryFilter(t *testing.T) {
 		t.Fatalf("failed to seed: %v", err)
 	}
 
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{

@@ -8,22 +8,22 @@ import (
 	"gorm.io/gorm"
 )
 
-func (f *Pagination[T]) arrQuery(
+func (p *Pagination[T]) arrQuery(
 	db *gorm.DB,
 	filters []ArrFilterSQL,
 	sorts []ArrFilterSortSQL,
 ) *gorm.DB {
-	db = f.applyJoinsForFilters(db, filters)
-	db = f.applySQLFilters(db, filters)
+	db = p.applyJoinsForFilters(db, filters)
+	db = p.applySQLFilters(db, filters)
 	if len(sorts) > 0 {
-		db = f.applySort(db, sorts)
+		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("created_at DESC")
+		db = db.Order(p.columnDefaultSort)
 	}
 	return db
 }
 
-func (f *Pagination[T]) structuredQuery(
+func (p *Pagination[T]) structuredQuery(
 	db *gorm.DB,
 	filterRoot StructuredFilter,
 ) *gorm.DB {
@@ -34,7 +34,7 @@ func (f *Pagination[T]) structuredQuery(
 		}
 	}
 	if len(filterRoot.FieldFilters) > 0 {
-		db = f.applysGorm(db, filterRoot)
+		db = p.applysGorm(db, filterRoot)
 	}
 	hasNestedFields := false
 	for _, filter := range filterRoot.FieldFilters {
@@ -60,7 +60,7 @@ func (f *Pagination[T]) structuredQuery(
 	}
 	if len(filterRoot.SortFields) > 0 {
 		for _, sortField := range filterRoot.SortFields {
-			if !strings.Contains(sortField.Field, ".") && !f.fieldExists(db, sortField.Field) {
+			if !strings.Contains(sortField.Field, ".") && !p.fieldExists(db, sortField.Field) {
 				continue
 			}
 			order := "ASC"
@@ -84,9 +84,10 @@ func (f *Pagination[T]) structuredQuery(
 		}
 	} else {
 		if mainTableName != "" {
-			db = db.Order(fmt.Sprintf(`"%s"."created_at" DESC`, mainTableName))
+			db = db.Order(fmt.Sprintf(`"%s"."%s"`, mainTableName, (p.columnDefaultSort)))
+
 		} else {
-			db = db.Order("created_at DESC")
+			db = db.Order(p.columnDefaultSort)
 		}
 	}
 	return db

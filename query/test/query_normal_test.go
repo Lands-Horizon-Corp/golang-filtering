@@ -35,7 +35,9 @@ func TestPaginationBasic(t *testing.T) {
 		t.Fatalf("failed to open database: %v", err)
 	}
 	users := seedUsers(t, db)
-	p := query.NewPagination[User](true)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	filter := &User{} // No filter — match all
 
@@ -56,7 +58,9 @@ func TestPaginationPage2(t *testing.T) {
 	}
 
 	users := seedUsers(t, db)
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	res, err := p.NormalPagination(db.Order("created_at ASC"), &User{}, 1, 2)
 	assert.NoError(t, err)
@@ -73,7 +77,9 @@ func TestPaginationLastPage(t *testing.T) {
 	}
 
 	users := seedUsers(t, db)
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	res, err := p.NormalPagination(db.Order("created_at ASC"), &User{}, 2, 2)
 	assert.NoError(t, err)
@@ -88,7 +94,9 @@ func TestPaginationWithFilter(t *testing.T) {
 		t.Fatalf("failed to init db: %v", err)
 	}
 	seedUsers(t, db)
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	res, err := p.NormalPagination(db.Order("created_at ASC"), &User{Age: 30}, 0, 10)
 	assert.NoError(t, err)
@@ -104,7 +112,9 @@ func TestPaginationPageSizeValidation(t *testing.T) {
 		t.Fatalf("failed to init db: %v", err)
 	}
 	seedUsers(t, db)
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	res, err := p.NormalPagination(db, &User{}, 0, -1)
 	assert.NoError(t, err)
@@ -118,7 +128,9 @@ func TestPaginationPageIndexValidation(t *testing.T) {
 	}
 
 	seedUsers(t, db)
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	res, err := p.NormalPagination(db, &User{}, -10, 10)
 	assert.NoError(t, err)

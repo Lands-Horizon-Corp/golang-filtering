@@ -45,7 +45,9 @@ func TestStructuredPagination(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to insert sample data: %v", err)
 	}
-	p := query.NewPagination[User](true)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -109,7 +111,9 @@ func TestStructuredPaginationComplex(t *testing.T) {
 		t.Fatalf("failed to insert sample data: %v", err)
 	}
 
-	p := query.NewPagination[User](true)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
@@ -174,7 +178,9 @@ func TestStructuredPaginationComplexAdvanced(t *testing.T) {
 		t.Fatalf("failed to insert sample data: %v", err)
 	}
 
-	p := query.NewPagination[User](true)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{Field: "age", Value: 30, Mode: query.ModeGTE, DataType: query.DataTypeNumber},
@@ -244,7 +250,9 @@ func TestStructuredPaginationWithRange(t *testing.T) {
 		t.Fatalf("failed to insert sample data: %v", err)
 	}
 
-	p := query.NewPagination[User](true)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
@@ -305,7 +313,9 @@ func TestAllModes(t *testing.T) {
 		t.Fatalf("failed to insert sample data: %v", err)
 	}
 
-	p := query.NewPagination[User](true)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	tests := []struct {
 		name          string

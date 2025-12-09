@@ -59,7 +59,11 @@ func NewRegistry[TData any, TResponse any, TRequest any](
 		deleted:           params.Deleted,
 		tabular:           params.tabular,
 		validator:         params.Validator,
-		pagination:        *query.NewPagination[TData](true),
+		pagination: *query.NewPagination[TData](query.PaginationConfig{
+			Verbose:           true,
+			ColumnDefaultSort: params.ColumnDefaultSort,
+			ColumnDefaultID:   params.ColumnDefaultID,
+		}),
 	}
 }
 

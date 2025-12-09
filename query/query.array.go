@@ -25,7 +25,7 @@ func (f *Pagination[T]) ArrPagination(
 	if result.PageSize <= 0 {
 		result.PageSize = 30
 	}
-	if f.Verbose {
+	if f.verbose {
 		db = db.Debug()
 	}
 	query := f.arrQuery(db, filters, sorts)
@@ -76,7 +76,7 @@ func (p *Pagination[T]) ArrFind(
 	if len(sorts) > 0 {
 		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("created_at DESC")
+		db = db.Order(p.columnDefaultSort)
 	}
 	if err := db.Find(&entities).Error; err != nil {
 		return nil, fmt.Errorf("failed to find entities with %d filters: %w", len(filters), err)
@@ -84,22 +84,22 @@ func (p *Pagination[T]) ArrFind(
 	return entities, nil
 }
 
-func (r *Pagination[T]) ArrFindLock(
+func (p *Pagination[T]) ArrFindLock(
 	db *gorm.DB,
 	filters []ArrFilterSQL,
 	sorts []ArrFilterSortSQL,
 	preloads ...string,
 ) ([]*T, error) {
 	var entities []*T
-	db = r.applyJoinsForFilters(db, filters)
-	db = r.applySQLFilters(db, filters)
+	db = p.applyJoinsForFilters(db, filters)
+	db = p.applySQLFilters(db, filters)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
 	if len(sorts) > 0 {
-		db = r.applySort(db, sorts)
+		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("created_at DESC")
+		db = db.Order(p.columnDefaultSort)
 	}
 	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
 	if err := db.Find(&entities).Error; err != nil {
@@ -123,7 +123,7 @@ func (p *Pagination[T]) ArrFindOne(
 	if len(sorts) > 0 {
 		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("created_at DESC")
+		db = db.Order(p.columnDefaultSort)
 	}
 	err := db.First(&entity).Error
 	if err != nil {
@@ -150,7 +150,7 @@ func (p *Pagination[T]) ArrFindOneWithLock(
 	if len(sorts) > 0 {
 		db = p.applySort(db, sorts)
 	} else {
-		db = db.Order("created_at DESC")
+		db = db.Order(p.columnDefaultSort)
 	}
 	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
 	err := db.First(&entity).Error
@@ -173,19 +173,6 @@ func (p *Pagination[T]) ArrExists(
 	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence: %w", err)
-	}
-	return dummy == 1, nil
-}
-
-func (p *Pagination[T]) ArrExistsByID(
-	db *gorm.DB,
-	id any,
-) (bool, error) {
-	var dummy int
-	query := db.Where("id = ?", id)
-	err := query.Select("1").Limit(1).Scan(&dummy).Error
-	if err != nil {
-		return false, fmt.Errorf("failed to check existence by ID: %w", err)
 	}
 	return dummy == 1, nil
 }

@@ -15,7 +15,9 @@ func TestArrPaginationBasic(t *testing.T) {
 		t.Fatalf("failed to open database: %v", err)
 	}
 	users := seedUsers(t, db)
-	p := query.NewPagination[User](true)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	// No filters — match all
 	res, err := p.ArrPagination(db, nil, nil, 0, 2)
@@ -46,7 +48,9 @@ func TestArrPaginationWithFilter(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed seed: %v", err)
 	}
-	p := query.NewPagination[User](false)
+	p := query.NewPagination[User](query.PaginationConfig{
+		Verbose: true,
+	})
 
 	filters := []query.ArrFilterSQL{{Field: "age", Op: query.ModeEqual, Value: 30}}
 

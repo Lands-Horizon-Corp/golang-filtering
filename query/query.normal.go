@@ -24,7 +24,7 @@ func (f *Pagination[T]) NormalPagination(
 	if result.PageSize <= 0 {
 		result.PageSize = 30
 	}
-	if f.Verbose {
+	if f.verbose {
 		db = db.Debug()
 	}
 	query := db.Where(filter)
@@ -149,7 +149,7 @@ func (p *Pagination[T]) NormalExistsByID(
 	id any,
 ) (bool, error) {
 	var dummy int
-	query := db.Where("id = ?", id)
+	query := db.Where(fmt.Sprintf("%s = ?", p.columnDefaultID), id)
 	err := query.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence by ID: %w", err)
@@ -236,7 +236,7 @@ func (p *Pagination[T]) NormalGetByID(
 		db = db.Preload(preload)
 	}
 
-	err := db.First(&entity, "id = ?", id).Error
+	err := db.First(&entity, fmt.Sprintf("%s = ?", p.columnDefaultID), id).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity by ID %v: %w", id, err)
 	}
@@ -253,7 +253,7 @@ func (p *Pagination[T]) NormalGetByIDLock(
 		tx = tx.Preload(preload)
 	}
 	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	err := tx.First(&entity, "id = ?", id).Error
+	err := tx.First(&entity, fmt.Sprintf("%s = ?", p.columnDefaultID), id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -273,7 +273,7 @@ func (p *Pagination[T]) NormalGetByIDIncludingDeleted(
 	}
 
 	var entity T
-	err := db.First(&entity, "id = ?", id).Error
+	err := db.First(&entity, fmt.Sprintf("%s = ?", p.columnDefaultID), id).Error
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to get entity by ID %v including deleted: %w", id, err)
