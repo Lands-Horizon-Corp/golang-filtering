@@ -286,7 +286,11 @@ func (f *Pagination[T]) NormalTabular(
 	db *gorm.DB,
 	filter T,
 	getter func(data *T) map[string]any,
+	preloads ...string,
 ) ([]byte, error) {
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
 	data, err := f.NormalFind(db, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data: %w", err)

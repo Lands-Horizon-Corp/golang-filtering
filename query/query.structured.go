@@ -221,7 +221,11 @@ func (f *Pagination[T]) StructuredTabular(
 	db *gorm.DB,
 	filterRoot StructuredFilter,
 	getter func(data *T) map[string]any,
+	preloads ...string,
 ) ([]byte, error) {
+	for _, preload := range preloads {
+		db = db.Preload(preload)
+	}
 	data, err := f.StructuredFind(db, filterRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data: %w", err)
