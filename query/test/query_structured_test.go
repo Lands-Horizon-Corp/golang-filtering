@@ -19,7 +19,7 @@ func database[T any](model T) (*gorm.DB, error) {
 	if err := db.AutoMigrate(model); err != nil {
 		return nil, err
 	}
-	return db, nil
+	return db.Model(new(T)), nil
 }
 
 // Example model

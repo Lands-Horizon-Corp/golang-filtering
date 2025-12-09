@@ -30,7 +30,6 @@ func (f *Pagination[T]) ArrPagination(
 	}
 	query := f.arrQuery(db, filters, sorts)
 	var totalCount int64
-	query = query.Model(new(T))
 	if err := query.Count(&totalCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count records: %w", err)
 	}
@@ -56,7 +55,7 @@ func (p Pagination[T]) ArrCount(
 	var count int64
 	db = p.applyJoinsForFilters(db, filters)
 	db = p.applySQLFilters(db, filters)
-	if err := db.Model(new(T)).Count(&count).Error; err != nil {
+	if err := db.Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("failed to count entities with %d filters: %w", len(filters), err)
 	}
 	return count, nil
@@ -171,7 +170,7 @@ func (p *Pagination[T]) ArrExists(
 	db = p.applyJoinsForFilters(db, filters)
 	db = p.applySQLFilters(db, filters)
 	var dummy int
-	err := db.Model(new(T)).Select("1").Limit(1).Scan(&dummy).Error
+	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence: %w", err)
 	}
@@ -183,7 +182,7 @@ func (p *Pagination[T]) ArrExistsByID(
 	id any,
 ) (bool, error) {
 	var dummy int
-	query := db.Model(new(T)).Where("id = ?", id)
+	query := db.Where("id = ?", id)
 	err := query.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence by ID: %w", err)
@@ -199,7 +198,7 @@ func (p *Pagination[T]) ArrExistsIncludingDeleted(
 	db = p.applyJoinsForFilters(db, filters)
 	db = p.applySQLFilters(db, filters)
 	var dummy int
-	err := db.Model(new(T)).Select("1").Limit(1).Scan(&dummy).Error
+	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence including deleted: %w", err)
 	}
@@ -214,7 +213,7 @@ func (p *Pagination[T]) ArrGetMax(
 	var result any
 	db = p.applyJoinsForFilters(db, filters)
 	db = p.applySQLFilters(db, filters)
-	row := db.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	row := db.Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
 	}
@@ -229,7 +228,7 @@ func (p *Pagination[T]) ArrGetMin(
 	var result any
 	db = p.applyJoinsForFilters(db, filters)
 	db = p.applySQLFilters(db, filters)
-	row := db.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	row := db.Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s: %w", field, err)
 	}
@@ -245,7 +244,7 @@ func (p *Pagination[T]) ArrGetMaxLock(
 	tx = p.applyJoinsForFilters(tx, filters)
 	tx = p.applySQLFilters(tx, filters)
 	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	row := tx.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	row := tx.Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
 	}
@@ -261,7 +260,7 @@ func (p *Pagination[T]) ArrGetMinLock(
 	tx = p.applyJoinsForFilters(tx, filters)
 	tx = p.applySQLFilters(tx, filters)
 	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	row := tx.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	row := tx.Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)
 	}

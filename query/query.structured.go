@@ -138,7 +138,7 @@ func (p *Pagination[T]) StructuredExists(
 ) (bool, error) {
 	db = p.structuredQuery(db, filterRoot)
 	var dummy int
-	err := db.Model(new(T)).Select("1").Limit(1).Scan(&dummy).Error
+	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence: %w", err)
 	}
@@ -150,7 +150,7 @@ func (p *Pagination[T]) StructuredExistsByID(
 	id any,
 ) (bool, error) {
 	var dummy int
-	query := db.Model(new(T)).Where("id = ?", id)
+	query := db.Where("id = ?", id)
 	err := query.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence by ID: %w", err)
@@ -165,7 +165,7 @@ func (p *Pagination[T]) StructuredExistsIncludingDeleted(
 	db = db.Unscoped()
 	db = p.structuredQuery(db, filterRoot)
 	var dummy int
-	err := db.Model(new(T)).Select("1").Limit(1).Scan(&dummy).Error
+	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence including deleted: %w", err)
 	}
@@ -179,7 +179,7 @@ func (p *Pagination[T]) StructuredGetMax(
 ) (any, error) {
 	var result any
 	db = p.structuredQuery(db, filterRoot)
-	row := db.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	row := db.Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
 	}
@@ -193,7 +193,7 @@ func (p *Pagination[T]) StructuredGetMin(
 ) (any, error) {
 	var result any
 	db = p.structuredQuery(db, filterRoot)
-	row := db.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	row := db.Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s: %w", field, err)
 	}
@@ -208,7 +208,7 @@ func (p *Pagination[T]) StructuredGetMaxLock(
 	var result any
 	tx = p.structuredQuery(tx, filterRoot)
 	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	row := tx.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	row := tx.Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
 	}
@@ -223,7 +223,7 @@ func (p *Pagination[T]) StructuredGetMinLock(
 	var result any
 	tx = p.structuredQuery(tx, filterRoot)
 	tx = tx.Clauses(clause.Locking{Strength: "UPDATE"})
-	row := tx.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	row := tx.Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)
 	}

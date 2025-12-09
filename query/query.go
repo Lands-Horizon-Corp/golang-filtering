@@ -27,15 +27,14 @@ func (f *Pagination[T]) structuredQuery(
 	db *gorm.DB,
 	filterRoot StructuredFilter,
 ) *gorm.DB {
-	query := db.Model(new(T))
-	query = autoJoinRelatedTables(query, filterRoot.FieldFilters, filterRoot.SortFields)
+	db = autoJoinRelatedTables(db, filterRoot.FieldFilters, filterRoot.SortFields)
 	if len(filterRoot.Preload) > 0 {
 		for _, preloadField := range filterRoot.Preload {
-			query = query.Preload(preloadField)
+			db = db.Preload(preloadField)
 		}
 	}
 	if len(filterRoot.FieldFilters) > 0 {
-		query = f.applysGorm(query, filterRoot)
+		db = f.applysGorm(db, filterRoot)
 	}
 	hasNestedFields := false
 	for _, filter := range filterRoot.FieldFilters {
@@ -81,16 +80,16 @@ func (f *Pagination[T]) structuredQuery(
 			} else if mainTableName != "" {
 				field = fmt.Sprintf(`"%s"."%s"`, mainTableName, field)
 			}
-			query = query.Order(fmt.Sprintf("%s %s", field, order))
+			db = db.Order(fmt.Sprintf("%s %s", field, order))
 		}
 	} else {
 		if mainTableName != "" {
-			query = query.Order(fmt.Sprintf(`"%s"."created_at" DESC`, mainTableName))
+			db = db.Order(fmt.Sprintf(`"%s"."created_at" DESC`, mainTableName))
 		} else {
-			query = query.Order("created_at DESC")
+			db = db.Order("created_at DESC")
 		}
 	}
-	return query
+	return db
 }
 
 func (f *Pagination[T]) applysGorm(db *gorm.DB, filterRoot StructuredFilter) *gorm.DB {

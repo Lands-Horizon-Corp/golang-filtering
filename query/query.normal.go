@@ -27,7 +27,7 @@ func (f *Pagination[T]) NormalPagination(
 	if f.Verbose {
 		db = db.Debug()
 	}
-	query := db.Model(new(T)).Where(filter)
+	query := db.Where(filter)
 	var totalCount int64
 	if err := query.Count(&totalCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count records: %w", err)
@@ -52,7 +52,7 @@ func (p *Pagination[T]) NormalCount(
 	filter T,
 ) (int64, error) {
 	var count int64
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	if err := db.Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("failed to count entities: %w", err)
 	}
@@ -64,7 +64,7 @@ func (p *Pagination[T]) NormalFind(
 	filter T,
 	preloads ...string,
 ) ([]*T, error) {
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
@@ -80,7 +80,7 @@ func (r *Pagination[T]) NormalFindLock(
 	preloads ...string,
 ) ([]*T, error) {
 	var entities []*T
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
@@ -95,7 +95,7 @@ func (p *Pagination[T]) NormalFindOne(
 	filter T,
 	preloads ...string,
 ) (*T, error) {
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
@@ -115,7 +115,7 @@ func (p *Pagination[T]) NormalFindOneWithLock(
 	filter T,
 	preloads ...string,
 ) (*T, error) {
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
@@ -135,7 +135,7 @@ func (p *Pagination[T]) NormalExists(
 	db *gorm.DB,
 	filter T,
 ) (bool, error) {
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	var dummy int
 	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
@@ -149,7 +149,7 @@ func (p *Pagination[T]) NormalExistsByID(
 	id any,
 ) (bool, error) {
 	var dummy int
-	query := db.Model(new(T)).Where("id = ?", id)
+	query := db.Where("id = ?", id)
 	err := query.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence by ID: %w", err)
@@ -161,7 +161,7 @@ func (p *Pagination[T]) NormalExistsIncludingDeleted(
 	db *gorm.DB,
 	filter T,
 ) (bool, error) {
-	db = db.Unscoped().Model(new(T)).Where(&filter)
+	db = db.Unscoped().Where(&filter)
 	var dummy int
 	err := db.Select("1").Limit(1).Scan(&dummy).Error
 	if err != nil {
@@ -176,7 +176,7 @@ func (p *Pagination[T]) NormalGetMax(
 	filter T,
 ) (any, error) {
 	var result any
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	row := db.Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
@@ -190,7 +190,7 @@ func (p *Pagination[T]) NormalGetMin(
 	filter T,
 ) (any, error) {
 	var result any
-	db = db.Model(new(T)).Where(&filter)
+	db = db.Where(&filter)
 	row := db.Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s: %w", field, err)
@@ -204,7 +204,7 @@ func (p *Pagination[T]) NormalGetMaxLock(
 	filter T,
 ) (any, error) {
 	var result any
-	tx = tx.Model(new(T)).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
+	tx = tx.Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
 	row := tx.Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
@@ -218,7 +218,7 @@ func (p *Pagination[T]) NormalGetMinLock(
 	filter T,
 ) (any, error) {
 	var result any
-	tx = tx.Model(new(T)).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
+	tx = tx.Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
 	row := tx.Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)
