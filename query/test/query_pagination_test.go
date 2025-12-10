@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Helper to create echo context from query string
 func createEchoContext(queryStr string) echo.Context {
 	req := httptest.NewRequest(http.MethodGet, "/?"+queryStr, nil)
 	rec := httptest.NewRecorder()
@@ -22,13 +21,11 @@ func createEchoContext(queryStr string) echo.Context {
 	return e.NewContext(req, rec)
 }
 
-// Helper to encode filter to base64
 func encodeFilter(filter query.StructuredFilter) string {
 	data, _ := json.Marshal(filter)
 	return base64.StdEncoding.EncodeToString(data)
 }
 
-// Helper to encode sort fields to base64
 func encodeSort(sorts []query.SortField) string {
 	data, _ := json.Marshal(sorts)
 	return base64.StdEncoding.EncodeToString(data)

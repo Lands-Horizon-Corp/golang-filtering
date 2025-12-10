@@ -16,7 +16,7 @@ import (
 type Animal struct {
 	ID        uint   `gorm:"primaryKey"`
 	Name      string `gorm:"size:100;not null"`
-	Type      string `gorm:"size:50"` // Land, Air, Water
+	Type      string `gorm:"size:50"`
 	HabitatID uint
 	Habitat   Habitat
 	CreatedAt time.Time
@@ -27,7 +27,7 @@ type Animal struct {
 type Habitat struct {
 	ID      uint   `gorm:"primaryKey"`
 	Name    string `gorm:"size:100;not null"`
-	Type    string `gorm:"size:50"` // Land, Air, Water
+	Type    string `gorm:"size:50"`
 	Animals []Animal
 }
 
@@ -38,17 +38,6 @@ type Predator struct {
 	Prey      Animal
 	HabitatID uint
 	Habitat   Habitat
-}
-
-// ----------------------
-// PAGINATION RESULT
-// ----------------------
-type PaginationResult[T any] struct {
-	PageIndex int
-	PageSize  int
-	TotalSize int
-	TotalPage int
-	Data      []*T
 }
 
 // ----------------------
@@ -84,7 +73,7 @@ func seedData(db *gorm.DB) {
 }
 
 // ----------------------
-// DB HELPER (added here)
+// DB HELPER
 // ----------------------
 func animalTestDB() (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -92,15 +81,11 @@ func animalTestDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	// migrate
 	if err := db.AutoMigrate(&Animal{}, &Habitat{}, &Predator{}); err != nil {
 		return nil, err
 	}
 
-	// seed
 	seedData(db)
-
-	// RETURN DB ALREADY SCOPED TO ANIMAL
 	return db.Model(&Animal{}), nil
 }
 
@@ -109,7 +94,6 @@ func animalTestDB() (*gorm.DB, error) {
 // ----------------------
 func TestRawAllMethods(t *testing.T) {
 
-	// ⬇⬇⬇ Use the helper
 	db, err := animalTestDB()
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +109,7 @@ func TestRawAllMethods(t *testing.T) {
 
 	// RawFind
 	rawFind, _ := p.RawFind(db, "Habitat")
-	fmt.Println("RawFind:", rawFind)
+	fmt.Println("RawFind:", len(rawFind))
 
 	// RawCount
 	count, _ := p.RawCount(db)
@@ -133,7 +117,7 @@ func TestRawAllMethods(t *testing.T) {
 
 	// RawFindLock
 	rawLock, _ := p.RawFindLock(db, "Habitat")
-	fmt.Println("RawFindLock:", rawLock)
+	fmt.Println("RawFindLock:", len(rawLock))
 
 	// RawFindOne
 	one, _ := p.RawFindOne(db, "Habitat")
@@ -153,14 +137,14 @@ func TestRawAllMethods(t *testing.T) {
 
 	// RawGetMax / Min
 	maxID, _ := p.RawGetMax(db, "id")
-	fmt.Println("RawGetMax ID:", maxID)
 	minID, _ := p.RawGetMin(db, "id")
+	fmt.Println("RawGetMax ID:", maxID)
 	fmt.Println("RawGetMin ID:", minID)
 
 	// RawGetMaxLock / MinLock
 	maxLock, _ := p.RawGetMaxLock(db, "id")
-	fmt.Println("RawGetMaxLock ID:", maxLock)
 	minLock, _ := p.RawGetMinLock(db, "id")
+	fmt.Println("RawGetMaxLock ID:", maxLock)
 	fmt.Println("RawGetMinLock ID:", minLock)
 
 	// RawTabular
@@ -171,13 +155,59 @@ func TestRawAllMethods(t *testing.T) {
 			"Habitat": a.Habitat.Name,
 		}
 	}, "Habitat")
-	fmt.Println("RawTabular CSV length:", len(rawTabular))
+	fmt.Println("RawTabular length:", len(rawTabular))
 
 	// RawFindIncludeDeleted
 	includeDeleted, _ := p.RawFindIncludeDeleted(db, "Habitat")
-	fmt.Println("RawFindIncludeDeleted:", includeDeleted)
+	fmt.Println("RawFindIncludeDeleted:", len(includeDeleted))
 
 	// RawFindLockIncludeDeleted
 	includeDeletedLock, _ := p.RawFindLockIncludeDeleted(db, "Habitat")
-	fmt.Println("RawFindLockIncludeDeleted:", includeDeletedLock)
+	fmt.Println("RawFindLockIncludeDeleted:", len(includeDeletedLock))
+}
+
+// ----------------------
+// COMPLEX RAW PAGINATION
+// ----------------------
+func TestRawPaginationComplex(t *testing.T) {
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.AutoMigrate(&Animal{}, &Habitat{}, &Predator{}); err != nil {
+		t.Fatal(err)
+	}
+	seedData(db)
+
+	p := query.NewPagination[Animal](query.PaginationConfig{
+		Verbose: true,
+	})
+	db = db.Model(&Animal{})
+
+	// Build query with JOIN
+	dbQuery := db.
+		Table("animals").
+		Joins("JOIN habitats ON habitats.id = animals.habitat_id").
+		Where("habitats.name = ?", "Forest").
+		Order("animals.name ASC")
+	res, err := p.RawPagination(
+		dbQuery,
+		0,
+		10,
+		"Habitat",
+	)
+	if err != nil {
+		t.Fatalf("RawPagination failed: %s", err)
+	}
+	if len(res.Data) == 0 {
+		t.Fatalf("expected results but got 0")
+	}
+	for _, a := range res.Data {
+		if a.Habitat.Name != "Forest" {
+			t.Fatalf("expected Forest habitat, got %s", a.Habitat.Name)
+		}
+	}
+	t.Logf("SUCCESS — Got %d animals from Forest", len(res.Data))
 }
