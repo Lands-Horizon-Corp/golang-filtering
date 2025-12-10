@@ -361,7 +361,7 @@ func (f *Pagination[T]) NormalStringTabular(
 	getter func(data *T) map[string]any,
 	preloads ...string,
 ) ([]byte, error) {
-	filterRoot, _, _, err := strParseQuery(filterValue)
+	filterRoot, _, _, err := StrParseQuery(filterValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query string: %w", err)
 	}

@@ -534,7 +534,7 @@ func parseQuery(ctx echo.Context) (StructuredFilter, int, int, error) {
 	return filterRoot, pageIndex, pageSize, nil
 }
 
-func strParseFilters(value string) (StructuredFilter, error) {
+func StrParseFilters(value string) (StructuredFilter, error) {
 	if value == "" {
 		return StructuredFilter{Logic: LogicAnd}, nil
 	}
@@ -556,7 +556,7 @@ func strParseFilters(value string) (StructuredFilter, error) {
 	return filterRoot, nil
 }
 
-func strParseSort(value string) ([]SortField, error) {
+func StrParseSort(value string) ([]SortField, error) {
 	if value == "" {
 		return nil, nil
 	}
@@ -583,7 +583,7 @@ func strParseSort(value string) ([]SortField, error) {
 	return sortFields, nil
 }
 
-func strParsePageSize(value string) (int, error) {
+func StrParsePageSize(value string) (int, error) {
 	if value == "" {
 		return 0, nil
 	}
@@ -594,7 +594,7 @@ func strParsePageSize(value string) (int, error) {
 	return pageSize, nil
 }
 
-func strParsePageIndex(value string) (int, error) {
+func StrParsePageIndex(value string) (int, error) {
 	if value == "" {
 		return 0, nil
 	}
@@ -605,7 +605,7 @@ func strParsePageIndex(value string) (int, error) {
 	return pageIndex, nil
 }
 
-func strParseQuery(value string) (StructuredFilter, int, int, error) {
+func StrParseQuery(value string) (StructuredFilter, int, int, error) {
 	parts := strings.Split(value, "|")
 	var filterStr, sortStr, pageIndexStr, pageSizeStr string
 	if len(parts) > 0 {
@@ -621,20 +621,20 @@ func strParseQuery(value string) (StructuredFilter, int, int, error) {
 		pageSizeStr = parts[3]
 	}
 
-	filterRoot, err := strParseFilters(filterStr)
+	filterRoot, err := StrParseFilters(filterStr)
 	if err != nil {
 		return StructuredFilter{}, 0, 0, fmt.Errorf("filter processing failed: %w", err)
 	}
-	sortFields, err := strParseSort(sortStr)
+	sortFields, err := StrParseSort(sortStr)
 	if err != nil {
 		return StructuredFilter{}, 0, 0, fmt.Errorf("sort processing failed: %w", err)
 	}
 	filterRoot.SortFields = sortFields
-	pageIndex, err := strParsePageIndex(pageIndexStr)
+	pageIndex, err := StrParsePageIndex(pageIndexStr)
 	if err != nil {
 		return StructuredFilter{}, 0, 0, fmt.Errorf("pageIndex processing failed: %w", err)
 	}
-	pageSize, err := strParsePageSize(pageSizeStr)
+	pageSize, err := StrParsePageSize(pageSizeStr)
 	if err != nil {
 		return StructuredFilter{}, 0, 0, fmt.Errorf("pageSize processing failed: %w", err)
 	}

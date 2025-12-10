@@ -11,7 +11,7 @@ func (f *Pagination[T]) NoPaginationStr(
 	filterValue string,
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := strParseQuery(filterValue)
+	filterRoot, _, _, err := StrParseQuery(filterValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query string: %w", err)
 	}
@@ -24,7 +24,7 @@ func (f *Pagination[T]) NoPaginationStructuredStr(
 	filter StructuredFilter,
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := strParseQuery(filterValue)
+	filterRoot, _, _, err := StrParseQuery(filterValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query string: %w", err)
 	}
@@ -44,7 +44,7 @@ func (f *Pagination[T]) NoPaginationArrayStr(
 	sorts []ArrFilterSortSQL,
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := strParseQuery(filterValue)
+	filterRoot, _, _, err := StrParseQuery(filterValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query string: %w", err)
 	}
@@ -72,7 +72,7 @@ func (f *Pagination[T]) NoPaginationNormalStr(
 	filter *T,
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := strParseQuery(filterValue)
+	filterRoot, _, _, err := StrParseQuery(filterValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query string: %w", err)
 	}
