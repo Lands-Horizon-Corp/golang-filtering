@@ -48,20 +48,29 @@ func (f *Pagination[T]) NoPaginationArrayStr(
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query string: %w", err)
 	}
+
 	for _, f := range filters {
+		dt := DataTypeText
+		switch f.Value.(type) {
+		case int, int32, int64, float32, float64:
+			dt = DataTypeNumber
+		}
 		filterRoot.FieldFilters = append(filterRoot.FieldFilters, FieldFilter{
 			Field:    f.Field,
 			Value:    f.Value,
 			Mode:     f.Op,
-			DataType: DataTypeText,
+			DataType: dt,
 		})
 	}
+
 	filterRoot.Logic = LogicAnd
+
 	if len(filterRoot.SortFields) == 0 && len(sorts) > 0 {
 		for _, s := range sorts {
 			filterRoot.SortFields = append(filterRoot.SortFields, SortField(s))
 		}
 	}
+
 	filterRoot.Preload = append(filterRoot.Preload, preloads...)
 	return f.StructuredFind(db, filterRoot, preloads...)
 }

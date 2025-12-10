@@ -63,27 +63,14 @@ var timeLayouts = []string{
 
 func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []SortField) *gorm.DB {
 	joinedTables := make(map[string]bool)
-	allowedJoinTables := map[string]struct{}{
-		// Allowed PascalCase table names (example):
-		"User":    {},
-		"Profile": {},
-		"Order":   {},
-		// TODO: Add other table names from your schema as appropriate.
-	}
 	for _, filter := range filters {
 		if strings.Contains(filter.Field, ".") {
 			parts := strings.Split(filter.Field, ".")
 			if len(parts) >= 2 {
 				tableName := toPascalCase(parts[0])
-				if _, allowed := allowedJoinTables[tableName]; allowed {
-					if !joinedTables[tableName] {
-						db = db.Joins(tableName)
-						joinedTables[tableName] = true
-					}
-				} else {
-					// Optionally: log or handle attempt to join disallowed table
-					// fmt.Printf("Attempt to join disallowed table: %s\n", tableName)
-					continue
+				if !joinedTables[tableName] {
+					db = db.Joins(tableName)
+					joinedTables[tableName] = true
 				}
 			}
 		}
@@ -93,15 +80,9 @@ func autoJoinRelatedTables(db *gorm.DB, filters []FieldFilter, sortFields []Sort
 			parts := strings.Split(sortField.Field, ".")
 			if len(parts) >= 2 {
 				tableName := toPascalCase(parts[0])
-				if _, allowed := allowedJoinTables[tableName]; allowed {
-					if !joinedTables[tableName] {
-						db = db.Joins(tableName)
-						joinedTables[tableName] = true
-					}
-				} else {
-					// Optionally: log or handle attempt to join disallowed table
-					// fmt.Printf("Attempt to join disallowed table: %s\n", tableName)
-					continue
+				if !joinedTables[tableName] {
+					db = db.Joins(tableName)
+					joinedTables[tableName] = true
 				}
 			}
 		}
