@@ -82,7 +82,9 @@ func TestRegistryArrFindWithFilters(t *testing.T) {
 	assert.NotNil(t, res)
 	assert.Len(t, res, 3)
 
-	// Ensure the results are sorted by UpdatedAt descending
-	assert.True(t, res[0].UpdatedAt.After(res[1].UpdatedAt) || res[0].UpdatedAt.Equal(res[1].UpdatedAt))
-	assert.True(t, res[1].UpdatedAt.After(res[2].UpdatedAt) || res[1].UpdatedAt.Equal(res[2].UpdatedAt))
+	for i := 0; i < len(res)-1; i++ {
+		assert.True(t, res[i].UpdatedAt.After(res[i+1].UpdatedAt) || res[i].UpdatedAt.Equal(res[i+1].UpdatedAt),
+			"entries not sorted descending by UpdatedAt at index %d", i)
+	}
+
 }
