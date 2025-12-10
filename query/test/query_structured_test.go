@@ -23,10 +23,11 @@ func database[T any](model T) (*gorm.DB, error) {
 }
 
 type User struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	Name      string    `json:"name"`
-	Age       int       `json:"age"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	Name      string         `json:"name"`
+	Age       int            `json:"age"`
+	CreatedAt time.Time      `json:"created_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 func TestStructuredPagination(t *testing.T) {

@@ -170,7 +170,7 @@ func (r *Registry[TData, TResponse, TRequest]) RawFindIncludeDeleted(
 }
 
 func (r *Registry[TData, TResponse, TRequest]) RawFindLockIncludeDeleted(
-	ctx context.Context,
+	context context.Context,
 	filter *gorm.DB,
 	preloads ...string,
 ) ([]*TData, error) {
@@ -178,7 +178,7 @@ func (r *Registry[TData, TResponse, TRequest]) RawFindLockIncludeDeleted(
 	if filter != nil {
 		db = filter.Model(new(TData))
 	} else {
-		db = r.client.WithContext(ctx)
+		db = r.client.WithContext(context)
 	}
 	return r.pagination.RawFindLockIncludeDeleted(db, preloads...)
 }

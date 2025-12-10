@@ -91,3 +91,67 @@ func TestRegistryDeleteVariants(t *testing.T) {
 	}
 	assert.Equal(t, int64(0), count)
 }
+
+func TestRegistryRawFindIncludeDeletedVariants(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	if err := db.AutoMigrate(&User{}); err != nil {
+		t.Fatalf("failed to migrate: %v", err)
+	}
+
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25},
+		{ID: uuid.New(), Name: "Bob", Age: 30},
+		{ID: uuid.New(), Name: "Charlie", Age: 35},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	r := registry.NewRegistry(registry.RegistryParams[User, User, any]{
+		Database: db,
+		Resource: func(d *User) *User { return d },
+	})
+
+	ctx := context.Background()
+
+	if err := r.Delete(ctx, users[1].ID); err != nil {
+		t.Fatalf("Delete failed: %v", err)
+	}
+
+	results, err := r.RawFindIncludeDeleted(ctx, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(results))
+
+	filter := db.Where("age > ?", 28)
+	resultsFiltered, err := r.RawFindIncludeDeleted(ctx, filter)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(resultsFiltered))
+
+	resultsLock, err := r.RawFindLockIncludeDeleted(ctx, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(resultsLock))
+
+	resultsLockFiltered, err := r.RawFindLockIncludeDeleted(ctx, filter)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(resultsLockFiltered))
+
+	rawResults, err := r.RawFindIncludeDeletedRaw(ctx, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(rawResults))
+	assert.IsType(t, &User{}, rawResults[0])
+
+	rawResultsFiltered, err := r.RawFindIncludeDeletedRaw(ctx, filter)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(rawResultsFiltered))
+
+	rawResultsLock, err := r.RawFindLockIncludeDeletedRaw(ctx, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(rawResultsLock))
+
+	rawResultsLockFiltered, err := r.RawFindLockIncludeDeletedRaw(ctx, filter)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(rawResultsLockFiltered))
+}
