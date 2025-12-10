@@ -13,7 +13,7 @@ func (f *Pagination[T]) NoPagination(
 	ctx echo.Context,
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := parseQuery(ctx)
+	filterRoot, err := parseQueryNoPagination(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}
@@ -30,7 +30,7 @@ func (f *Pagination[T]) NoPaginationStructured(
 
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := parseQuery(ctx)
+	filterRoot, err := parseQueryNoPagination(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}
@@ -54,7 +54,7 @@ func (f *Pagination[T]) NoPaginationArray(
 
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := parseQuery(ctx)
+	filterRoot, err := parseQueryNoPagination(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}
@@ -86,7 +86,7 @@ func (f *Pagination[T]) NoPaginationNormal(
 
 	preloads ...string,
 ) ([]*T, error) {
-	filterRoot, _, _, err := parseQuery(ctx)
+	filterRoot, err := parseQueryNoPagination(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}

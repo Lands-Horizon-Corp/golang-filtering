@@ -34,9 +34,6 @@ func encodeSort(sorts []query.SortField) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
-// ------------------------------------------
-// TEST 1: BASIC PAGINATION WITHOUT FILTERS
-// ------------------------------------------
 func TestPaginationBasicNoFilters(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -57,9 +54,6 @@ func TestPaginationBasicNoFilters(t *testing.T) {
 	assert.Len(t, result.Data, 2)
 }
 
-// ------------------------------------------
-// TEST 2: PAGINATION WITH STRUCTURED FILTER
-// ------------------------------------------
 func TestPaginationWithStructuredFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -93,13 +87,10 @@ func TestPaginationWithStructuredFilter(t *testing.T) {
 	result, err := p.Pagination(db, ctx.Request().Context(), ctx)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 4, result.TotalSize) // Bob, Charlie, David, Eve
+	assert.Equal(t, 4, result.TotalSize)
 	assert.Len(t, result.Data, 4)
 }
 
-// ------------------------------------------
-// TEST 3: PAGINATION WITH SORT FIELDS
-// ------------------------------------------
 func TestPaginationWithSort(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {

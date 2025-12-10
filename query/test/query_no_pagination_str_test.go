@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupDB(t *testing.T) *gorm.DB {
+func setupDBNoPaginationStr(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to connect database: %v", err)
@@ -33,7 +33,7 @@ func setupDB(t *testing.T) *gorm.DB {
 }
 
 func TestNoPaginationStr_WithEncodedFilter(t *testing.T) {
-	db := setupDB(t)
+	db := setupDBNoPaginationStr(t)
 	p := &query.Pagination[User]{}
 
 	filter := query.StructuredFilter{
@@ -50,7 +50,7 @@ func TestNoPaginationStr_WithEncodedFilter(t *testing.T) {
 }
 
 func TestNoPaginationStructuredStr_WithEncodedFilter(t *testing.T) {
-	db := setupDB(t)
+	db := setupDBNoPaginationStr(t)
 	p := &query.Pagination[User]{}
 
 	filter := query.StructuredFilter{
@@ -67,7 +67,7 @@ func TestNoPaginationStructuredStr_WithEncodedFilter(t *testing.T) {
 }
 
 func TestNoPaginationArrayStr_WithEncodedFilter(t *testing.T) {
-	db := setupDB(t)
+	db := setupDBNoPaginationStr(t)
 	p := &query.Pagination[User]{}
 
 	filters := []query.ArrFilterSQL{
@@ -84,7 +84,7 @@ func TestNoPaginationArrayStr_WithEncodedFilter(t *testing.T) {
 }
 
 func TestNoPaginationNormalStr_WithFilter(t *testing.T) {
-	db := setupDB(t)
+	db := setupDBNoPaginationStr(t)
 	p := &query.Pagination[User]{}
 
 	filter := &User{Age: 30}

@@ -622,6 +622,41 @@ func StrParseQuery(value string) (StructuredFilter, int, int, error) {
 	return filterRoot, pageIndex, pageSize, nil
 }
 
+func StrParseQueryNoPagination(value string) (StructuredFilter, error) {
+	parts := strings.Split(value, "|")
+	var filterStr, sortStr string
+	if len(parts) > 0 {
+		filterStr = parts[0]
+	}
+	if len(parts) > 1 {
+		sortStr = parts[1]
+	}
+
+	filterRoot, err := StrParseFilters(filterStr)
+	if err != nil {
+		return StructuredFilter{}, fmt.Errorf("filter processing failed: %w", err)
+	}
+	sortFields, err := StrParseSort(sortStr)
+	if err != nil {
+		return StructuredFilter{}, fmt.Errorf("sort processing failed: %w", err)
+	}
+	filterRoot.SortFields = sortFields
+	return filterRoot, nil
+}
+
+func parseQueryNoPagination(ctx echo.Context) (StructuredFilter, error) {
+	filterRoot, err := parseFilters(ctx)
+	if err != nil {
+		return StructuredFilter{}, fmt.Errorf("filter processing failed: %w", err)
+	}
+	sortFields, err := parseSort(ctx)
+	if err != nil {
+		return StructuredFilter{}, fmt.Errorf("sort processing failed: %w", err)
+	}
+	filterRoot.SortFields = sortFields
+	return filterRoot, nil
+}
+
 func DetectDataType(val any) DataType {
 	if val == nil {
 		return DataTypeText
