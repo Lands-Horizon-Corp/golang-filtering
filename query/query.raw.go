@@ -8,11 +8,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// ----------------------
-// RAW PAGINATION METHODS
-// ----------------------
-
-// RawPagination fetches paginated records without filters or sorts.
 func (f *Pagination[T]) RawPagination(
 	db *gorm.DB,
 	pageIndex int,
@@ -55,8 +50,6 @@ func (f *Pagination[T]) RawPagination(
 	result.Data = data
 	return &result, nil
 }
-
-// RawFind fetches all records raw, no pagination, no filters, no sorts
 func (f *Pagination[T]) RawFind(db *gorm.DB, preloads ...string) ([]*T, error) {
 	for _, preload := range preloads {
 		db = db.Preload(preload)
@@ -68,7 +61,6 @@ func (f *Pagination[T]) RawFind(db *gorm.DB, preloads ...string) ([]*T, error) {
 	return data, nil
 }
 
-// RawCount counts all records
 func (f *Pagination[T]) RawCount(db *gorm.DB) (int64, error) {
 	var count int64
 	if err := db.Model(new(T)).Count(&count).Error; err != nil {
@@ -77,7 +69,6 @@ func (f *Pagination[T]) RawCount(db *gorm.DB) (int64, error) {
 	return count, nil
 }
 
-// RawFindLock fetches all records with lock
 func (f *Pagination[T]) RawFindLock(db *gorm.DB, preloads ...string) ([]*T, error) {
 	for _, preload := range preloads {
 		db = db.Preload(preload)
@@ -90,7 +81,6 @@ func (f *Pagination[T]) RawFindLock(db *gorm.DB, preloads ...string) ([]*T, erro
 	return data, nil
 }
 
-// RawFindOne fetches the first record
 func (f *Pagination[T]) RawFindOne(db *gorm.DB, preloads ...string) (*T, error) {
 	for _, preload := range preloads {
 		db = db.Preload(preload)
@@ -106,7 +96,6 @@ func (f *Pagination[T]) RawFindOne(db *gorm.DB, preloads ...string) (*T, error) 
 	return &entity, nil
 }
 
-// RawFindOneWithLock fetches the first record with lock
 func (f *Pagination[T]) RawFindOneWithLock(db *gorm.DB, preloads ...string) (*T, error) {
 	for _, preload := range preloads {
 		db = db.Preload(preload)
@@ -123,7 +112,6 @@ func (f *Pagination[T]) RawFindOneWithLock(db *gorm.DB, preloads ...string) (*T,
 	return &entity, nil
 }
 
-// RawExists checks if at least one record exists
 func (f *Pagination[T]) RawExists(db *gorm.DB) (bool, error) {
 	var dummy int
 	err := db.Select("1").Limit(1).Scan(&dummy).Error
@@ -133,7 +121,6 @@ func (f *Pagination[T]) RawExists(db *gorm.DB) (bool, error) {
 	return dummy == 1, nil
 }
 
-// RawExistsIncludingDeleted checks existence including soft deleted records
 func (f *Pagination[T]) RawExistsIncludingDeleted(db *gorm.DB) (bool, error) {
 	var dummy int
 	db = db.Unscoped()
@@ -144,10 +131,8 @@ func (f *Pagination[T]) RawExistsIncludingDeleted(db *gorm.DB) (bool, error) {
 	return dummy == 1, nil
 }
 
-// RawGetMax fetches max value of a field
 func (f *Pagination[T]) RawGetMax(db *gorm.DB, field string) (any, error) {
 	var result any
-	// explicitly set the model so GORM knows the table
 	row := db.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
@@ -164,7 +149,6 @@ func (f *Pagination[T]) RawGetMin(db *gorm.DB, field string) (any, error) {
 	return result, nil
 }
 
-// RawGetMaxLock fetches max value with lock
 func (f *Pagination[T]) RawGetMaxLock(db *gorm.DB, field string) (any, error) {
 	var result any
 	row := db.Model(new(T)).Clauses(clause.Locking{Strength: "UPDATE"}).Select(fmt.Sprintf("MAX(%s)", field)).Row()
@@ -174,7 +158,6 @@ func (f *Pagination[T]) RawGetMaxLock(db *gorm.DB, field string) (any, error) {
 	return result, nil
 }
 
-// RawGetMinLock fetches min value with lock
 func (f *Pagination[T]) RawGetMinLock(db *gorm.DB, field string) (any, error) {
 	var result any
 	row := db.Model(new(T)).Clauses(clause.Locking{Strength: "UPDATE"}).Select(fmt.Sprintf("MIN(%s)", field)).Row()
@@ -184,11 +167,6 @@ func (f *Pagination[T]) RawGetMinLock(db *gorm.DB, field string) (any, error) {
 	return result, nil
 }
 
-// ----------------------
-// RAW TABULAR METHODS
-// ----------------------
-
-// RawTabular fetches all raw records and generates CSV using getter
 func (f *Pagination[T]) RawTabular(db *gorm.DB, getter func(data *T) map[string]any, preloads ...string) ([]byte, error) {
 	data, err := f.RawFind(db, preloads...)
 	if err != nil {
@@ -197,7 +175,6 @@ func (f *Pagination[T]) RawTabular(db *gorm.DB, getter func(data *T) map[string]
 	return csvCreation(data, getter)
 }
 
-// RawRequestTabular fetches all raw records for an Echo request and generates CSV
 func (f *Pagination[T]) RawRequestTabular(db *gorm.DB, ctx echo.Context, getter func(data *T) map[string]any, preloads ...string) ([]byte, error) {
 	data, err := f.RawFind(db, preloads...)
 	if err != nil {
@@ -206,7 +183,6 @@ func (f *Pagination[T]) RawRequestTabular(db *gorm.DB, ctx echo.Context, getter 
 	return csvCreation(data, getter)
 }
 
-// RawStringTabular fetches all raw records from string input and generates CSV
 func (f *Pagination[T]) RawStringTabular(db *gorm.DB, str string, getter func(data *T) map[string]any, preloads ...string) ([]byte, error) {
 	data, err := f.RawFind(db, preloads...)
 	if err != nil {
@@ -215,13 +191,11 @@ func (f *Pagination[T]) RawStringTabular(db *gorm.DB, str string, getter func(da
 	return csvCreation(data, getter)
 }
 
-// RawFindIncludeDeleted fetches all raw records including deleted
 func (f *Pagination[T]) RawFindIncludeDeleted(db *gorm.DB, preloads ...string) ([]*T, error) {
 	db = db.Unscoped()
 	return f.RawFind(db, preloads...)
 }
 
-// RawFindLockIncludeDeleted fetches all raw records including deleted with lock
 func (f *Pagination[T]) RawFindLockIncludeDeleted(db *gorm.DB, preloads ...string) ([]*T, error) {
 	db = db.Unscoped()
 	return f.RawFindLock(db, preloads...)

@@ -12,9 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// ----------------------
-// MODELS
-// ----------------------
 type Animal struct {
 	ID        uint   `gorm:"primaryKey"`
 	Name      string `gorm:"size:100;not null"`
@@ -42,9 +39,6 @@ type Predator struct {
 	Habitat   Habitat
 }
 
-// ----------------------
-// SEED DATA
-// ----------------------
 func seedData(db *gorm.DB) {
 	habitats := []Habitat{
 		{Name: "Forest", Type: "Land"},
@@ -70,13 +64,9 @@ func seedData(db *gorm.DB) {
 	}
 	db.Create(&predators)
 
-	// Soft delete one
 	db.Delete(&animals[5])
 }
 
-// ----------------------
-// DB HELPER
-// ----------------------
 func animalTestDB() (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -91,9 +81,6 @@ func animalTestDB() (*gorm.DB, error) {
 	return db.Model(&Animal{}), nil
 }
 
-// ----------------------
-// TEST SUITE
-// ----------------------
 func TestRawAllMethods(t *testing.T) {
 
 	db, err := animalTestDB()
@@ -105,45 +92,35 @@ func TestRawAllMethods(t *testing.T) {
 		Verbose: true,
 	})
 
-	// RawPagination
 	paginated, _ := p.RawPagination(db, 0, 2, "Habitat")
 	fmt.Println("RawPagination:", paginated.Data)
 
-	// RawFind
 	rawFind, _ := p.RawFind(db, "Habitat")
 	fmt.Println("RawFind:", len(rawFind))
 
-	// RawCount
 	count, _ := p.RawCount(db)
 	fmt.Println("RawCount:", count)
 
-	// RawFindLock
 	rawLock, _ := p.RawFindLock(db, "Habitat")
 	fmt.Println("RawFindLock:", len(rawLock))
 
-	// RawFindOne
 	one, _ := p.RawFindOne(db, "Habitat")
 	fmt.Println("RawFindOne:", one)
 
-	// RawFindOneWithLock
 	oneLock, _ := p.RawFindOneWithLock(db, "Habitat")
 	fmt.Println("RawFindOneWithLock:", oneLock)
 
-	// RawExists
 	exists, _ := p.RawExists(db)
 	fmt.Println("RawExists:", exists)
 
-	// RawExistsIncludingDeleted
 	existsDeleted, _ := p.RawExistsIncludingDeleted(db)
 	fmt.Println("RawExistsIncludingDeleted:", existsDeleted)
 
-	// RawGetMax / Min
 	maxID, _ := p.RawGetMax(db, "id")
 	minID, _ := p.RawGetMin(db, "id")
 	fmt.Println("RawGetMax ID:", maxID)
 	fmt.Println("RawGetMin ID:", minID)
 
-	// RawGetMaxLock / MinLock
 	maxLock, _ := p.RawGetMaxLock(db, "id")
 	minLock, _ := p.RawGetMinLock(db, "id")
 	fmt.Println("RawGetMaxLock ID:", maxLock)
@@ -159,18 +136,13 @@ func TestRawAllMethods(t *testing.T) {
 	}, "Habitat")
 	fmt.Println("RawTabular length:", len(rawTabular))
 
-	// RawFindIncludeDeleted
 	includeDeleted, _ := p.RawFindIncludeDeleted(db, "Habitat")
 	fmt.Println("RawFindIncludeDeleted:", len(includeDeleted))
 
-	// RawFindLockIncludeDeleted
 	includeDeletedLock, _ := p.RawFindLockIncludeDeleted(db, "Habitat")
 	fmt.Println("RawFindLockIncludeDeleted:", len(includeDeletedLock))
 }
 
-// ----------------------
-// COMPLEX RAW PAGINATION
-// ----------------------
 func TestRawPaginationComplex(t *testing.T) {
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

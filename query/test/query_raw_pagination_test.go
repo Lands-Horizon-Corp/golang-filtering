@@ -11,13 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// ----------------------
-// MODELS
-// ----------------------
 type Profession struct {
 	ID        uint   `gorm:"primaryKey"`
-	Name      string `gorm:"size:100;not null"` // Engineer, Doctor, Philosopher...
-	Category  string `gorm:"size:100"`          // Engineering, Medical, Academic
+	Name      string `gorm:"size:100;not null"`
+	Category  string `gorm:"size:100"`
 	Employees []Employee
 }
 
@@ -27,16 +24,13 @@ type Employee struct {
 	LastName     string `gorm:"size:100;not null"`
 	ProfessionID uint
 	Profession   Profession
-	Department   string `gorm:"size:100"` // SE, FE, BE, Surgeon, Philosopher, Architect...
+	Department   string `gorm:"size:100"`
 	HiredAt      time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
 
-// ----------------------
-// PAGINATION RESULT
-// ----------------------
 type PaginationResult[T any] struct {
 	PageIndex int
 	PageSize  int
@@ -45,9 +39,6 @@ type PaginationResult[T any] struct {
 	Data      []*T
 }
 
-// ----------------------
-// SEED DATA
-// ----------------------
 func seedHiringData(db *gorm.DB) {
 	professions := []Profession{
 		{Name: "Software Engineer", Category: "Engineering"},
@@ -64,7 +55,6 @@ func seedHiringData(db *gorm.DB) {
 	db.Create(&professions)
 
 	employees := []Employee{
-		// Engineering
 		{FirstName: "Alice", LastName: "Smith", ProfessionID: 1, Department: "SE", HiredAt: time.Now().AddDate(-2, 0, 0)},
 		{FirstName: "Bob", LastName: "Johnson", ProfessionID: 2, Department: "BE", HiredAt: time.Now().AddDate(-3, 0, 0)},
 		{FirstName: "Carol", LastName: "Williams", ProfessionID: 3, Department: "FE", HiredAt: time.Now().AddDate(-1, 0, 0)},
@@ -84,13 +74,9 @@ func seedHiringData(db *gorm.DB) {
 
 	db.Create(&employees)
 
-	// Soft delete one employee
 	db.Delete(&employees[10])
 }
 
-// ----------------------
-// DB HELPER
-// ----------------------
 func hiringTestDB() (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -102,10 +88,6 @@ func hiringTestDB() (*gorm.DB, error) {
 	seedHiringData(db)
 	return db.Model(&Employee{}), nil
 }
-
-// ----------------------
-// TEST
-// ----------------------
 func TestPaginationRawHiring(t *testing.T) {
 	db, err := hiringTestDB()
 	if err != nil {

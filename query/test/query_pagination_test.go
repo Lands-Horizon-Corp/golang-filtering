@@ -41,7 +41,6 @@ func TestPaginationBasicNoFilters(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Query: pageIndex=0, pageSize=2
 	ctx := createEchoContext("pageIndex=0&pageSize=2")
 	result, err := p.Pagination(db, ctx.Request().Context(), ctx)
 	assert.NoError(t, err)
@@ -106,7 +105,6 @@ func TestPaginationWithSort(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Sort by age ascending
 	sorts := []query.SortField{
 		{Field: "age", Order: query.SortOrderAsc},
 	}
@@ -118,14 +116,11 @@ func TestPaginationWithSort(t *testing.T) {
 
 	assert.Equal(t, 3, result.TotalSize)
 	assert.Len(t, result.Data, 3)
-	assert.Equal(t, "Alice", result.Data[0].Name)   // Age 20
-	assert.Equal(t, "Bob", result.Data[1].Name)     // Age 30
-	assert.Equal(t, "Charlie", result.Data[2].Name) // Age 40
+	assert.Equal(t, "Alice", result.Data[0].Name)
+	assert.Equal(t, "Bob", result.Data[1].Name)
+	assert.Equal(t, "Charlie", result.Data[2].Name)
 }
 
-// ------------------------------------------
-// TEST 4: PAGINATION PAGE 2 WITH QUERY PARAMS
-// ------------------------------------------
 func TestPaginationQueryPage2(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -146,7 +141,6 @@ func TestPaginationQueryPage2(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Page 1 (second page), size 2
 	ctx := createEchoContext("pageIndex=1&pageSize=2")
 	result, err := p.Pagination(db, ctx.Request().Context(), ctx)
 	assert.NoError(t, err)
@@ -158,9 +152,6 @@ func TestPaginationQueryPage2(t *testing.T) {
 	assert.Len(t, result.Data, 2)
 }
 
-// ------------------------------------------
-// TEST 5: COMPLEX FILTER + SORT + PAGINATION
-// ------------------------------------------
 func TestPaginationComplex(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -184,7 +175,6 @@ func TestPaginationComplex(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Filter: age >= 30, Sort: age ASC
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{Field: "age", Value: 30, Mode: query.ModeGTE, DataType: query.DataTypeNumber},
@@ -200,15 +190,13 @@ func TestPaginationComplex(t *testing.T) {
 	result, err := p.Pagination(db, ctx.Request().Context(), ctx)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 4, result.TotalSize) // Bob, Charlie, David, Eve
+	assert.Equal(t, 4, result.TotalSize)
 	assert.Equal(t, 2, result.TotalPage)
 	assert.Len(t, result.Data, 2)
-	// Default sort is created_at DESC, so newest first
-	assert.Equal(t, "Eve", result.Data[0].Name)   // Newest
-	assert.Equal(t, "David", result.Data[1].Name) // Second newest
+	assert.Equal(t, "Eve", result.Data[0].Name)
+	assert.Equal(t, "David", result.Data[1].Name)
 }
 
-// TestPaginationStructuredNoRouteFilter tests PaginationStructured without route filter
 func TestPaginationStructuredNoRouteFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -229,8 +217,6 @@ func TestPaginationStructuredNoRouteFilter(t *testing.T) {
 	p := query.NewPagination[User](query.PaginationConfig{
 		Verbose: true,
 	})
-
-	// Query params only: age >= 30
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -248,11 +234,10 @@ func TestPaginationStructuredNoRouteFilter(t *testing.T) {
 	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, query.StructuredFilter{})
 	assert.NoError(t, err)
 
-	assert.Equal(t, 4, result.TotalSize) // Bob, Charlie, David, Eve
+	assert.Equal(t, 4, result.TotalSize)
 	assert.Len(t, result.Data, 4)
 }
 
-// TestPaginationStructuredWithRouteFilter tests PaginationStructured merging route filter with query filters
 func TestPaginationStructuredWithRouteFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -273,8 +258,6 @@ func TestPaginationStructuredWithRouteFilter(t *testing.T) {
 	p := query.NewPagination[User](query.PaginationConfig{
 		Verbose: true,
 	})
-
-	// Query params: age >= 30
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -285,8 +268,6 @@ func TestPaginationStructuredWithRouteFilter(t *testing.T) {
 			},
 		},
 	}
-
-	// Route filter: name = "Bob"
 	routeFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -297,21 +278,16 @@ func TestPaginationStructuredWithRouteFilter(t *testing.T) {
 			},
 		},
 	}
-
 	filterEncoded := encodeFilter(queryFilter)
 	ctx := createEchoContext("filter=" + filterEncoded + "&pageIndex=0&pageSize=10")
-
 	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
 	assert.NoError(t, err)
-
-	// Both conditions must be true (AND logic): age >= 30 AND name = "Bob" -> only Bob matches
 	assert.Equal(t, 1, result.TotalSize)
 	assert.Len(t, result.Data, 1)
 	assert.Equal(t, "Bob", result.Data[0].Name)
 	assert.Equal(t, 30, result.Data[0].Age)
 }
 
-// TestPaginationStructuredSortFieldOverride tests that route filter sort takes precedence
 func TestPaginationStructuredSortFieldOverride(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -331,8 +307,6 @@ func TestPaginationStructuredSortFieldOverride(t *testing.T) {
 	p := query.NewPagination[User](query.PaginationConfig{
 		Verbose: true,
 	})
-
-	// Query has no sort (defaults to created_at DESC)
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -343,10 +317,8 @@ func TestPaginationStructuredSortFieldOverride(t *testing.T) {
 			},
 		},
 	}
-
-	// Route filter specifies sort by age ASC
 	routeFilter := query.StructuredFilter{
-		FieldFilters: []query.FieldFilter{}, // No additional filters
+		FieldFilters: []query.FieldFilter{},
 		SortFields: []query.SortField{
 			{
 				Field: "age",
@@ -361,12 +333,11 @@ func TestPaginationStructuredSortFieldOverride(t *testing.T) {
 	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
 	assert.NoError(t, err)
 
-	// Results should be sorted by age ASC: 25, 28, 30, 35
 	assert.Len(t, result.Data, 4)
-	assert.Equal(t, 25, result.Data[0].Age) // Alice
-	assert.Equal(t, 28, result.Data[1].Age) // Bob
-	assert.Equal(t, 30, result.Data[2].Age) // Charlie
-	assert.Equal(t, 35, result.Data[3].Age) // David
+	assert.Equal(t, 25, result.Data[0].Age)
+	assert.Equal(t, 28, result.Data[1].Age)
+	assert.Equal(t, 30, result.Data[2].Age)
+	assert.Equal(t, 35, result.Data[3].Age)
 }
 
 // TestPaginationStructuredPreloadMerging tests that preloads are merged
