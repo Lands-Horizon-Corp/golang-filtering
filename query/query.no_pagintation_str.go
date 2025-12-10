@@ -50,16 +50,12 @@ func (f *Pagination[T]) NoPaginationArrayStr(
 	}
 
 	for _, f := range filters {
-		dt := DataTypeText
-		switch f.Value.(type) {
-		case int, int32, int64, float32, float64:
-			dt = DataTypeNumber
-		}
+
 		filterRoot.FieldFilters = append(filterRoot.FieldFilters, FieldFilter{
 			Field:    f.Field,
 			Value:    f.Value,
 			Mode:     f.Op,
-			DataType: dt,
+			DataType: DetectDataType(f.Value),
 		})
 	}
 

@@ -621,3 +621,38 @@ func StrParseQuery(value string) (StructuredFilter, int, int, error) {
 	}
 	return filterRoot, pageIndex, pageSize, nil
 }
+
+func DetectDataType(val any) DataType {
+	if val == nil {
+		return DataTypeText
+	}
+
+	rv := reflect.ValueOf(val)
+	kind := rv.Kind()
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return DataTypeNumber
+
+	case reflect.Bool:
+		return DataTypeBool
+
+	case reflect.String:
+		return DataTypeText
+
+	case reflect.Struct:
+		if t, ok := val.(time.Time); ok {
+			if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 {
+				return DataTypeDate
+			}
+			return DataTypeTime
+		}
+	case reflect.Ptr:
+		if !rv.IsNil() {
+			return DetectDataType(rv.Elem().Interface())
+		}
+	}
+
+	return DataTypeText
+}

@@ -64,7 +64,7 @@ func (f *Pagination[T]) PaginationArray(
 			Field:    f.Field,
 			Value:    f.Value,
 			Mode:     f.Op,
-			DataType: DataTypeText,
+			DataType: DetectDataType(f.Value),
 		})
 	}
 	filterRoot.Logic = LogicAnd
