@@ -2,10 +2,12 @@ package query_test
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/Lands-Horizon-Corp/golang-filtering/query"
+	"github.com/labstack/echo/v4"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -210,4 +212,55 @@ func TestRawPaginationComplex(t *testing.T) {
 		}
 	}
 	t.Logf("SUCCESS — Got %d animals from Forest", len(res.Data))
+}
+
+func TestPaginationRaw(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Migrate & seed
+	if err := db.AutoMigrate(&Animal{}, &Habitat{}, &Predator{}); err != nil {
+		t.Fatal(err)
+	}
+	seedData(db)
+
+	// Create Echo context with query params for pageIndex=0, pageSize=2
+	e := echo.New()
+	req := httptest.NewRequest("GET", "/?pageIndex=0&pageSize=2", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+
+	p := query.NewPagination[Animal](query.PaginationConfig{
+		Verbose: true,
+	})
+
+	db = db.Model(&Animal{})
+
+	// rawQuery function example
+	rawQuery := func(d *gorm.DB) *gorm.DB {
+		return d.
+			Joins("JOIN habitats ON habitats.id = animals.habitat_id").
+			Where("habitats.name = ?", "Forest").
+			Order("animals.name ASC")
+	}
+
+	// Run PaginationRaw
+	result, err := p.PaginationRaw(db, ctx, rawQuery, "Habitat")
+	if err != nil {
+		t.Fatalf("PaginationRaw failed: %v", err)
+	}
+
+	if len(result.Data) == 0 {
+		t.Fatal("expected some animals but got 0")
+	}
+
+	for _, a := range result.Data {
+		if a.Habitat.Name != "Forest" {
+			t.Fatalf("expected Forest habitat, got %s", a.Habitat.Name)
+		}
+	}
+
+	t.Logf("SUCCESS — got %d animals via PaginationRaw", len(result.Data))
 }
