@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Lands-Horizon-Corp/golang-filtering/query"
+	"gorm.io/gorm"
 )
 
 func (r *Registry[TData, TResponse, TRequest]) Find(
@@ -148,6 +149,69 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredFindWithLockRaw(
 	preloads ...string,
 ) ([]*TResponse, error) {
 	data, err := r.StructuredFindWithLock(context, filter, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawFind(
+	context context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TData, error) {
+	var db *gorm.DB
+	if filter != nil {
+		db = filter.Model(new(TData))
+	} else {
+		db = r.client.WithContext(context)
+	}
+
+	data, err := r.pagination.RawFind(db, preloads...)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+func (r *Registry[TData, TResponse, TRequest]) RawFindRaw(
+	context context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.RawFind(context, filter, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawFindWithLock(
+	context context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TData, error) {
+	var db *gorm.DB
+	if filter != nil {
+		db = filter.Model(new(TData))
+	} else {
+		db = r.client.WithContext(context)
+	}
+
+	data, err := r.pagination.RawFindLock(db, preloads...)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawFindWithLockRaw(
+	context context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.RawFindWithLock(context, filter, preloads...)
 	if err != nil {
 		return nil, err
 	}

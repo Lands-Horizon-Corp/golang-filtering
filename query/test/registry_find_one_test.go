@@ -64,3 +64,54 @@ func TestRegistryFindOneVariants(t *testing.T) {
 	assert.NotNil(t, resStructLock)
 	assert.Equal(t, "Bob", resStructLock.Name)
 }
+
+func TestRegistryRawFindOneVariants(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	if err := db.AutoMigrate(&User{}); err != nil {
+		t.Fatalf("failed to migrate: %v", err)
+	}
+
+	users := []User{
+		{ID: uuid.New(), Name: "Alice", Age: 25},
+		{ID: uuid.New(), Name: "Bob", Age: 30},
+		{ID: uuid.New(), Name: "Charlie", Age: 35},
+	}
+	if err := db.Create(&users).Error; err != nil {
+		t.Fatalf("failed to seed: %v", err)
+	}
+
+	r := registry.NewRegistry(registry.RegistryParams[User, User, any]{
+		Database: db,
+		Resource: func(d *User) *User { return d },
+	})
+
+	ctx := context.Background()
+
+	// Create a query with model and order
+	queryAll := db.Model(&User{}).Order("age ASC")
+	res, err := r.RawFindOne(ctx, queryAll)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, "Alice", res.Name)
+
+	queryCharlie := db.Model(&User{}).Where("name = ?", "Charlie")
+	resFiltered, err := r.RawFindOne(ctx, queryCharlie)
+	assert.NoError(t, err)
+	assert.NotNil(t, resFiltered)
+	assert.Equal(t, "Charlie", resFiltered.Name)
+
+	queryLock := db.Model(&User{}).Order("age ASC")
+	resLock, err := r.RawFindOneWithLock(ctx, queryLock)
+	assert.NoError(t, err)
+	assert.NotNil(t, resLock)
+	assert.Equal(t, "Alice", resLock.Name)
+
+	queryBobLock := db.Model(&User{}).Where("name = ?", "Bob")
+	resLockFiltered, err := r.RawFindOneWithLock(ctx, queryBobLock)
+	assert.NoError(t, err)
+	assert.NotNil(t, resLockFiltered)
+	assert.Equal(t, "Bob", resLockFiltered.Name)
+}
