@@ -405,10 +405,8 @@ func (f *Pagination[T]) buildDateCondition(field string, mode Mode, value any) (
 		hasTimeTo := hasTimeComponent(rangeVal.To)
 
 		if hasTimeFrom && hasTimeTo {
-			// Both dates have time components, use exact timestamps
 			return fmt.Sprintf("%s >= ? AND %s <= ?", field, field), []any{rangeVal.From, rangeVal.To}
 		} else {
-			// Date-only range: include entire days from start of From day to end of To day
 			startOfFromDay := time.Date(rangeVal.From.Year(), rangeVal.From.Month(), rangeVal.From.Day(), 0, 0, 0, 0, rangeVal.From.Location())
 			endOfToDay := time.Date(rangeVal.To.Year(), rangeVal.To.Month(), rangeVal.To.Day(), 23, 59, 59, 999999999, rangeVal.To.Location())
 			return fmt.Sprintf("%s >= ? AND %s <= ?", field, field), []any{startOfFromDay, endOfToDay}

@@ -12,17 +12,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// ----------------------
-// TEST REGISTRY COUNT
-// ----------------------
 func TestRegistryCounts(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 
 	err = db.AutoMigrate(&User{})
 	assert.NoError(t, err)
-
-	// Seed data
 	users := []User{
 		{ID: uuid.New(), Name: "Alice", Age: 22},
 		{ID: uuid.New(), Name: "Bob", Age: 30},
@@ -39,28 +34,18 @@ func TestRegistryCounts(t *testing.T) {
 	})
 
 	ctx := context.Background()
-
-	// ----------------------
-	// Count: simple filter
-	// ----------------------
 	filter := &User{Age: 25}
 	count, err := r.Count(ctx, filter)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	// ----------------------
-	// ArrCount: filter by raw SQL
-	// ----------------------
 	filters := []query.ArrFilterSQL{
 		{Field: "age", Op: query.ModeGT, Value: 22},
 	}
 	arrCount, err := r.ArrCount(ctx, filters)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(2), arrCount) // Bob and Charlie
+	assert.Equal(t, int64(2), arrCount)
 
-	// ----------------------
-	// StructuredCount: simulate structured filter
-	// ----------------------
 	filterRoot := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -74,20 +59,14 @@ func TestRegistryCounts(t *testing.T) {
 	}
 	structCount, err := r.StructuredCount(ctx, db, filterRoot)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(2), structCount) // Bob and Charlie
+	assert.Equal(t, int64(2), structCount)
 
-	// ----------------------
-	// RawCount: simple raw query
-	// ----------------------
 	rawDB := db.Model(&User{}).Where("age <= ?", 25)
 	rawCount, err := r.RawCount(ctx, rawDB)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(2), rawCount) // Alice and Charlie
+	assert.Equal(t, int64(2), rawCount)
 
-	// ----------------------
-	// RawCount: nil raw DB = count all
-	// ----------------------
 	rawAll, err := r.RawCount(ctx, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(3), rawAll) // Alice, Bob, Charlie
+	assert.Equal(t, int64(3), rawAll)
 }

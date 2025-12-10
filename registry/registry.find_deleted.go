@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Lands-Horizon-Corp/golang-filtering/query"
+	"gorm.io/gorm"
 )
 
 func (r *Registry[TData, TResponse, TRequest]) FindIncludeDeleted(
@@ -80,8 +81,6 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredFindWithLockIncludeDele
 	return data, nil
 }
 
-// ===== RAW versions =====
-
 func (r *Registry[TData, TResponse, TRequest]) FindIncludeDeletedRaw(
 	context context.Context,
 	fields *TData,
@@ -150,6 +149,58 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredFindWithLockIncludeDele
 	preloads ...string,
 ) ([]*TResponse, error) {
 	data, err := r.StructuredFindWithLockIncludeDeleted(context, filter, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawFindIncludeDeleted(
+	context context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TData, error) {
+	var db *gorm.DB
+	if filter != nil {
+		db = filter.Model(new(TData))
+	} else {
+		db = r.client.WithContext(context)
+	}
+	return r.pagination.RawFindIncludeDeleted(db, preloads...)
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawFindLockIncludeDeleted(
+	ctx context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TData, error) {
+	var db *gorm.DB
+	if filter != nil {
+		db = filter.Model(new(TData))
+	} else {
+		db = r.client.WithContext(ctx)
+	}
+	return r.pagination.RawFindLockIncludeDeleted(db, preloads...)
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawFindIncludeDeletedRaw(
+	ctx context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.RawFindIncludeDeleted(ctx, filter, preloads...)
+	if err != nil {
+		return nil, err
+	}
+	return r.ToModels(data), nil
+}
+
+func (r *Registry[TData, TResponse, TRequest]) RawFindLockIncludeDeletedRaw(
+	ctx context.Context,
+	filter *gorm.DB,
+	preloads ...string,
+) ([]*TResponse, error) {
+	data, err := r.RawFindLockIncludeDeleted(ctx, filter, preloads...)
 	if err != nil {
 		return nil, err
 	}

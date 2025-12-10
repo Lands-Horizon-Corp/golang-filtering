@@ -51,7 +51,6 @@ func TestRegistryTabularVariants(t *testing.T) {
 	assert.NotContains(t, csvStr, "Alice")
 	assert.NotContains(t, csvStr, "Charlie")
 
-	// ArrTabular with filter Age = 35
 	arrFilters := []query.ArrFilterSQL{{Field: "age", Op: query.ModeEqual, Value: 35}}
 	arrCSV, err := r.ArrTabular(ctx, arrFilters, nil)
 	assert.NoError(t, err)
@@ -61,7 +60,6 @@ func TestRegistryTabularVariants(t *testing.T) {
 	assert.NotContains(t, arrCSVStr, "Alice")
 	assert.NotContains(t, arrCSVStr, "Bob")
 
-	// StructuredTabular with filter Age = 30
 	structFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{Field: "age", Value: 30, Mode: query.ModeEqual, DataType: query.DataTypeNumber},

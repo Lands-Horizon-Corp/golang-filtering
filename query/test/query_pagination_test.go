@@ -70,7 +70,6 @@ func TestPaginationWithStructuredFilter(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Filter: age >= 30
 	filter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{Field: "age", Value: 30, Mode: query.ModeGTE, DataType: query.DataTypeNumber},
@@ -853,7 +852,6 @@ func TestPaginationNormalComplexMerge(t *testing.T) {
 		Verbose: true,
 	})
 
-	// URL query filter: age >= 30
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{

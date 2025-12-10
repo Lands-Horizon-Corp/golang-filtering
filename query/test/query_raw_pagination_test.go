@@ -60,13 +60,9 @@ func seedHiringData(db *gorm.DB) {
 		{FirstName: "Carol", LastName: "Williams", ProfessionID: 3, Department: "FE", HiredAt: time.Now().AddDate(-1, 0, 0)},
 		{FirstName: "David", LastName: "Brown", ProfessionID: 4, Department: "Construction", HiredAt: time.Now().AddDate(-5, 0, 0)},
 		{FirstName: "Eve", LastName: "Jones", ProfessionID: 5, Department: "Architect", HiredAt: time.Now().AddDate(-4, 0, 0)},
-
-		// Medical
 		{FirstName: "Frank", LastName: "Miller", ProfessionID: 6, Department: "Surgery", HiredAt: time.Now().AddDate(-6, 0, 0)},
 		{FirstName: "Grace", LastName: "Davis", ProfessionID: 7, Department: "General Medicine", HiredAt: time.Now().AddDate(-2, 0, 0)},
 		{FirstName: "Hank", LastName: "Garcia", ProfessionID: 6, Department: "Surgery", HiredAt: time.Now().AddDate(-1, 0, 0)},
-
-		// Academic
 		{FirstName: "Ivy", LastName: "Martinez", ProfessionID: 8, Department: "Philosophy", HiredAt: time.Now().AddDate(-10, 0, 0)},
 		{FirstName: "Jack", LastName: "Rodriguez", ProfessionID: 9, Department: "Research", HiredAt: time.Now().AddDate(-8, 0, 0)},
 		{FirstName: "Karen", LastName: "Lopez", ProfessionID: 10, Department: "Teaching", HiredAt: time.Now().AddDate(-12, 0, 0)},

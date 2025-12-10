@@ -13,7 +13,6 @@ func TestNormalCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
-	// seed
 	users := []User{
 		{ID: uuid.New(), Name: "Alice", Age: 25},
 		{ID: uuid.New(), Name: "Bob", Age: 30},
@@ -34,7 +33,6 @@ func TestArrCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
-	// seed
 	users := []User{
 		{ID: uuid.New(), Name: "Alice", Age: 25},
 		{ID: uuid.New(), Name: "Bob", Age: 30},

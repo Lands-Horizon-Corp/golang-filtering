@@ -37,14 +37,12 @@ func TestRegistryFindVariants(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Normal Find
 	res, err := r.Find(ctx, &User{Age: 30})
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Len(t, res, 1)
 	assert.Equal(t, "Bob", res[0].Name)
 
-	// Array Find
 	arrFilters := []query.ArrFilterSQL{{Field: "age", Op: query.ModeEqual, Value: 35}}
 	resArr, err := r.ArrFind(ctx, arrFilters, nil)
 	assert.NoError(t, err)
@@ -52,7 +50,6 @@ func TestRegistryFindVariants(t *testing.T) {
 	assert.Len(t, resArr, 1)
 	assert.Equal(t, "Charlie", resArr[0].Name)
 
-	// Structured Find
 	structFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{{Field: "age", Value: 30, Mode: query.ModeEqual, DataType: query.DataTypeNumber}},
 		Logic:        query.LogicAnd,

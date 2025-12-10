@@ -83,7 +83,6 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredFindOneWithLock(
 	return entity, nil
 }
 
-// Raw variants return both the raw data entity and the converted response model.
 func (r *Registry[TData, TResponse, TRequest]) FindOneRaw(
 	context context.Context,
 	fields *TData,

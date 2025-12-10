@@ -325,7 +325,6 @@ func (f *Pagination[T]) NormalTabular(
 	return csvCreation(data, getter)
 }
 
-// NormalRequestTabular uses echo.Context and optional filter
 func (f *Pagination[T]) NormalRequestTabular(
 	db *gorm.DB,
 	ctx echo.Context,

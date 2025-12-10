@@ -42,7 +42,6 @@ func TestStrParsePageIndexAndSize(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 50, size)
 
-	// Empty string should return 0
 	index, err = query.StrParsePageIndex("")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, index)

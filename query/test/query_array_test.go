@@ -18,8 +18,6 @@ func TestArrPaginationBasic(t *testing.T) {
 	p := query.NewPagination[User](query.PaginationConfig{
 		Verbose: true,
 	})
-
-	// No filters — match all
 	res, err := p.ArrPagination(db, nil, nil, 0, 2)
 	assert.NoError(t, err)
 

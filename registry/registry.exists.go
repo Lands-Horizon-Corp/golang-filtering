@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// FilterSQL is an alias for the query.ArrFilterSQL type used in array-style filters.
 type FilterSQL = query.ArrFilterSQL
 
 func (r *Registry[TData, TResponse, TRequest]) Exists(

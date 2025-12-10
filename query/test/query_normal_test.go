@@ -39,7 +39,7 @@ func TestPaginationBasic(t *testing.T) {
 		Verbose: true,
 	})
 
-	filter := &User{} // No filter — match all
+	filter := &User{}
 
 	res, err := p.NormalPagination(db, filter, 0, 2)
 	assert.NoError(t, err)

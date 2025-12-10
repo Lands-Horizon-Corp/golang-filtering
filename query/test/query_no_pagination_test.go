@@ -31,7 +31,6 @@ func setupDBNoPagination(t *testing.T) *gorm.DB {
 
 func setupEchoContext() echo.Context {
 	e := echo.New()
-	// Add dummy pageIndex and pageSize to satisfy parseQuery
 	req := httptest.NewRequest(http.MethodGet, "/?pageIndex=1&pageSize=10", nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)

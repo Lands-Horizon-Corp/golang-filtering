@@ -22,7 +22,6 @@ func database[T any](model T) (*gorm.DB, error) {
 	return db.Model(new(T)), nil
 }
 
-// Example model
 type User struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	Name      string    `json:"name"`
@@ -141,7 +140,6 @@ func TestStructuredPaginationComplex(t *testing.T) {
 	assert.Equal(t, "Charlie", result.Data[0].Name)
 	assert.Equal(t, "David", result.Data[1].Name)
 
-	// Page 1
 	resultPage2, err := p.StructuredPagination(db, filter, 1, 2)
 	if err != nil {
 		t.Fatalf("pagination failed: %v", err)
@@ -204,7 +202,6 @@ func TestStructuredPaginationComplexAdvanced(t *testing.T) {
 	assert.Equal(t, "Grace", resultPage0.Data[0].Name)
 	assert.Equal(t, "Frank", resultPage0.Data[1].Name)
 
-	// Page 1
 	resultPage1, err := p.StructuredPagination(db, filter, 1, 2)
 	if err != nil {
 		t.Fatalf("pagination failed: %v", err)
@@ -307,7 +304,7 @@ func TestAllModes(t *testing.T) {
 		{ID: uuid.New(), Name: "Charlie", Age: 35, CreatedAt: truncate(base.Add(-3 * time.Hour))},
 		{ID: uuid.New(), Name: "David", Age: 40, CreatedAt: truncate(base.Add(-2 * time.Hour))},
 		{ID: uuid.New(), Name: "Eve", Age: 45, CreatedAt: truncate(base.Add(-1 * time.Hour))},
-		{ID: uuid.New(), Name: "", Age: 50, CreatedAt: truncate(base)}, // for empty check
+		{ID: uuid.New(), Name: "", Age: 50, CreatedAt: truncate(base)},
 	}
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to insert sample data: %v", err)

@@ -63,7 +63,6 @@ func TestRegistryMinMaxVariants(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, 30, sMin)
 
-	// Structured lock variants
 	sMaxLock, err := r.StructuredGetMaxLock(ctx, "age", structFilter)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 40, sMaxLock)

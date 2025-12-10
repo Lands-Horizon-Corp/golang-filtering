@@ -235,7 +235,6 @@ func parseRangeNumber(value any) (RangeNumber, error) {
 func parseRangeDateTime(value any) (RangeDate, error) {
 	switch v := value.(type) {
 	case RangeDate:
-		// Already a RangeDate, just return
 		return v, nil
 	case Range:
 		from, err := parseDateTime(v.From)
@@ -276,7 +275,6 @@ func parseRangeDateTime(value any) (RangeDate, error) {
 func parseRangeTime(value any) (RangeDate, error) {
 	switch v := value.(type) {
 	case RangeDate:
-		// Already a RangeDate, just return
 		return v, nil
 	case Range:
 		from, err := parseTime(v.From)

@@ -126,7 +126,6 @@ func TestRawAllMethods(t *testing.T) {
 	fmt.Println("RawGetMaxLock ID:", maxLock)
 	fmt.Println("RawGetMinLock ID:", minLock)
 
-	// RawTabular
 	rawTabular, _ := p.RawTabular(db, func(a *Animal) map[string]any {
 		return map[string]any{
 			"Name":    a.Name,
@@ -160,7 +159,6 @@ func TestRawPaginationComplex(t *testing.T) {
 	})
 	db = db.Model(&Animal{})
 
-	// Build query with JOIN
 	dbQuery := db.
 		Table("animals").
 		Joins("JOIN habitats ON habitats.id = animals.habitat_id").
@@ -192,13 +190,11 @@ func TestPaginationRaw(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Migrate & seed
 	if err := db.AutoMigrate(&Animal{}, &Habitat{}, &Predator{}); err != nil {
 		t.Fatal(err)
 	}
 	seedData(db)
 
-	// Create Echo context with query params for pageIndex=0, pageSize=2
 	e := echo.New()
 	req := httptest.NewRequest("GET", "/?pageIndex=0&pageSize=2", nil)
 	rec := httptest.NewRecorder()
@@ -210,7 +206,6 @@ func TestPaginationRaw(t *testing.T) {
 
 	db = db.Model(&Animal{})
 
-	// rawQuery function example
 	rawQuery := func(d *gorm.DB) *gorm.DB {
 		return d.
 			Joins("JOIN habitats ON habitats.id = animals.habitat_id").
@@ -218,7 +213,6 @@ func TestPaginationRaw(t *testing.T) {
 			Order("animals.name ASC")
 	}
 
-	// Run PaginationRaw
 	result, err := p.PaginationRaw(db, ctx, rawQuery, "Habitat")
 	if err != nil {
 		t.Fatalf("PaginationRaw failed: %v", err)
