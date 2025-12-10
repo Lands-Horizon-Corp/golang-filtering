@@ -109,5 +109,5 @@ func (f *Pagination[T]) PaginationRaw(
 	}
 	dbQuery := rawQuery(db)
 	dbQuery = f.structuredQuery(dbQuery, filterRoot)
-	return f.StructuredPaginationRaw(dbQuery, pageIndex, pageSize, preloads...)
+	return f.RawPagination(dbQuery, pageIndex, pageSize, preloads...)
 }
