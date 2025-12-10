@@ -340,7 +340,6 @@ func TestPaginationStructuredSortFieldOverride(t *testing.T) {
 	assert.Equal(t, 35, result.Data[3].Age)
 }
 
-// TestPaginationStructuredPreloadMerging tests that preloads are merged
 func TestPaginationStructuredPreloadMerging(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -352,22 +351,17 @@ func TestPaginationStructuredPreloadMerging(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Route filter without additional filters, just with empty preloads
 	routeFilter := query.StructuredFilter{
-		Preload: []string{}, // Empty preloads
+		Preload: []string{},
 	}
 
 	ctx := createEchoContext("pageIndex=0&pageSize=10")
-
 	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
 	assert.NoError(t, err)
-
-	// Just verify the query executed without error and returned all users
 	assert.Equal(t, 5, result.TotalSize)
 	assert.Len(t, result.Data, 5)
 }
 
-// TestPaginationStructuredComplexMerge tests complex scenario with multiple filters and sorts
 func TestPaginationStructuredComplexMerge(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -387,8 +381,6 @@ func TestPaginationStructuredComplexMerge(t *testing.T) {
 	p := query.NewPagination[User](query.PaginationConfig{
 		Verbose: true,
 	})
-
-	// Query params: age >= 28
 	queryFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -399,8 +391,6 @@ func TestPaginationStructuredComplexMerge(t *testing.T) {
 			},
 		},
 	}
-
-	// Route filter: name = "Charlie", with sort by name ASC
 	routeFilter := query.StructuredFilter{
 		FieldFilters: []query.FieldFilter{
 			{
@@ -423,20 +413,12 @@ func TestPaginationStructuredComplexMerge(t *testing.T) {
 
 	result, err := p.PaginationStructured(db, ctx.Request().Context(), ctx, routeFilter)
 	assert.NoError(t, err)
-
-	// Conditions: (age >= 28) AND (name = 'Charlie')
-	// Only Charlie matches: age 30 >= 28 and name = "Charlie"
 	assert.Equal(t, 1, result.TotalSize)
 	assert.Len(t, result.Data, 1)
 	assert.Equal(t, "Charlie", result.Data[0].Name)
 	assert.Equal(t, 30, result.Data[0].Age)
 }
 
-// ------------------------------------------
-// PAGINATION ARRAY TESTS
-// ------------------------------------------
-
-// TestPaginationArrayNoFilters tests PaginationArray without array filters
 func TestPaginationArrayNoFilters(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -447,8 +429,6 @@ func TestPaginationArrayNoFilters(t *testing.T) {
 	p := query.NewPagination[User](query.PaginationConfig{
 		Verbose: true,
 	})
-
-	// Query: pageIndex=0, pageSize=2, no filters
 	ctx := createEchoContext("pageIndex=0&pageSize=2")
 	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, nil, nil)
 	assert.NoError(t, err)
@@ -458,7 +438,6 @@ func TestPaginationArrayNoFilters(t *testing.T) {
 	assert.Len(t, result.Data, 2)
 }
 
-// TestPaginationArrayWithSingleFilter tests PaginationArray with one array filter
 func TestPaginationArrayWithSingleFilter(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -475,12 +454,10 @@ func TestPaginationArrayWithSingleFilter(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatalf("failed to seed: %v", err)
 	}
-
 	p := query.NewPagination[User](query.PaginationConfig{
 		Verbose: true,
 	})
 
-	// Filter: name = "Bob" (use string for text filters)
 	filters := []query.ArrFilterSQL{{Field: "name", Op: query.ModeEqual, Value: "Bob"}}
 
 	ctx := createEchoContext("pageIndex=0&pageSize=10")
@@ -492,7 +469,6 @@ func TestPaginationArrayWithSingleFilter(t *testing.T) {
 	assert.Equal(t, 30, result.Data[0].Age)
 }
 
-// TestPaginationArrayWithMultipleFilters tests PaginationArray with multiple array filters (AND logic)
 func TestPaginationArrayWithMultipleFilters(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -513,7 +489,6 @@ func TestPaginationArrayWithMultipleFilters(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Filters: name starts with "B" AND age = 30 (AND logic)
 	filters := []query.ArrFilterSQL{
 		{Field: "name", Op: query.ModeStartsWith, Value: "B"},
 		{Field: "age", Op: query.ModeEqual, Value: 30},
@@ -523,13 +498,11 @@ func TestPaginationArrayWithMultipleFilters(t *testing.T) {
 	result, err := p.PaginationArray(db, ctx.Request().Context(), ctx, filters, nil)
 	assert.NoError(t, err)
 
-	// Only Bob matches: name starts with "B" AND age = 30
 	assert.Equal(t, 1, result.TotalSize)
 	assert.Len(t, result.Data, 1)
 	assert.Equal(t, "Bob", result.Data[0].Name)
 }
 
-// TestPaginationArrayWithSort tests PaginationArray with sort fields
 func TestPaginationArrayWithSort(t *testing.T) {
 	db, err := database(&User{})
 	if err != nil {
@@ -550,7 +523,6 @@ func TestPaginationArrayWithSort(t *testing.T) {
 		Verbose: true,
 	})
 
-	// Sort by name ASC (overrides default created_at DESC)
 	sorts := []query.ArrFilterSortSQL{
 		{Field: "name", Order: "ASC"},
 	}
@@ -560,7 +532,6 @@ func TestPaginationArrayWithSort(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Len(t, result.Data, 4)
-	// Sorted by name ASC: Alice, Bob, Charlie, David
 	assert.Equal(t, "Alice", result.Data[0].Name)
 	assert.Equal(t, "Bob", result.Data[1].Name)
 	assert.Equal(t, "Charlie", result.Data[2].Name)

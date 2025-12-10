@@ -1,9 +1,6 @@
 package registry
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/Lands-Horizon-Corp/golang-filtering/query"
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
@@ -38,6 +35,7 @@ type Registry[TData any, TResponse any, TRequest any] struct {
 	deleted           func(*TData) Topics
 	tabular           func(data *TData) map[string]any
 	pagination        query.Pagination[TData]
+	client            *gorm.DB
 }
 
 func NewRegistry[TData any, TResponse any, TRequest any](
@@ -49,7 +47,10 @@ func NewRegistry[TData any, TResponse any, TRequest any](
 	if params.ColumnDefaultSort == "" {
 		params.ColumnDefaultSort = "created_at DESC"
 	}
-	fmt.Println("Initializing Registry with ColumnDefaultID:", params)
+	var client *gorm.DB
+	if params.Database != nil {
+		client = params.Database.Model(new(TData))
+	}
 	return &Registry[TData, TResponse, TRequest]{
 		columnDefaultID:   params.ColumnDefaultID,
 		columnDefaultSort: params.ColumnDefaultSort,
@@ -62,19 +63,13 @@ func NewRegistry[TData any, TResponse any, TRequest any](
 		deleted:           params.Deleted,
 		tabular:           params.Tabular,
 		validator:         params.Validator,
+		client:            client,
 		pagination: *query.NewPagination[TData](query.PaginationConfig{
 			Verbose:           true,
 			ColumnDefaultSort: params.ColumnDefaultSort,
 			ColumnDefaultID:   params.ColumnDefaultID,
 		}),
 	}
-}
-
-func (r *Registry[TData, TResponse, TRequest]) Client(context context.Context) *gorm.DB {
-	if r.database == nil {
-		return nil
-	}
-	return r.database.WithContext(context).Model(new(TData))
 }
 
 func (r *Registry[TData, TResponse, TRequest]) preload(preloads ...string) []string {
