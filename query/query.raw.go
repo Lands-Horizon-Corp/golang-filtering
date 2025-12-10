@@ -3,7 +3,6 @@ package query
 import (
 	"fmt"
 
-	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
@@ -45,19 +44,4 @@ func (f *Pagination[T]) StructuredPaginationRaw(
 
 	result.Data = data
 	return &result, nil
-}
-
-func (f *Pagination[T]) PaginationRaw(
-	db *gorm.DB,
-	ctx echo.Context,
-	rawQuery func(*gorm.DB) *gorm.DB,
-	preloads ...string,
-) (*PaginationResult[T], error) {
-	filterRoot, pageIndex, pageSize, err := parseQuery(ctx)
-	if err != nil {
-		return &PaginationResult[T]{}, fmt.Errorf("failed to parse query: %w", err)
-	}
-	dbQuery := rawQuery(db)
-	dbQuery = f.structuredQuery(dbQuery, filterRoot)
-	return f.StructuredPaginationRaw(dbQuery, pageIndex, pageSize, preloads...)
 }

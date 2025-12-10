@@ -206,21 +206,20 @@ func (p *Pagination[T]) NormalGetMaxLock(
 	filter T,
 ) (any, error) {
 	var result any
-	tx = tx.Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
+	tx = tx.Model(&filter).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
 	row := tx.Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
 	}
 	return result, nil
 }
-
 func (p *Pagination[T]) NormalGetMinLock(
 	tx *gorm.DB,
 	field string,
 	filter T,
 ) (any, error) {
 	var result any
-	tx = tx.Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
+	tx = tx.Model(&filter).Where(&filter).Clauses(clause.Locking{Strength: "UPDATE"})
 	row := tx.Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)

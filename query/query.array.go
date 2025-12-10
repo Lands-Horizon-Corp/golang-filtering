@@ -292,10 +292,8 @@ func (f *Pagination[T]) ArrRequestTabular(
 	filters = append(filters, extraFilters...)
 	sorts := make([]ArrFilterSortSQL, len(filterRoot.SortFields))
 	for i, sf := range filterRoot.SortFields {
-		sorts[i] = ArrFilterSortSQL{
-			Field: sf.Field,
-			Order: sf.Order,
-		}
+		sorts[i] = ArrFilterSortSQL(sf)
+
 	}
 	sorts = append(sorts, extraSorts...)
 	data, err := f.ArrFind(db, filters, sorts, preloads...)
@@ -328,10 +326,8 @@ func (f *Pagination[T]) ArrStringTabular(
 	filters = append(filters, extraFilters...)
 	sorts := make([]ArrFilterSortSQL, len(filterRoot.SortFields))
 	for i, sf := range filterRoot.SortFields {
-		sorts[i] = ArrFilterSortSQL{
-			Field: sf.Field,
-			Order: sf.Order,
-		}
+		sorts[i] = ArrFilterSortSQL(sf)
+
 	}
 	sorts = append(sorts, extraSorts...)
 	data, err := f.ArrFind(db, filters, sorts, preloads...)

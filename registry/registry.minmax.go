@@ -29,8 +29,8 @@ func (r *Registry[TData, TResponse, TRequest]) GetMinInt(ctx context.Context, fi
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) GetMaxLock(ctx context.Context, field string, filter *TData) (any, error) {
-	return r.pagination.NormalGetMaxLock(r.Client(ctx), field, *filter)
+func (r *Registry[TData, TResponse, TRequest]) GetMaxLock(ctx context.Context, tx *gorm.DB, field string, filter *TData) (any, error) {
+	return r.pagination.NormalGetMaxLock(tx, field, *filter)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) GetMaxLockInt(ctx context.Context, tx *gorm.DB, field string, filter *TData) (int, error) {

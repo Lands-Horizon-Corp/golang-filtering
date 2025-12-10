@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Lands-Horizon-Corp/golang-filtering/query"
 	"github.com/go-playground/validator/v10"
@@ -42,6 +43,13 @@ type Registry[TData any, TResponse any, TRequest any] struct {
 func NewRegistry[TData any, TResponse any, TRequest any](
 	params RegistryParams[TData, TResponse, TRequest],
 ) *Registry[TData, TResponse, TRequest] {
+	if params.ColumnDefaultID == "" {
+		params.ColumnDefaultID = "id"
+	}
+	if params.ColumnDefaultSort == "" {
+		params.ColumnDefaultSort = "created_at DESC"
+	}
+	fmt.Println("Initializing Registry with ColumnDefaultID:", params)
 	return &Registry[TData, TResponse, TRequest]{
 		columnDefaultID:   params.ColumnDefaultID,
 		columnDefaultSort: params.ColumnDefaultSort,
