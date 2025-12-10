@@ -147,17 +147,17 @@ func (f *Pagination[T]) RawExistsIncludingDeleted(db *gorm.DB) (bool, error) {
 // RawGetMax fetches max value of a field
 func (f *Pagination[T]) RawGetMax(db *gorm.DB, field string) (any, error) {
 	var result any
-	row := db.Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	// explicitly set the model so GORM knows the table
+	row := db.Model(new(T)).Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s: %w", field, err)
 	}
 	return result, nil
 }
 
-// RawGetMin fetches min value of a field
 func (f *Pagination[T]) RawGetMin(db *gorm.DB, field string) (any, error) {
 	var result any
-	row := db.Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	row := db.Model(new(T)).Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s: %w", field, err)
 	}
@@ -167,8 +167,7 @@ func (f *Pagination[T]) RawGetMin(db *gorm.DB, field string) (any, error) {
 // RawGetMaxLock fetches max value with lock
 func (f *Pagination[T]) RawGetMaxLock(db *gorm.DB, field string) (any, error) {
 	var result any
-	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
-	row := db.Select(fmt.Sprintf("MAX(%s)", field)).Row()
+	row := db.Model(new(T)).Clauses(clause.Locking{Strength: "UPDATE"}).Select(fmt.Sprintf("MAX(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get max of %s with lock: %w", field, err)
 	}
@@ -178,8 +177,7 @@ func (f *Pagination[T]) RawGetMaxLock(db *gorm.DB, field string) (any, error) {
 // RawGetMinLock fetches min value with lock
 func (f *Pagination[T]) RawGetMinLock(db *gorm.DB, field string) (any, error) {
 	var result any
-	db = db.Clauses(clause.Locking{Strength: "UPDATE"})
-	row := db.Select(fmt.Sprintf("MIN(%s)", field)).Row()
+	row := db.Model(new(T)).Clauses(clause.Locking{Strength: "UPDATE"}).Select(fmt.Sprintf("MIN(%s)", field)).Row()
 	if err := row.Scan(&result); err != nil {
 		return nil, fmt.Errorf("failed to get min of %s with lock: %w", field, err)
 	}
