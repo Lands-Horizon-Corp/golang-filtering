@@ -8,22 +8,21 @@ import (
 )
 
 func (r *Registry[TData, TResponse, TRequest]) Delete(
-	ctx context.Context,
+	context context.Context,
 	id any,
 ) error {
-	return r.database.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return r.DeleteWithTx(ctx, tx, id)
+	return r.client.WithContext(context).Transaction(func(tx *gorm.DB) error {
+		return r.DeleteWithTx(context, tx, id)
 	})
 }
 
 func (r *Registry[TData, TResponse, TRequest]) DeleteWithTx(
-	ctx context.Context,
+	context context.Context,
 	tx *gorm.DB,
 	id any,
 ) error {
 	var entity TData
-	// Use the custom column name
-	if err := tx.Where(fmt.Sprintf("%s = ?", r.columnDefaultID), id).First(&entity).Error; err != nil {
+	if err := tx.Where(fmt.Sprintf("%s = ?", r.columnDefaultID), id).First(&entity).WithContext(context).Error; err != nil {
 		return fmt.Errorf("failed to find entity for delete: %w", err)
 	}
 
@@ -31,24 +30,24 @@ func (r *Registry[TData, TResponse, TRequest]) DeleteWithTx(
 		return fmt.Errorf("failed to delete entity with transaction: %w", err)
 	}
 
-	r.OnDelete(ctx, &entity)
+	r.OnDelete(context, &entity)
 	return nil
 }
 
 func (r *Registry[TData, TResponse, TRequest]) BulkDelete(
-	ctx context.Context,
+	context context.Context,
 	ids []any,
 ) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	return r.database.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return r.BulkDeleteWithTx(ctx, tx, ids)
+	return r.client.WithContext(context).Transaction(func(tx *gorm.DB) error {
+		return r.BulkDeleteWithTx(context, tx, ids)
 	})
 }
 
 func (r *Registry[TData, TResponse, TRequest]) BulkDeleteWithTx(
-	ctx context.Context,
+	context context.Context,
 	tx *gorm.DB,
 	ids []any,
 ) error {
@@ -67,7 +66,7 @@ func (r *Registry[TData, TResponse, TRequest]) BulkDeleteWithTx(
 		return fmt.Errorf("failed to bulk delete entities: %w", err)
 	}
 	for _, data := range entities {
-		r.OnDelete(ctx, &data)
+		r.OnDelete(context, &data)
 	}
 
 	return nil

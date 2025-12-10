@@ -12,26 +12,26 @@ func (r *Registry[TData, TResponse, TRequest]) Tabular(
 	filter TData,
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.NormalTabular(r.Client(context), filter, r.tabular, r.preload(preloads...)...)
+	return r.pagination.NormalTabular(r.client.WithContext(context), filter, r.tabular, r.preload(preloads...)...)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) RequestTabular(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	echocontext echo.Context,
 	filter *TData,
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.NormalRequestTabular(r.Client(ctx), echoCtx, filter, r.tabular, r.preload(preloads...)...)
+	return r.pagination.NormalRequestTabular(r.client.WithContext(context), echocontext, filter, r.tabular, r.preload(preloads...)...)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) StringTabular(
-	ctx context.Context,
+	context context.Context,
 	filterValue string,
 	filter *TData,
 
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.NormalStringTabular(r.Client(ctx), filterValue, filter, r.tabular, r.preload(preloads...)...)
+	return r.pagination.NormalStringTabular(r.client.WithContext(context), filterValue, filter, r.tabular, r.preload(preloads...)...)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) ArrTabular(
@@ -41,28 +41,28 @@ func (r *Registry[TData, TResponse, TRequest]) ArrTabular(
 	sorts []query.ArrFilterSortSQL,
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.ArrTabular(r.Client(context), filters, sorts, r.tabular, r.preload(preloads...)...)
+	return r.pagination.ArrTabular(r.client.WithContext(context), filters, sorts, r.tabular, r.preload(preloads...)...)
 }
 func (r *Registry[TData, TResponse, TRequest]) ArrRequestTabular(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	echocontext echo.Context,
 	extraFilters []query.ArrFilterSQL,
 	extraSorts []query.ArrFilterSortSQL,
 
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.ArrRequestTabular(r.Client(ctx), echoCtx, extraFilters, extraSorts, r.tabular, r.preload(preloads...)...)
+	return r.pagination.ArrRequestTabular(r.client.WithContext(context), echocontext, extraFilters, extraSorts, r.tabular, r.preload(preloads...)...)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) ArrStringTabular(
-	ctx context.Context,
+	context context.Context,
 	filterValue string,
 	extraFilters []query.ArrFilterSQL,
 	extraSorts []query.ArrFilterSortSQL,
 
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.ArrStringTabular(r.Client(ctx), filterValue, extraFilters, extraSorts, r.tabular, r.preload(preloads...)...)
+	return r.pagination.ArrStringTabular(r.client.WithContext(context), filterValue, extraFilters, extraSorts, r.tabular, r.preload(preloads...)...)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) StructuredTabular(
@@ -71,25 +71,25 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredTabular(
 
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.StructuredTabular(r.Client(context), filter, r.tabular, r.preload(preloads...)...)
+	return r.pagination.StructuredTabular(r.client.WithContext(context), filter, r.tabular, r.preload(preloads...)...)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) StructuredRequestTabular(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	echocontext echo.Context,
 	filter query.StructuredFilter,
 
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.StructuredRequestTabular(r.Client(ctx), echoCtx, filter, r.tabular, r.preload(preloads...)...)
+	return r.pagination.StructuredRequestTabular(r.client.WithContext(context), echocontext, filter, r.tabular, r.preload(preloads...)...)
 }
 
 func (r *Registry[TData, TResponse, TRequest]) StructuredStringTabular(
-	ctx context.Context,
+	context context.Context,
 	filterValue string,
 	filter query.StructuredFilter,
 
 	preloads ...string,
 ) ([]byte, error) {
-	return r.pagination.StructuredStringTabular(r.Client(ctx), filterValue, filter, r.tabular, r.preload(preloads...)...)
+	return r.pagination.StructuredStringTabular(r.client.WithContext(context), filterValue, filter, r.tabular, r.preload(preloads...)...)
 }

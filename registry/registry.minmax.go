@@ -7,33 +7,33 @@ import (
 	"gorm.io/gorm"
 )
 
-func (r *Registry[TData, TResponse, TRequest]) GetMax(ctx context.Context, field string, filter *TData) (any, error) {
-	return r.pagination.NormalGetMax(r.Client(ctx), field, *filter)
+func (r *Registry[TData, TResponse, TRequest]) GetMax(context context.Context, field string, filter *TData) (any, error) {
+	return r.pagination.NormalGetMax(r.client.WithContext(context), field, *filter)
 }
-func (r *Registry[TData, TResponse, TRequest]) GetMaxInt(ctx context.Context, field string, filter *TData) (int, error) {
-	result, err := r.pagination.NormalGetMax(r.Client(ctx), field, *filter)
+func (r *Registry[TData, TResponse, TRequest]) GetMaxInt(context context.Context, field string, filter *TData) (int, error) {
+	result, err := r.pagination.NormalGetMax(r.client.WithContext(context), field, *filter)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) GetMin(ctx context.Context, field string, filter *TData) (any, error) {
-	return r.pagination.NormalGetMin(r.Client(ctx), field, *filter)
+func (r *Registry[TData, TResponse, TRequest]) GetMin(context context.Context, field string, filter *TData) (any, error) {
+	return r.pagination.NormalGetMin(r.client.WithContext(context), field, *filter)
 }
-func (r *Registry[TData, TResponse, TRequest]) GetMinInt(ctx context.Context, field string, filter *TData) (int, error) {
-	result, err := r.pagination.NormalGetMin(r.Client(ctx), field, *filter)
+func (r *Registry[TData, TResponse, TRequest]) GetMinInt(context context.Context, field string, filter *TData) (int, error) {
+	result, err := r.pagination.NormalGetMin(r.client.WithContext(context), field, *filter)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) GetMaxLock(ctx context.Context, tx *gorm.DB, field string, filter *TData) (any, error) {
+func (r *Registry[TData, TResponse, TRequest]) GetMaxLock(context context.Context, tx *gorm.DB, field string, filter *TData) (any, error) {
 	return r.pagination.NormalGetMaxLock(tx, field, *filter)
 }
 
-func (r *Registry[TData, TResponse, TRequest]) GetMaxLockInt(ctx context.Context, tx *gorm.DB, field string, filter *TData) (int, error) {
+func (r *Registry[TData, TResponse, TRequest]) GetMaxLockInt(context context.Context, tx *gorm.DB, field string, filter *TData) (int, error) {
 	result, err := r.pagination.NormalGetMaxLock(tx, field, *filter)
 	if err != nil {
 		return 0, err
@@ -41,104 +41,104 @@ func (r *Registry[TData, TResponse, TRequest]) GetMaxLockInt(ctx context.Context
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) GetMinLock(ctx context.Context, tx *gorm.DB, field string, filter *TData) (any, error) {
+func (r *Registry[TData, TResponse, TRequest]) GetMinLock(context context.Context, tx *gorm.DB, field string, filter *TData) (any, error) {
 	return r.pagination.NormalGetMinLock(tx, field, *filter)
 }
 
-func (r *Registry[TData, TResponse, TRequest]) GetMinLockInt(ctx context.Context, field string, filter *TData) (int, error) {
-	result, err := r.pagination.NormalGetMinLock(r.Client(ctx), field, *filter)
+func (r *Registry[TData, TResponse, TRequest]) GetMinLockInt(context context.Context, field string, filter *TData) (int, error) {
+	result, err := r.pagination.NormalGetMinLock(r.client.WithContext(context), field, *filter)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMax(ctx context.Context, field string, filter query.StructuredFilter) (any, error) {
-	return r.pagination.StructuredGetMax(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMax(context context.Context, field string, filter query.StructuredFilter) (any, error) {
+	return r.pagination.StructuredGetMax(r.client.WithContext(context), field, filter)
 }
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMaxInt(ctx context.Context, field string, filter query.StructuredFilter) (int, error) {
-	result, err := r.pagination.StructuredGetMax(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMaxInt(context context.Context, field string, filter query.StructuredFilter) (int, error) {
+	result, err := r.pagination.StructuredGetMax(r.client.WithContext(context), field, filter)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMin(ctx context.Context, field string, filter query.StructuredFilter) (any, error) {
-	return r.pagination.StructuredGetMin(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMin(context context.Context, field string, filter query.StructuredFilter) (any, error) {
+	return r.pagination.StructuredGetMin(r.client.WithContext(context), field, filter)
 }
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMinInt(ctx context.Context, field string, filter query.StructuredFilter) (int, error) {
-	result, err := r.pagination.StructuredGetMin(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMinInt(context context.Context, field string, filter query.StructuredFilter) (int, error) {
+	result, err := r.pagination.StructuredGetMin(r.client.WithContext(context), field, filter)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMaxLock(ctx context.Context, field string, filter query.StructuredFilter) (any, error) {
-	return r.pagination.StructuredGetMaxLock(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMaxLock(context context.Context, field string, filter query.StructuredFilter) (any, error) {
+	return r.pagination.StructuredGetMaxLock(r.client.WithContext(context), field, filter)
 }
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMaxLockInt(ctx context.Context, field string, filter query.StructuredFilter) (int, error) {
-	result, err := r.pagination.StructuredGetMaxLock(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMaxLockInt(context context.Context, field string, filter query.StructuredFilter) (int, error) {
+	result, err := r.pagination.StructuredGetMaxLock(r.client.WithContext(context), field, filter)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMinLock(ctx context.Context, field string, filter query.StructuredFilter) (any, error) {
-	return r.pagination.StructuredGetMinLock(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMinLock(context context.Context, field string, filter query.StructuredFilter) (any, error) {
+	return r.pagination.StructuredGetMinLock(r.client.WithContext(context), field, filter)
 }
-func (r *Registry[TData, TResponse, TRequest]) StructuredGetMinLockInt(ctx context.Context, field string, filter query.StructuredFilter) (int, error) {
-	result, err := r.pagination.StructuredGetMinLock(r.Client(ctx), field, filter)
+func (r *Registry[TData, TResponse, TRequest]) StructuredGetMinLockInt(context context.Context, field string, filter query.StructuredFilter) (int, error) {
+	result, err := r.pagination.StructuredGetMinLock(r.client.WithContext(context), field, filter)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMax(ctx context.Context, field string, filters []query.ArrFilterSQL) (any, error) {
-	return r.pagination.ArrGetMax(r.Client(ctx), field, filters)
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMax(context context.Context, field string, filters []query.ArrFilterSQL) (any, error) {
+	return r.pagination.ArrGetMax(r.client.WithContext(context), field, filters)
 }
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMaxInt(ctx context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
-	result, err := r.pagination.ArrGetMax(r.Client(ctx), field, filters)
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMaxInt(context context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
+	result, err := r.pagination.ArrGetMax(r.client.WithContext(context), field, filters)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMin(ctx context.Context, field string, filters []query.ArrFilterSQL,
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMin(context context.Context, field string, filters []query.ArrFilterSQL,
 ) (any, error) {
-	return r.pagination.ArrGetMin(r.Client(ctx), field, filters)
+	return r.pagination.ArrGetMin(r.client.WithContext(context), field, filters)
 }
 
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMinInt(ctx context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
-	result, err := r.pagination.ArrGetMin(r.Client(ctx), field, filters)
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMinInt(context context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
+	result, err := r.pagination.ArrGetMin(r.client.WithContext(context), field, filters)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMaxLock(ctx context.Context, field string, filters []query.ArrFilterSQL) (any, error) {
-	return r.pagination.ArrGetMaxLock(r.Client(ctx), field, filters)
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMaxLock(context context.Context, field string, filters []query.ArrFilterSQL) (any, error) {
+	return r.pagination.ArrGetMaxLock(r.client.WithContext(context), field, filters)
 }
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMaxLockInt(ctx context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
-	result, err := r.pagination.ArrGetMaxLock(r.Client(ctx), field, filters)
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMaxLockInt(context context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
+	result, err := r.pagination.ArrGetMaxLock(r.client.WithContext(context), field, filters)
 	if err != nil {
 		return 0, err
 	}
 	return result.(int), nil
 }
 
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMinLock(ctx context.Context, field string, filters []query.ArrFilterSQL,
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMinLock(context context.Context, field string, filters []query.ArrFilterSQL,
 ) (any, error) {
-	return r.pagination.ArrGetMinLock(r.Client(ctx), field, filters)
+	return r.pagination.ArrGetMinLock(r.client.WithContext(context), field, filters)
 }
 
-func (r *Registry[TData, TResponse, TRequest]) ArrGetMinLockInt(ctx context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
-	result, err := r.pagination.ArrGetMinLock(r.Client(ctx), field, filters)
+func (r *Registry[TData, TResponse, TRequest]) ArrGetMinLockInt(context context.Context, field string, filters []query.ArrFilterSQL) (int, error) {
+	result, err := r.pagination.ArrGetMinLock(r.client.WithContext(context), field, filters)
 	if err != nil {
 		return 0, err
 	}

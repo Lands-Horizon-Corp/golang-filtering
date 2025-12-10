@@ -10,7 +10,7 @@ func (r *Registry[TData, TResponse, TRequest]) List(
 	preloads ...string,
 ) ([]*TData, error) {
 	var entities []*TData
-	db := r.Client(context)
+	db := r.client.WithContext(context)
 	if preloads == nil {
 		preloads = r.preloads
 	}

@@ -13,7 +13,7 @@ func (r *Registry[TData, TResponse, TRequest]) Pagination(
 	ctx echo.Context,
 	preloads ...string,
 ) (*query.PaginationResult[TResponse], error) {
-	data, err := r.pagination.Pagination(r.Client(context), context, ctx, r.preload(preloads...)...)
+	data, err := r.pagination.Pagination(r.client.WithContext(context), context, ctx, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (r *Registry[TData, TResponse, TRequest]) NormalPagination(
 	filter *TData,
 	preloads ...string,
 ) (*query.PaginationResult[TResponse], error) {
-	data, err := r.pagination.PaginationNormal(r.Client(context), context, ctx, filter, r.preload(preloads...)...)
+	data, err := r.pagination.PaginationNormal(r.client.WithContext(context), context, ctx, filter, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (r *Registry[TData, TResponse, TRequest]) ArrPagination(
 
 	preloads ...string,
 ) (*query.PaginationResult[TResponse], error) {
-	data, err := r.pagination.PaginationArray(r.Client(context), context, ctx, filters, sorts, r.preload(preloads...)...)
+	data, err := r.pagination.PaginationArray(r.client.WithContext(context), context, ctx, filters, sorts, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredPagination(
 
 	preloads ...string,
 ) (*query.PaginationResult[TResponse], error) {
-	data, err := r.pagination.PaginationStructured(r.Client(context), context, ctx, filter, r.preload(preloads...)...)
+	data, err := r.pagination.PaginationStructured(r.client.WithContext(context), context, ctx, filter, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -89,14 +89,14 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredPagination(
 }
 
 func (r *Registry[TData, TResponse, TRequest]) RawPagination(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	ctx echo.Context,
 	rawQuery func(*gorm.DB) *gorm.DB,
 	preloads ...string,
 ) (*query.PaginationResult[TResponse], error) {
 	data, err := r.pagination.PaginationRaw(
-		r.Client(ctx),
-		echoCtx,
+		r.client.WithContext(context),
+		ctx,
 		rawQuery,
 		r.preload(preloads...)...,
 	)

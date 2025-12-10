@@ -8,11 +8,11 @@ import (
 )
 
 func (r *Registry[TData, TResponse, TRequest]) NoPagination(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	echocontext echo.Context,
 	preloads ...string,
 ) ([]*TResponse, error) {
-	data, err := r.pagination.NoPagination(r.Client(ctx), echoCtx, r.preload(preloads...)...)
+	data, err := r.pagination.NoPagination(r.client.WithContext(context), echocontext, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -21,12 +21,12 @@ func (r *Registry[TData, TResponse, TRequest]) NoPagination(
 }
 
 func (r *Registry[TData, TResponse, TRequest]) NoPaginationNormal(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	echocontext echo.Context,
 	filter *TData,
 	preloads ...string,
 ) ([]*TResponse, error) {
-	data, err := r.pagination.NoPaginationNormal(r.Client(ctx), ctx, echoCtx, filter, r.preload(preloads...)...)
+	data, err := r.pagination.NoPaginationNormal(r.client.WithContext(context), context, echocontext, filter, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -35,13 +35,13 @@ func (r *Registry[TData, TResponse, TRequest]) NoPaginationNormal(
 }
 
 func (r *Registry[TData, TResponse, TRequest]) NoPaginationArray(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	echocontext echo.Context,
 	filters []query.ArrFilterSQL,
 	sorts []query.ArrFilterSortSQL,
 	preloads ...string,
 ) ([]*TResponse, error) {
-	data, err := r.pagination.NoPaginationArray(r.Client(ctx), ctx, echoCtx, filters, sorts, r.preload(preloads...)...)
+	data, err := r.pagination.NoPaginationArray(r.client.WithContext(context), context, echocontext, filters, sorts, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,12 +50,12 @@ func (r *Registry[TData, TResponse, TRequest]) NoPaginationArray(
 }
 
 func (r *Registry[TData, TResponse, TRequest]) NoPaginationStructured(
-	ctx context.Context,
-	echoCtx echo.Context,
+	context context.Context,
+	echocontext echo.Context,
 	filter query.StructuredFilter,
 	preloads ...string,
 ) ([]*TResponse, error) {
-	data, err := r.pagination.NoPaginationStructured(r.Client(ctx), ctx, echoCtx, filter, r.preload(preloads...)...)
+	data, err := r.pagination.NoPaginationStructured(r.client.WithContext(context), context, echocontext, filter, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}

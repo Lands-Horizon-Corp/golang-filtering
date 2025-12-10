@@ -11,7 +11,7 @@ func (r *Registry[TData, TResponse, TRequest]) FindIncludeDeleted(
 	fields *TData,
 	preloads ...string,
 ) ([]*TData, error) {
-	data, err := r.pagination.NormalFindIncludeDeleted(r.Client(context), *fields, r.preload(preloads...)...)
+	data, err := r.pagination.NormalFindIncludeDeleted(r.client.WithContext(context), *fields, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (r *Registry[TData, TResponse, TRequest]) FindWithLockIncludeDeleted(
 	fields *TData,
 	preloads ...string,
 ) ([]*TData, error) {
-	data, err := r.pagination.NormalFindLockIncludeDeleted(r.Client(context), *fields, r.preload(preloads...)...)
+	data, err := r.pagination.NormalFindLockIncludeDeleted(r.client.WithContext(context), *fields, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (r *Registry[TData, TResponse, TRequest]) ArrFindIncludeDeleted(
 	sorts []query.ArrFilterSortSQL,
 	preloads ...string,
 ) ([]*TData, error) {
-	data, err := r.pagination.ArrFindIncludeDeleted(r.Client(context), filters, sorts, r.preload(preloads...)...)
+	data, err := r.pagination.ArrFindIncludeDeleted(r.client.WithContext(context), filters, sorts, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (r *Registry[TData, TResponse, TRequest]) ArrFindWithLockIncludeDeleted(
 	sorts []query.ArrFilterSortSQL,
 	preloads ...string,
 ) ([]*TData, error) {
-	data, err := r.pagination.ArrFindLockIncludeDeleted(r.Client(context), filters, sorts, r.preload(preloads...)...)
+	data, err := r.pagination.ArrFindLockIncludeDeleted(r.client.WithContext(context), filters, sorts, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredFindIncludeDeleted(
 	filter query.StructuredFilter,
 	preloads ...string,
 ) ([]*TData, error) {
-	data, err := r.pagination.StructuredFindIncludeDeleted(r.Client(context), filter)
+	data, err := r.pagination.StructuredFindIncludeDeleted(r.client.WithContext(context), filter)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (r *Registry[TData, TResponse, TRequest]) StructuredFindWithLockIncludeDele
 	filter query.StructuredFilter,
 	preloads ...string,
 ) ([]*TData, error) {
-	data, err := r.pagination.StructuredFindLockIncludeDeleted(r.Client(context), filter, r.preload(preloads...)...)
+	data, err := r.pagination.StructuredFindLockIncludeDeleted(r.client.WithContext(context), filter, r.preload(preloads...)...)
 	if err != nil {
 		return nil, err
 	}
